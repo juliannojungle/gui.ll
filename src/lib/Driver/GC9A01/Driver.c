@@ -36,29 +36,17 @@ int EPD_CS_PIN;
 int EPD_BL_PIN;
 int EPD_CLK_PIN;
 int EPD_MOSI_PIN;
-int EPD_SCL_PIN;
-int EPD_SDA_PIN;
 
 uint slice_num;
 
-void DriverGPIOMode(UWORD pin, UWORD mode) {
-    GPIOInit(pin);
-
-    if(mode == 0 || mode == GPIO_IN) {
-        GPIOSetDir(pin, GPIO_IN);
-    } else {
-        GPIOSetDir(pin, GPIO_OUT);
-    }
-}
-
 void DriverGPIOInit(void) {
-    DriverGPIOMode(EPD_RST_PIN, 1);
-    DriverGPIOMode(EPD_DC_PIN, 1);
-    DriverGPIOMode(EPD_CS_PIN, 1);
-    DriverGPIOMode(EPD_BL_PIN, 1);
+    GPIOSetDir(EPD_RST_PIN, GPIO_OUT);
+    GPIOSetDir(EPD_DC_PIN, GPIO_OUT);
+    GPIOSetDir(EPD_CS_PIN, GPIO_OUT);
+    GPIOSetDir(EPD_BL_PIN, GPIO_OUT);
 
-    DriverGPIOMode(EPD_CS_PIN, 1);
-    DriverGPIOMode(EPD_BL_PIN, 1);
+    GPIOSetDir(EPD_CS_PIN, GPIO_OUT);
+    GPIOSetDir(EPD_BL_PIN, GPIO_OUT);
 
     DigitalWrite(EPD_CS_PIN, 1);
     DigitalWrite(EPD_DC_PIN, 0);
@@ -69,14 +57,12 @@ UBYTE DriverInit(void) {
     STDIOInitAll();
 
     //GPIO PIN
-    EPD_RST_PIN = 12;
     EPD_DC_PIN = 8;
-    EPD_BL_PIN = 13;
     EPD_CS_PIN = 9;
     EPD_CLK_PIN = 10;
     EPD_MOSI_PIN = 11;
-    EPD_SCL_PIN = 7;
-    EPD_SDA_PIN = 6;
+    EPD_RST_PIN = 12;
+    EPD_BL_PIN = 13;
 
     // SPI Config
     SPIInit(10000 * 1000);
@@ -93,13 +79,6 @@ UBYTE DriverInit(void) {
     PWMSetChannelLevel(slice_num, PWM_CHAN_B, 1);
     PWMSetClockDivider(slice_num, 50);
     PWMSetEnabled(slice_num, true);
-
-    //I2C Config
-    I2CInit(300*1000);
-    GPIOSetFunction(EPD_SDA_PIN, GPIO_FUNC_I2C);
-    GPIOSetFunction(EPD_SCL_PIN, GPIO_FUNC_I2C);
-    GPIOPullUp(EPD_SDA_PIN);
-    GPIOPullUp(EPD_SCL_PIN);
 
     printf("DriverInit OK\r\n");
     return 0;

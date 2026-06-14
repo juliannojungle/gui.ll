@@ -97,4 +97,4 @@ void I2CInit(uint speed) {
     i2c_init(i2c1, speed);
 }
 
-#endif
+#endif /* _HAL_C_ */

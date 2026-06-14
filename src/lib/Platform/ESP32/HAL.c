@@ -169,4 +169,4 @@ void I2CWrite(UBYTE addr, UBYTE reg, UBYTE value) {
     (void)value;
 }
 
-#endif
+#endif /* _HAL_C_ */

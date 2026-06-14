@@ -156,7 +156,7 @@ void DisplayPng(FIL *file) {
     printf("Turning on backlight...\n");
 #endif
     EPD_BL_PIN = 25;
-    DriverGPIOMode(EPD_BL_PIN, GPIO_OUT);
+    GPIOSetDir(EPD_BL_PIN, GPIO_OUT);
     DigitalWrite(EPD_CS_PIN, 1);
     DigitalWrite(EPD_DC_PIN, 0);
     DigitalWrite(EPD_BL_PIN, 1);

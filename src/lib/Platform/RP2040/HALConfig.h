@@ -1,5 +1,5 @@
-#ifndef PLATFORM_CONFIG_H
-#define PLATFORM_CONFIG_H
+#ifndef HAL_CONFIG_H
+#define HAL_CONFIG_H
 
 #include <stdbool.h>
 
@@ -22,4 +22,4 @@
 
 bool Platform_SDCard_Init(void);
 
-#endif /* PLATFORM_CONFIG_H */
+#endif /* HAL_CONFIG_H */

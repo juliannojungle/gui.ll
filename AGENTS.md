@@ -4,7 +4,11 @@
 
 **gui.ll** is a multi-platform embedded C project that reads PNG files from an SD card
 and displays them on a GC9A01 round LCD (240x240). It targets **RP2040** (Raspberry Pi Pico)
-and **ESP32** from a single codebase with platform-specific abstractions.
+and **ESP32-S3** from a single codebase with platform-specific abstractions.
+
+Target devices (both expose 2×20 pin headers at 1.27mm pitch with an embedded round LCD on the back):
+- **[RP2040-LCD-1.28](https://www.waveshare.com/wiki/RP2040-LCD-1.28)** — Waveshare RP2040 board
+- **[ESP32-S3-LCD-1.28](https://www.waveshare.com/wiki/ESP32-S3-LCD-1.28)** — Waveshare ESP32-S3 board
 
 ---
 
@@ -43,7 +47,7 @@ gui.ll/
 │   │   │   └── ESP32/
 │   │   │       ├── CMakeLists.txt   # idf_component_register (ESP-IDF component)
 │   │   │       ├── HAL.c           # HAL: GPIO, SPI (ESP-IDF), LEDC PWM compat
-│   │   │       ├── HALConfig.h     # Pin definitions
+│   │   │       ├── HALConfig.h     # Pin definitions (SD_SPI_SCLK=42, MOSI=41, MISO=46, CS=45)
 │   │   │       ├── SDConfig.h      # spi_t, sd_card_t struct definitions (ESP32 types)
 │   │   │       ├── SDHWConfig.h    # Default SPI/SD arrays
 │   │   │       ├── RTC.h           # RTC via settimeofday + get_fattime()
@@ -243,8 +247,9 @@ This prevents the git plugin from showing false "modified" files in submodules
 ## Current Status (as of last session)
 
 - **RP2040**: Builds successfully, generates `.uf2`, zero errors and warnings.
-- **ESP32**: Builds successfully, generates `.bin`, zero errors and warnings.
+- **ESP32-S3**: Builds successfully, generates `.bin`, zero errors and warnings.
   - libpng false-positive warnings suppressed via `set_source_files_properties` in ESP32 `CMakeLists.txt`
+  - SD card SPI pins updated to match shared shield design: SCLK=42, MOSI=41, MISO=46, CS=45
 
 ---
 
@@ -267,3 +272,39 @@ This prevents the git plugin from showing false "modified" files in submodules
 5. **`#include "HAL.c"` pattern**: The project uses a single-translation-unit approach
    where .c files are included directly (not compiled separately). This is intentional —
    do not refactor into separate compilation units unless explicitly requested.
+
+6. **Shared shield GPIO selection**: Both target boards expose 2×20 pin headers (1.27mm pitch).
+   The LCD is internally wired to the same GPIO numbers on both devices, but those GPIOs occupy
+   *different physical positions* on the headers. After overlaying the two pinouts, the only
+   free GPIOs that land on the same header position on both boards are listed below.
+   Already assigned to SD card SPI (MISO, CS, SCK, MOSI respectively):
+   - RP2040 GP0 = ESP32-S3 GP46 → SD MISO
+   - RP2040 GP1 = ESP32-S3 GP45 → SD CS
+   - RP2040 GP2 = ESP32-S3 GP42 → SD SCK
+   - RP2040 GP3 = ESP32-S3 GP41 → SD MOSI
+
+   Additional overlapping free pins available for future features — **header H1** (same physical
+   pin number on both boards):
+   | H1 Pin | RP2040 GPIO | ESP32-S3 GPIO | Notes |
+   |--------|-------------|---------------|-------|
+   | 11     | GP13        | GP18          | ✅ usable |
+   | 12     | GP5         | GP39          | ✅ usable |
+   | 13     | GP14        | GP17          | ✅ usable |
+   | 15     | GP15        | GP16          | ✅ usable |
+   | 17     | SWCLK       | GP15          | ⚠️ RP2040 SWD debug pin — usable as GPIO but disables SWD debug while shield is connected |
+   | 19     | SWDIO       | GP14          | ⚠️ RP2040 SWD debug pin — usable as GPIO but disables SWD debug while shield is connected |
+
+   **Header H2** — pin numbering order differs between boards, listed as RP2040 pin = ESP32-S3 pin:
+   | RP2040 H2 Pin | ESP32-S3 H2 Pin | RP2040 GPIO | ESP32-S3 GPIO | Notes |
+   |---------------|-----------------|-------------|---------------|-------|
+   | 2             | 19              | GP16        | GP13          | ✅ usable |
+   | 7             | 14              | GP27        | GP2           | ✅ usable |
+   | 5             | 16              | GP26        | GP3           | ❌ ESP32-S3 GP3 is a strapping pin — HIGH at boot triggers UART download mode, unsafe for shield use |
+
+   ⚠️ **Total: 9 overlapping free physical pins** (6 on H1 + 3 on H2). No other pins can be
+   reused on a shield compatible with both boards. Of these 9, pin H2-5/16 (GP26/GP3) is
+   excluded from safe use due to the ESP32-S3 strapping pin restriction, leaving **8 usable
+   pins** for future features (with the SWD caveat on H1-17 and H1-19).
+
+   Reference pinout images: `Documentation/Image/RP2040_LCD_1_28.png` and
+   `Documentation/Image/ESP32_S3_LCD_1_28.png` (also linked in README.md Supported Platforms table).
