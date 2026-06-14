@@ -60,8 +60,8 @@ Currently supports **RP2040** (Raspberry Pi Pico) and **ESP32** from a single co
 | 3V3        | 3V3         |   3V3   |  3V3    |   3V3    | pin4 (VDD/3V3)   | 3V3  |
 | GP8        | GP8         |         |         |          |                  | DC   |
 | GP9        | GP9         |         |         |          |                  | CS   |
-| GP10       | GP10        |         |         |          |                  | MOSI |
-| GP11       | GP11        |         |         |          |                  | CLK  |
+| GP10       | GP10        |         |         |          |                  | CLK  |
+| GP11       | GP11        |         |         |          |                  | MOSI |
 | GP12       | GP12        |         |         |          |                  | RST  |
 | GP25       | GP40        |         |         |          |                  | BL   |
 

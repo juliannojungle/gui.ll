@@ -109,8 +109,8 @@ void DisplayPng(FIL *file) {
 
     // ####### LCD_1IN28_Display #######
     LCD_1IN28_SetWindows(0, 0, maxCol, maxRow);
-    DigitalWrite(EPD_DC_PIN, 1);
-    DigitalWrite(EPD_CS_PIN, 0);
+    DigitalWrite(LCD_DC_PIN, 1);
+    DigitalWrite(LCD_CS_PIN, 0);
 
     int num_palette = 0;
     png_colorp palette = NULL;
@@ -147,23 +147,10 @@ void DisplayPng(FIL *file) {
         row_pointers = NULL;
     }
 
-    DigitalWrite(EPD_CS_PIN, 1);
+    DigitalWrite(LCD_CS_PIN, 1);
     LCD_1IN28_SendCommand(0x29);
     // ####### LCD_1IN28_Display #######
 
-    /* Turn backlight on */
-#if _DEBUG
-    printf("Turning on backlight...\n");
-#endif
-    EPD_BL_PIN = 25;
-    GPIOSetDir(EPD_BL_PIN, GPIO_OUT);
-    DigitalWrite(EPD_CS_PIN, 1);
-    DigitalWrite(EPD_DC_PIN, 0);
-    DigitalWrite(EPD_BL_PIN, 1);
-
-#if _DEBUG
-    printf("DEV_Module_Exit...\n");
-#endif
     DriverExit();
 
 #if _DEBUG

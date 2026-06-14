@@ -7,6 +7,7 @@
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "HALConfig.h"
 
 #include <stdio.h>
 #include <stdint.h>
@@ -77,9 +78,9 @@ void SPIInit(uint32_t speed) {
     // LCD SPI initialization for ESP32
     // Note: SD card SPI is handled separately in diskio.c
     spi_bus_config_t bus_cfg = {
-        .mosi_io_num = 13,  // LCD MOSI (adjust per hardware)
+        .mosi_io_num = LCD_MOSI_PIN,
         .miso_io_num = -1,  // LCD doesn't need MISO
-        .sclk_io_num = 14,  // LCD SCLK (adjust per hardware)
+        .sclk_io_num = LCD_CLK_PIN,
         .quadwp_io_num = -1,
         .quadhd_io_num = -1,
         .max_transfer_sz = 240 * 240 * 2

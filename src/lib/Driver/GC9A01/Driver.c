@@ -1,5 +1,5 @@
 /*****************************************************************************
-* | File          :   DEV_Config.c
+* | File          :   Driver.c
 * | Author      :   
 * | Function    :   Hardware underlying interface
 * | Info        :
@@ -29,52 +29,33 @@
 #ifndef _DRIVER_C_
 #define _DRIVER_C_
 
-// GPIO
-int EPD_RST_PIN;
-int EPD_DC_PIN;
-int EPD_CS_PIN;
-int EPD_BL_PIN;
-int EPD_CLK_PIN;
-int EPD_MOSI_PIN;
+#include "HALConfig.h"
 
 uint slice_num;
 
 void DriverGPIOInit(void) {
-    GPIOSetDir(EPD_RST_PIN, GPIO_OUT);
-    GPIOSetDir(EPD_DC_PIN, GPIO_OUT);
-    GPIOSetDir(EPD_CS_PIN, GPIO_OUT);
-    GPIOSetDir(EPD_BL_PIN, GPIO_OUT);
+    GPIOSetDir(LCD_RST_PIN, GPIO_OUT);
+    GPIOSetDir(LCD_DC_PIN, GPIO_OUT);
+    GPIOSetDir(LCD_CS_PIN, GPIO_OUT);
 
-    GPIOSetDir(EPD_CS_PIN, GPIO_OUT);
-    GPIOSetDir(EPD_BL_PIN, GPIO_OUT);
-
-    DigitalWrite(EPD_CS_PIN, 1);
-    DigitalWrite(EPD_DC_PIN, 0);
-    DigitalWrite(EPD_BL_PIN, 1);
+    DigitalWrite(LCD_CS_PIN, 1);
+    DigitalWrite(LCD_DC_PIN, 0);
 }
 
 UBYTE DriverInit(void) {
     STDIOInitAll();
 
-    //GPIO PIN
-    EPD_DC_PIN = 8;
-    EPD_CS_PIN = 9;
-    EPD_CLK_PIN = 10;
-    EPD_MOSI_PIN = 11;
-    EPD_RST_PIN = 12;
-    EPD_BL_PIN = 13;
-
     // SPI Config
     SPIInit(10000 * 1000);
-    GPIOSetFunction(EPD_CLK_PIN, GPIO_FUNC_SPI);
-    GPIOSetFunction(EPD_MOSI_PIN, GPIO_FUNC_SPI);
+    GPIOSetFunction(LCD_CLK_PIN, GPIO_FUNC_SPI);
+    GPIOSetFunction(LCD_MOSI_PIN, GPIO_FUNC_SPI);
 
     // GPIO Config
     DriverGPIOInit();
 
-    // PWM Config
-    GPIOSetFunction(EPD_BL_PIN, GPIO_FUNC_PWM);
-    slice_num = pwm_gpio_to_slice_num(EPD_BL_PIN);
+    // PWM Config (backlight)
+    GPIOSetFunction(LCD_BL_PIN, GPIO_FUNC_PWM);
+    slice_num = pwm_gpio_to_slice_num(LCD_BL_PIN);
     PWMSetWrap(slice_num, 100);
     PWMSetChannelLevel(slice_num, PWM_CHAN_B, 1);
     PWMSetClockDivider(slice_num, 50);
