@@ -36,7 +36,7 @@ gui.ll/
 │   │   ├── Platform/
 │   │   │   ├── RP2040/
 │   │   │   │   ├── HAL.c           # HAL: GPIO, SPI, PWM, I2C (Pico SDK)
-│   │   │   │   ├── HALConfig.h     # Pin definitions, Platform_SDCard_Init decl
+│   │   │   │   ├── HALConfig.h     # SD pins (SCLK=2, MOSI=3, MISO=0, CS=1) + LCD pins (DC=8, CS=9, CLK=10, MOSI=11, RST=12, BL=25)
 │   │   │   │   ├── SDConfig.h      # spi_t, sd_card_t struct definitions
 │   │   │   │   ├── SDHWConfig.h    # Default SPI/SD arrays + sd_get_num/sd_get_by_num
 │   │   │   │   ├── RTC.h           # RTC via hardware/rtc.h + get_fattime()
@@ -46,14 +46,14 @@ gui.ll/
 │   │   │   │
 │   │   │   └── ESP32/
 │   │   │       ├── CMakeLists.txt   # idf_component_register (ESP-IDF component)
-│   │   │       ├── HAL.c           # HAL: GPIO, SPI (ESP-IDF), LEDC PWM compat
-│   │   │       ├── HALConfig.h     # Pin definitions (SD_SPI_SCLK=42, MOSI=41, MISO=46, CS=45)
+│   │   │       ├── HAL.c           # HAL: GPIO, SPI (ESP-IDF), LEDC PWM compat — SPIInit uses LCD_MOSI_PIN/LCD_CLK_PIN from HALConfig.h
+│   │   │       ├── HALConfig.h     # SD pins (SCLK=42, MOSI=41, MISO=46, CS=45) + LCD pins (DC=8, CS=9, CLK=10, MOSI=11, RST=12, BL=40)
 │   │   │       ├── SDConfig.h      # spi_t, sd_card_t struct definitions (ESP32 types)
 │   │   │       ├── SDHWConfig.h    # Default SPI/SD arrays
 │   │   │       ├── RTC.h           # RTC via settimeofday + get_fattime()
 │   │   │       └── DiskIO.c        # FatFS disk I/O (ESP-IDF SPI master)
 │   │   │
-│   │   ├── Driver/GC9A01/          # LCD driver (uses HAL.c abstractions)
+│   │   ├── Driver/GC9A01/          # LCD driver — uses LCD_* defines from HALConfig.h; DriverInit configures SPI, GPIO and backlight PWM
 │   │   ├── LCD/                     # LCD commands (LCD_1in28)
 │   │   ├── GUI/                     # Paint/drawing utilities
 │   │   └── Fonts/                   # Font data
@@ -250,6 +250,9 @@ This prevents the git plugin from showing false "modified" files in submodules
 - **ESP32-S3**: Builds successfully, generates `.bin`, zero errors and warnings.
   - libpng false-positive warnings suppressed via `set_source_files_properties` in ESP32 `CMakeLists.txt`
   - SD card SPI pins updated to match shared shield design: SCLK=42, MOSI=41, MISO=46, CS=45
+  - LCD pin defines (`LCD_DC_PIN`, `LCD_CS_PIN`, etc.) moved to `HALConfig.h` per platform
+  - `EPD_*` prefix replaced with `LCD_*` throughout; backlight init moved from `PNGHelper.c` to `DriverInit`
+  - `HAL.c` ESP32 `SPIInit` now uses `LCD_MOSI_PIN`/`LCD_CLK_PIN` from `HALConfig.h` (was hardcoded)
 
 ---
 
@@ -272,6 +275,12 @@ This prevents the git plugin from showing false "modified" files in submodules
 5. **`#include "HAL.c"` pattern**: The project uses a single-translation-unit approach
    where .c files are included directly (not compiled separately). This is intentional —
    do not refactor into separate compilation units unless explicitly requested.
+
+7. **LCD pin ownership**: All LCD GPIO definitions (`LCD_DC_PIN`, `LCD_CS_PIN`, `LCD_CLK_PIN`,
+   `LCD_MOSI_PIN`, `LCD_RST_PIN`, `LCD_BL_PIN`) live exclusively in each platform's `HALConfig.h`.
+   The `Driver.c` reads them via `#include "HALConfig.h"` — no pin numbers hardcoded in driver code.
+   Prefix is `LCD_*` (not `EPD_*`). Backlight PWM is initialized inside `DriverInit` — never in
+   helpers or application code. `PNGHelper.c` has no pin knowledge whatsoever.
 
 6. **Shared shield GPIO selection**: Both target boards expose 2×20 pin headers (1.27mm pitch).
    The LCD is internally wired to the same GPIO numbers on both devices, but those GPIOs occupy
