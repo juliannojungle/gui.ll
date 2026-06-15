@@ -49,21 +49,21 @@ Currently supports **RP2040** (Raspberry Pi Pico) and **ESP32** from a single co
 > The below table shows connections in a way that you can create a header connector/shield board to swap between the target devices.\
 > ⚠️ *Connect it to the RP2040 **or** to the ESP32. You're **NOT** supposed to wire RP2040 and ESP32 together.*
 
-| RP2040     | ESP32       | R1(10K) | R2(10K) | C1(10uF) | SDCARD           | LCD* |
-|------------|-------------|---------|---------|----------|------------------|------|
-| GP0 (MISO) | GP46 (MISO) |         |  MISO   |          | pin7 (DAT0/MISO) |      |
-| GP1 (CS)   | GP45 (CS)   |   CS    |         |          | pin1 (DAT3/CS)   |      |
-| GP2 (SCK)  | GP42 (SCK)  |         |         |          | pin5 (CLK/SCK)   |      |
-| GP3 (MOSI) | GP41 (MOSI) |         |         |          | pin2 (CMD/MOSI)  |      |
-| GND        | GND         |         |         |          | pin3 (VSS1/GND)  |      |
-| GND        | GND         |         |         |   GND    | pin6 (VSS2/GND)  | GND  |
-| 3V3        | 3V3         |   3V3   |  3V3    |   3V3    | pin4 (VDD/3V3)   | 3V3  |
-| GP8        | GP8         |         |         |          |                  | DC   |
-| GP9        | GP9         |         |         |          |                  | CS   |
-| GP10       | GP10        |         |         |          |                  | CLK  |
-| GP11       | GP11        |         |         |          |                  | MOSI |
-| GP12       | GP12        |         |         |          |                  | RST  |
-| GP25       | GP40        |         |         |          |                  | BL   |
+| RP2040     | ESP32       | R1(10K) | R2(10K) | C1(10uF) | SDCARD           | LCD*       |
+|------------|-------------|---------|---------|----------|------------------|------------|
+| GP0 (MISO) | GP46 (MISO) |         |  MISO   |          | pin7 (DAT0/MISO) |            |
+| GP1 (CS)   | GP45 (CS)   |   CS    |         |          | pin1 (DAT3/CS)   |            |
+| GP2 (SCK)  | GP42 (SCK)  |         |         |          | pin5 (CLK/SCK)   |            |
+| GP3 (MOSI) | GP41 (MOSI) |         |         |          | pin2 (CMD/MOSI)  |            |
+| GND        | GND         |         |         |          | pin3 (VSS1/GND)  |            |
+| GND        | GND         |         |         |   GND    | pin6 (VSS2/GND)  | GND        |
+| 3V3        | 3V3         |   3V3   |  3V3    |   3V3    | pin4 (VDD/3V3)   | VCC (3V3)  |
+| GP8        | GP8         |         |         |          |                  | DC         |
+| GP9        | GP9         |         |         |          |                  | CS         |
+| GP10       | GP10        |         |         |          |                  | CLK        |
+| GP11       | GP11        |         |         |          |                  | DIN (MOSI) |
+| GP12       | GP12        |         |         |          |                  | RST        |
+| GP25       | GP40        |         |         |          |                  | BL         |
 
 <sup>* The LCD connection is internally made on these devices, GP pins just for reference.</sup>
 
