@@ -748,8 +748,53 @@ DRESULT disk_ioctl(BYTE pdrv, BYTE cmd, void* buff)
 /* Platform_SDCard_Init - High-level initialization entry point          */
 /*-----------------------------------------------------------------------*/
 
+#ifndef DISKIO_TEST_MODE
+
+/**
+ * Card detect ISR — called on any edge of the detect pin.
+ * Resets initialized state so next MountSdCard() triggers full re-init.
+ * IRAM_ATTR required by ESP-IDF for GPIO ISR handlers.
+ */
+static void IRAM_ATTR sd_card_detect_isr(void *arg) {
+    (void)arg;
+    /* Card removed or reinserted — reset state to force re-init on next mount */
+    sd_state.initialized = false;
+}
+
+#endif /* DISKIO_TEST_MODE */
+
+/**
+ * Initialize the SPI peripheral and SD card for the ESP32 platform.
+ * Configures card detect GPIO with pull-up and ISR, checks card presence,
+ * then performs full SPI card initialization.
+ * Must be called before f_mount().
+ *
+ * @return true if initialization succeeded, false otherwise.
+ */
 bool Platform_SDCard_Init(void)
 {
+#ifndef DISKIO_TEST_MODE
+    /* Configure card detect pin: input with pull-up.
+     * Switch is normally open; closes to GND when card is present.
+     * Register ISR on both edges to catch insertion and removal. */
+    gpio_config_t detect_cfg = {
+        .pin_bit_mask = (1ULL << SD_DETECT_PIN),
+        .mode = GPIO_MODE_INPUT,
+        .pull_up_en = GPIO_PULLUP_ENABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_ANYEDGE
+    };
+    gpio_config(&detect_cfg);
+    gpio_install_isr_service(0);
+    gpio_isr_handler_add((gpio_num_t)SD_DETECT_PIN, sd_card_detect_isr, NULL);
+
+    /* Check card is actually present before attempting SPI init */
+    if (gpio_get_level((gpio_num_t)SD_DETECT_PIN) != 0) {
+        printf("SD card not detected\n");
+        return false;
+    }
+#endif /* DISKIO_TEST_MODE */
+
     DSTATUS status = disk_initialize(0);
     return (status == 0);
 }

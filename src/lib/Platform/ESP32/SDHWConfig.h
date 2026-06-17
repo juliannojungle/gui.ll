@@ -11,10 +11,10 @@
 static spi_t spis[] = {  // One for each SPI.
     {
         .host_id = 2,           // SPI2_HOST
-        .miso_gpio = 19,
-        .mosi_gpio = 23,
-        .sck_gpio = 18,
-        .baud_rate = 25 * 1000 * 1000
+        .miso_gpio = SD_SPI_MISO,
+        .mosi_gpio = SD_SPI_MOSI,
+        .sck_gpio = SD_SPI_SCLK,
+        .baud_rate = SD_SPI_BAUDRATE
     }
 };
 
@@ -23,10 +23,10 @@ static sd_card_t sd_cards[] = {  // One for each SD card.
         .pcName = "0:",             // Name used to mount device
         .type = SD_IF_SPI,
         .spi_if.spi = &spis[0],    // Pointer to the SPI driver
-        .spi_if.ss_gpio = 5,       // The SPI slave select GPIO
+        .spi_if.ss_gpio = SD_SPI_CS,
         .use_card_detect = true,
-        .card_detect_gpio = 21,    // Card detect GPIO
-        .card_detected_true = 0    // What the GPIO reads when card is present
+        .card_detect_gpio = SD_DETECT_PIN,
+        .card_detected_true = 0    // LOW = card present (normally-open switch closes to GND, pull-up on SD_DETECT_PIN)
     }
 };
 

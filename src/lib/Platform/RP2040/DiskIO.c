@@ -586,14 +586,55 @@ DRESULT disk_ioctl(BYTE pdrv, BYTE cmd, void* buff) {
 /* Platform SD Card Initialization                                       */
 /*-----------------------------------------------------------------------*/
 
+#ifndef DISKIO_TEST_MODE
+
+/**
+ * Card detect ISR — called on any edge of the detect pin.
+ * If the card was removed (detect pin goes high), force re-initialization
+ * so the next MountSdCard() attempt will reinitialize the SPI protocol.
+ */
+static void sd_card_detect_callback(uint gpio, uint32_t events) {
+    static bool busy = false;
+    if (busy) return; /* debounce */
+    busy = true;
+    if (gpio == SD_DETECT_PIN) {
+        /* Card removed or reinserted — reset state to force re-init on next mount */
+        sd_state.initialized = false;
+    }
+    busy = false;
+}
+
+#endif /* DISKIO_TEST_MODE */
+
 /**
  * Initialize the SPI peripheral and SD card for the RP2040 platform.
- * Configures SPI pins, CS GPIO, and performs full card initialization.
+ * Configures SPI pins, CS GPIO, card detect GPIO with pull-up and ISR,
+ * and performs full card initialization.
  * Must be called before f_mount().
  *
  * @return true if initialization succeeded, false otherwise.
  */
 bool Platform_SDCard_Init(void) {
+#ifndef DISKIO_TEST_MODE
+    /* Configure card detect pin: input with pull-up.
+     * Switch is normally open; closes to GND when card is present.
+     * Register ISR on both edges to catch insertion and removal. */
+    gpio_init(SD_DETECT_PIN);
+    gpio_set_dir(SD_DETECT_PIN, GPIO_IN);
+    gpio_pull_up(SD_DETECT_PIN);
+    gpio_set_irq_enabled_with_callback(
+        SD_DETECT_PIN,
+        GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL,
+        true,
+        &sd_card_detect_callback);
+
+    /* Check card is actually present before attempting SPI init */
+    if (gpio_get(SD_DETECT_PIN) != 0) {
+        printf("SD card not detected\n");
+        return false;
+    }
+#endif /* DISKIO_TEST_MODE */
+
     DSTATUS status = disk_initialize(0);
     return (status == 0);
 }

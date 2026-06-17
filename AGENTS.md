@@ -36,22 +36,22 @@ gui.ll/
 │   │   ├── Platform/
 │   │   │   ├── RP2040/
 │   │   │   │   ├── HAL.c           # HAL: GPIO, SPI, PWM, I2C (Pico SDK)
-│   │   │   │   ├── HALConfig.h     # SD pins (SCLK=2, MOSI=3, MISO=0, CS=1) + LCD pins (DC=8, CS=9, CLK=10, MOSI=11, RST=12, BL=25)
+│   │   │   │   ├── HALConfig.h     # SD pins (SCLK=2, MOSI=3, MISO=0, CS=1, DETECT=5) + LCD pins (DC=8, CS=9, CLK=10, MOSI=11, RST=12, BL=25)
 │   │   │   │   ├── SDConfig.h      # spi_t, sd_card_t struct definitions
 │   │   │   │   ├── SDHWConfig.h    # Default SPI/SD arrays + sd_get_num/sd_get_by_num
 │   │   │   │   ├── RTC.h           # RTC via hardware/rtc.h + get_fattime()
-│   │   │   │   ├── DiskIO.c        # FatFS disk I/O (SPI SD protocol)
+│   │   │   │   ├── DiskIO.c        # FatFS disk I/O (SPI SD protocol) — Platform_SDCard_Init configures card detect GPIO + ISR
 │   │   │   │   ├── PreExecutable.cmake   # fatfs lib, patch inclusion
 │   │   │   │   └── PostExecutable.cmake  # zlib, libpng, link libraries
 │   │   │   │
 │   │   │   └── ESP32/
 │   │   │       ├── CMakeLists.txt   # idf_component_register (ESP-IDF component)
 │   │   │       ├── HAL.c           # HAL: GPIO, SPI (ESP-IDF), LEDC PWM compat — SPIInit uses LCD_MOSI_PIN/LCD_CLK_PIN from HALConfig.h
-│   │   │       ├── HALConfig.h     # SD pins (SCLK=42, MOSI=41, MISO=46, CS=45) + LCD pins (DC=8, CS=9, CLK=10, MOSI=11, RST=12, BL=40)
+│   │   │       ├── HALConfig.h     # SD pins (SCLK=42, MOSI=41, MISO=46, CS=45, DETECT=39) + LCD pins (DC=8, CS=9, CLK=10, MOSI=11, RST=12, BL=40)
 │   │   │       ├── SDConfig.h      # spi_t, sd_card_t struct definitions (ESP32 types)
 │   │   │       ├── SDHWConfig.h    # Default SPI/SD arrays
 │   │   │       ├── RTC.h           # RTC via settimeofday + get_fattime()
-│   │   │       └── DiskIO.c        # FatFS disk I/O (ESP-IDF SPI master)
+│   │   │       └── DiskIO.c        # FatFS disk I/O (ESP-IDF SPI master) — Platform_SDCard_Init configures card detect GPIO + ISR (IRAM_ATTR)
 │   │   │
 │   │   ├── Driver/GC9A01/          # LCD driver — uses LCD_* defines from HALConfig.h; DriverInit configures SPI, GPIO and backlight PWM
 │   │   ├── LCD/                     # LCD commands (LCD_1in28)
@@ -253,6 +253,10 @@ This prevents the git plugin from showing false "modified" files in submodules
   - LCD pin defines (`LCD_DC_PIN`, `LCD_CS_PIN`, etc.) moved to `HALConfig.h` per platform
   - `EPD_*` prefix replaced with `LCD_*` throughout; backlight init moved from `PNGHelper.c` to `DriverInit`
   - `HAL.c` ESP32 `SPIInit` now uses `LCD_MOSI_PIN`/`LCD_CLK_PIN` from `HALConfig.h` (was hardcoded)
+  - SD card detect implemented: `SD_DETECT_PIN` = GP5 (RP2040) / GP39 (ESP32-S3), H1 pin 12
+    - Normally-open switch, closes to GND when card present (pull-up in firmware)
+    - ISR on both edges resets `sd_state.initialized` to force re-init on next mount
+    - `Platform_SDCard_Init` checks detect pin before attempting SPI init
 
 ---
 
@@ -276,13 +280,13 @@ This prevents the git plugin from showing false "modified" files in submodules
    where .c files are included directly (not compiled separately). This is intentional —
    do not refactor into separate compilation units unless explicitly requested.
 
-7. **LCD pin ownership**: All LCD GPIO definitions (`LCD_DC_PIN`, `LCD_CS_PIN`, `LCD_CLK_PIN`,
+6. **LCD pin ownership**: All LCD GPIO definitions (`LCD_DC_PIN`, `LCD_CS_PIN`, `LCD_CLK_PIN`,
    `LCD_MOSI_PIN`, `LCD_RST_PIN`, `LCD_BL_PIN`) live exclusively in each platform's `HALConfig.h`.
    The `Driver.c` reads them via `#include "HALConfig.h"` — no pin numbers hardcoded in driver code.
    Prefix is `LCD_*` (not `EPD_*`). Backlight PWM is initialized inside `DriverInit` — never in
    helpers or application code. `PNGHelper.c` has no pin knowledge whatsoever.
 
-6. **Shared shield GPIO selection**: Both target boards expose 2×20 pin headers (1.27mm pitch).
+7. **Shared shield GPIO selection**: Both target boards expose 2×20 pin headers (1.27mm pitch).
    The LCD is internally wired to the same GPIO numbers on both devices, but those GPIOs occupy
    *different physical positions* on the headers. After overlaying the two pinouts, the only
    free GPIOs that land on the same header position on both boards are listed below.
@@ -292,12 +296,14 @@ This prevents the git plugin from showing false "modified" files in submodules
    - RP2040 GP2 = ESP32-S3 GP42 → SD SCK
    - RP2040 GP3 = ESP32-S3 GP41 → SD MOSI
 
+   Already assigned to SD card detect:
+   - RP2040 GP5 = ESP32-S3 GP39 → SD_DETECT_PIN (H1 pin 12, normally-open switch to GND)
+
    Additional overlapping free pins available for future features — **header H1** (same physical
    pin number on both boards):
    | H1 Pin | RP2040 GPIO | ESP32-S3 GPIO | Notes |
    |--------|-------------|---------------|-------|
    | 11     | GP13        | GP18          | ✅ usable |
-   | 12     | GP5         | GP39          | ✅ usable |
    | 13     | GP14        | GP17          | ✅ usable |
    | 15     | GP15        | GP16          | ✅ usable |
    | 17     | SWCLK       | GP15          | ⚠️ RP2040 SWD debug pin — usable as GPIO but disables SWD debug while shield is connected |
@@ -310,10 +316,23 @@ This prevents the git plugin from showing false "modified" files in submodules
    | 7             | 14              | GP27        | GP2           | ✅ usable |
    | 5             | 16              | GP26        | GP3           | ❌ ESP32-S3 GP3 is a strapping pin — HIGH at boot triggers UART download mode, unsafe for shield use |
 
-   ⚠️ **Total: 9 overlapping free physical pins** (6 on H1 + 3 on H2). No other pins can be
-   reused on a shield compatible with both boards. Of these 9, pin H2-5/16 (GP26/GP3) is
-   excluded from safe use due to the ESP32-S3 strapping pin restriction, leaving **8 usable
-   pins** for future features (with the SWD caveat on H1-17 and H1-19).
+   ⚠️ **Total: 9 overlapping physical pins** (6 on H1 + 3 on H2). No other pins can be
+   reused on a shield compatible with both boards. Of these 9: 5 are assigned (SD SPI + detect),
+   H2-5/16 (GP26/GP3) is excluded due to the ESP32-S3 strapping pin restriction, leaving
+   **3 fully usable pins** + 2 with SWD caveat (H1-17, H1-19) for future features.
 
    Reference pinout images: `Documentation/Image/RP2040_LCD_1_28.png` and
    `Documentation/Image/ESP32_S3_LCD_1_28.png` (also linked in README.md Supported Platforms table).
+
+8. **SD card detect design**: The target device is subject to physical impacts that can eject
+   the SD card. A dedicated card detect pin (`SD_DETECT_PIN`) is wired to H1 pin 12 on the
+   shared shield:
+   - RP2040: GP5 — ESP32-S3: GP39
+   - Switch type: **normally open**, closes to GND when card is present
+   - Firmware configures internal pull-up; `card_detected_true = 0` (LOW = present)
+   - ISR registered on both edges (insert and remove) resets `sd_state.initialized = false`,
+     forcing `disk_initialize()` to run again on the next `MountSdCard()` call
+   - `Platform_SDCard_Init()` checks the detect pin before attempting SPI — returns `false`
+     immediately if card is absent, avoiding the ~1s SPI timeout
+   - RP2040: ISR via `gpio_set_irq_enabled_with_callback` (Pico SDK)
+   - ESP32-S3: ISR via `gpio_isr_handler_add` with `IRAM_ATTR` (required by ESP-IDF)

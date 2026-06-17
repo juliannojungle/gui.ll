@@ -20,6 +20,10 @@
 #define SD_SPI_BAUDRATE (25 * 1000 * 1000)
 #endif
 
+#ifndef SD_DETECT_PIN
+#define SD_DETECT_PIN 5   // H1 pin 12 — card detect switch (LOW = card present, pull-up assumed)
+#endif
+
 #ifndef LCD_DC_PIN
 #define LCD_DC_PIN 8
 #endif
