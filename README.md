@@ -51,12 +51,11 @@ Currently supports **RP2040** (Raspberry Pi Pico) and **ESP32** from a single co
 
 | RP2040     | ESP32       | R1(10K) | R2(10K) | C1(10uF) | SDCARD           | LCD*       |
 |------------|-------------|---------|---------|----------|------------------|------------|
-| GP5        | GP39        |         |         |          | SD_DETECT        |            |
 | GP0 (MISO) | GP46 (MISO) |         |  MISO   |          | pin7 (DAT0/MISO) |            |
 | GP1 (CS)   | GP45 (CS)   |   CS    |         |          | pin1 (DAT3/CS)   |            |
 | GP2 (SCK)  | GP42 (SCK)  |         |         |          | pin5 (CLK/SCK)   |            |
 | GP3 (MOSI) | GP41 (MOSI) |         |         |          | pin2 (CMD/MOSI)  |            |
-| GND        | GND         |         |         |          | pin3 (VSS1/GND)  |            |
+| GP5        | GP39        |         |         |          | pin3 (VSS1/GND)  |            |
 | GND        | GND         |         |         |   GND    | pin6 (VSS2/GND)  | GND        |
 | 3V3        | 3V3         |   3V3   |  3V3    |   3V3    | pin4 (VDD/3V3)   | VCC (3V3)  |
 | GP8        | GP8         |         |         |          |                  | DC         |

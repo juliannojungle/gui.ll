@@ -35,23 +35,23 @@ gui.ll/
 │   │   │
 │   │   ├── Platform/
 │   │   │   ├── RP2040/
-│   │   │   │   ├── HAL.c           # HAL: GPIO, SPI, PWM, I2C (Pico SDK)
-│   │   │   │   ├── HALConfig.h     # SD pins (SCLK=2, MOSI=3, MISO=0, CS=1, DETECT=5) + LCD pins (DC=8, CS=9, CLK=10, MOSI=11, RST=12, BL=25)
+│   │   │   │   ├── HAL.c           # HAL: GPIO, SPI, PWM, I2C (Pico SDK) — LCD SPI uses LCD_SPI from HALConfig.h
+│   │   │   │   ├── HALConfig.h     # SD pins + SD_SPI(spi0); LCD pins + LCD_SPI(spi1); SD_DETECT_PIN
 │   │   │   │   ├── SDConfig.h      # spi_t, sd_card_t struct definitions
 │   │   │   │   ├── SDHWConfig.h    # Default SPI/SD arrays + sd_get_num/sd_get_by_num
 │   │   │   │   ├── RTC.h           # RTC via hardware/rtc.h + get_fattime()
-│   │   │   │   ├── DiskIO.c        # FatFS disk I/O (SPI SD protocol) — Platform_SDCard_Init configures card detect GPIO + ISR
+│   │   │   │   ├── DiskIO.c        # FatFS disk I/O (SPI SD) — real CRC7 on all cmds; faithful no-OS-FatFS handshake; card detect ISR
 │   │   │   │   ├── PreExecutable.cmake   # fatfs lib, patch inclusion
 │   │   │   │   └── PostExecutable.cmake  # zlib, libpng, link libraries
 │   │   │   │
 │   │   │   └── ESP32/
 │   │   │       ├── CMakeLists.txt   # idf_component_register (ESP-IDF component)
-│   │   │       ├── HAL.c           # HAL: GPIO, SPI (ESP-IDF), LEDC PWM compat — SPIInit uses LCD_MOSI_PIN/LCD_CLK_PIN from HALConfig.h
-│   │   │       ├── HALConfig.h     # SD pins (SCLK=42, MOSI=41, MISO=46, CS=45, DETECT=39) + LCD pins (DC=8, CS=9, CLK=10, MOSI=11, RST=12, BL=40)
+│   │   │       ├── HAL.c           # HAL: GPIO, SPI (ESP-IDF), LEDC PWM compat — LCD SPI uses LCD_SPI from HALConfig.h
+│   │   │       ├── HALConfig.h     # SD pins + SD_SPI(SPI2_HOST); LCD pins + LCD_SPI(SPI3_HOST); SD_DETECT_PIN
 │   │   │       ├── SDConfig.h      # spi_t, sd_card_t struct definitions (ESP32 types)
 │   │   │       ├── SDHWConfig.h    # Default SPI/SD arrays
 │   │   │       ├── RTC.h           # RTC via settimeofday + get_fattime()
-│   │   │       └── DiskIO.c        # FatFS disk I/O (ESP-IDF SPI master) — Platform_SDCard_Init configures card detect GPIO + ISR (IRAM_ATTR)
+│   │   │       └── DiskIO.c        # FatFS disk I/O (ESP-IDF SPI master) — parity with RP2040: CRC7, manual CS, card detect ISR (IRAM_ATTR)
 │   │   │
 │   │   ├── Driver/GC9A01/          # LCD driver — uses LCD_* defines from HALConfig.h; DriverInit configures SPI, GPIO and backlight PWM
 │   │   ├── LCD/                     # LCD commands (LCD_1in28)
@@ -246,17 +246,24 @@ This prevents the git plugin from showing false "modified" files in submodules
 
 ## Current Status (as of last session)
 
-- **RP2040**: Builds successfully, generates `.uf2`, zero errors and warnings.
-- **ESP32-S3**: Builds successfully, generates `.bin`, zero errors and warnings.
-  - libpng false-positive warnings suppressed via `set_source_files_properties` in ESP32 `CMakeLists.txt`
-  - SD card SPI pins updated to match shared shield design: SCLK=42, MOSI=41, MISO=46, CS=45
-  - LCD pin defines (`LCD_DC_PIN`, `LCD_CS_PIN`, etc.) moved to `HALConfig.h` per platform
-  - `EPD_*` prefix replaced with `LCD_*` throughout; backlight init moved from `PNGHelper.c` to `DriverInit`
-  - `HAL.c` ESP32 `SPIInit` now uses `LCD_MOSI_PIN`/`LCD_CLK_PIN` from `HALConfig.h` (was hardcoded)
-  - SD card detect implemented: `SD_DETECT_PIN` = GP5 (RP2040) / GP39 (ESP32-S3), H1 pin 12
-    - Normally-open switch, closes to GND when card present (pull-up in firmware)
-    - ISR on both edges resets `sd_state.initialized` to force re-init on next mount
-    - `Platform_SDCard_Init` checks detect pin before attempting SPI init
+- **RP2040**: Builds and runs. SD card init + read confirmed working on a solid prototype.
+- **ESP32-S3**: Builds successfully (`.bin`); SD path rewritten for parity but **not yet
+  hardware-tested**.
+
+Recent work:
+- SD pins / shared-shield design, LCD pin defines, `EPD_*`→`LCD_*`, backlight in `DriverInit`,
+  card detect (see Design Decisions 6-8).
+- **SD driver rewritten as a faithful port of no-OS-FatFS** (Design Decision 9): real CRC7 on
+  every command, CMD0/CMD8/CMD58/ACMD41 handshake, CS held low across the whole init, block vs
+  byte addressing (SDHC vs SDSC). Same structure on both platforms.
+- **SPI instance/host is configurable** in `HALConfig.h` (Design Decision 10): `SD_SPI` and
+  `LCD_SPI` defines; no hardcoded `spi0`/`SPI_PORT` in driver code. RP2040: SD=spi0, LCD=spi1.
+  ESP32-S3: SD=SPI2_HOST, LCD=SPI3_HOST.
+- **Hard-won debugging lesson** (Design Decision 11): a flaky "CMD0 works, CMD8/ACMD41 silent"
+  symptom was **insufficient power**, not the SPI protocol. The SD card was powered from the
+  RP2040 `ADC_AVDD` pin (filtered, high-impedance) which sagged to 2.8V under load. CMD0 (low
+  current) worked; ACMD41 (card init current spike) browned the card out. Always rule out power
+  before chasing protocol bugs.
 
 ---
 
@@ -336,3 +343,39 @@ This prevents the git plugin from showing false "modified" files in submodules
      immediately if card is absent, avoiding the ~1s SPI timeout
    - RP2040: ISR via `gpio_set_irq_enabled_with_callback` (Pico SDK)
    - ESP32-S3: ISR via `gpio_isr_handler_add` with `IRAM_ATTR` (required by ESP-IDF)
+
+9. **SD SPI driver is a faithful port of no-OS-FatFS**: `DiskIO.c` on both platforms mirrors the
+   proven no-OS-FatFS-SD-SPI-RPi-Pico init/command logic. Key points that MUST be preserved:
+   - **Real CRC7 on every command** (table from no-OS-FatFS `crc.c`), not just CMD0/CMD8.
+     Some cards reject commands with a dummy CRC even in SPI mode. CMD59 enables CRC on the card.
+   - **CS held LOW continuously** through the whole init handshake (one `sd_acquire` at the
+     start, one `sd_release` at the end) — no per-command CS toggling, no deselect pulses.
+   - Handshake order: 74+ init clocks (CS high) → CMD0 (retried) → CMD8 (SDv2 detect) → CMD59 →
+     ACMD41 loop until idle bit clears → CMD58 (CCS/capacity) → read CSD.
+   - **Block vs byte addressing**: SDHC/SDXC use block addressing; SDSC multiplies the LBA by 512.
+   - Do NOT reintroduce deselect pulses, whole-sequence retries, or per-command CS toggling —
+     those were dead-ends tried during debugging; the real bug was power (Decision 11).
+
+10. **SPI instance/host lives in HALConfig**: The SPI peripheral for SD and LCD is declared in
+    each platform's `HALConfig.h`, never hardcoded in driver code:
+    - `SD_SPI`  — RP2040: `spi0`; ESP32-S3: `SPI2_HOST`
+    - `LCD_SPI` — RP2040: `spi1`; ESP32-S3: `SPI3_HOST`
+    - **RP2040**: the SPI peripheral is fixed by the pin (GP0-7/16-23 = spi0; GP8-15/26-28 = spi1).
+      `SD_SPI`/`LCD_SPI` MUST match the chosen pins or the bus is silent.
+    - **ESP32-S3**: the GPIO matrix routes any pin to any host, so the host isn't pin-fixed;
+      SD and LCD are kept on separate hosts (SPI2/SPI3) so they don't contend.
+    - ESP32-S3 SD uses **manual CS** (`spics_io_num = -1`, CS driven as GPIO) so CS can be held
+      low across a full command/response/data sequence; clock changes use
+      `spi_bus_remove_device`/`spi_bus_add_device` (NOT a second `spi_bus_initialize`).
+
+11. **Power before protocol (debugging lesson)**: A long debugging session chasing an
+    "CMD0 ok, CMD8/ACMD41 return 0xFF" symptom turned out to be **insufficient supply voltage**,
+    not a firmware bug. The SD card had been powered from the RP2040 `ADC_AVDD` header pin, which
+    is a filtered, high-impedance analog reference — it read 3.2V unloaded but sagged to 2.8V
+    under the card's load, browning out the card during ACMD41's init-current spike. Low-current
+    commands (CMD0) survived; higher-current ACMD41 did not. Lessons:
+    - Do NOT power the SD card from `ADC_AVDD`; use the real 3V3 rail or a dedicated LDO from VSYS.
+    - Keep the 10µF decoupling cap physically next to the card.
+    - When commands fail *intermittently* or *partway through* the handshake with correct CRC,
+      suspect power/signal integrity (supply sag, weak source, long flying wires, common ground)
+      before rewriting protocol code.

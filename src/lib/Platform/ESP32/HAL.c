@@ -24,8 +24,6 @@
 #define GPIO_FUNC_I2C   0  // No-op on ESP32 (I2C pins configured in I2CInit)
 #define PWM_CHAN_B      1
 
-#define SPI_PORT SPI2_HOST
-
 static spi_device_handle_t lcd_spi_handle = NULL;
 
 void DigitalWrite(uint32_t pin, UBYTE value) {
@@ -86,7 +84,7 @@ void SPIInit(uint32_t speed) {
         .max_transfer_sz = 240 * 240 * 2
     };
 
-    spi_bus_initialize(SPI_PORT, &bus_cfg, SPI_DMA_CH_AUTO);
+    spi_bus_initialize(LCD_SPI, &bus_cfg, SPI_DMA_CH_AUTO);
 
     spi_device_interface_config_t dev_cfg = {
         .clock_speed_hz = (int)speed,
@@ -95,7 +93,7 @@ void SPIInit(uint32_t speed) {
         .queue_size = 1
     };
 
-    spi_bus_add_device(SPI_PORT, &dev_cfg, &lcd_spi_handle);
+    spi_bus_add_device(LCD_SPI, &dev_cfg, &lcd_spi_handle);
 }
 
 void GPIOSetFunction(uint32_t pin, uint32_t function) {

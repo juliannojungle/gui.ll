@@ -16,6 +16,12 @@
 #define SD_SPI_CS 45
 #endif
 
+/* SPI host for the SD card. ESP32-S3 routes any GPIO to any SPI host via the
+ * GPIO matrix (SPI1_HOST is reserved for flash; SPI2_HOST/SPI3_HOST are free). */
+#ifndef SD_SPI
+#define SD_SPI SPI2_HOST
+#endif
+
 #ifndef SD_SPI_BAUDRATE
 #define SD_SPI_BAUDRATE (25 * 1000 * 1000)
 #endif
@@ -41,6 +47,13 @@
 #endif
 #ifndef LCD_BL_PIN
 #define LCD_BL_PIN 40
+#endif
+
+/* SPI host for the LCD. ESP32-S3 routes any GPIO to any SPI host via the GPIO
+ * matrix, so the host isn't fixed by the pins. Kept separate from SD_SPI
+ * (SPI2_HOST) so LCD and SD card can operate on independent buses. */
+#ifndef LCD_SPI
+#define LCD_SPI SPI3_HOST
 #endif
 
 bool Platform_SDCard_Init(void);

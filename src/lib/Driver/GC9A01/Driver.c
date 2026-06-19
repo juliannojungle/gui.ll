@@ -33,13 +33,28 @@
 
 uint slice_num;
 
+void DriverGPIOMode(UWORD pin, UWORD mode) {
+    GPIOInit(pin);
+
+    if(mode == 0 || mode == GPIO_IN) {
+        GPIOSetDir(pin, GPIO_IN);
+    } else {
+        GPIOSetDir(pin, GPIO_OUT);
+    }
+}
+
 void DriverGPIOInit(void) {
-    GPIOSetDir(LCD_RST_PIN, GPIO_OUT);
-    GPIOSetDir(LCD_DC_PIN, GPIO_OUT);
-    GPIOSetDir(LCD_CS_PIN, GPIO_OUT);
+    DriverGPIOMode(LCD_RST_PIN, GPIO_OUT);
+    DriverGPIOMode(LCD_DC_PIN, GPIO_OUT);
+    DriverGPIOMode(LCD_CS_PIN, GPIO_OUT);
+    DriverGPIOMode(LCD_BL_PIN, GPIO_OUT);
+
+    DriverGPIOMode(LCD_CS_PIN, GPIO_OUT);
+    DriverGPIOMode(LCD_BL_PIN, GPIO_OUT);
 
     DigitalWrite(LCD_CS_PIN, 1);
     DigitalWrite(LCD_DC_PIN, 0);
+    DigitalWrite(LCD_BL_PIN, 1);
 }
 
 UBYTE DriverInit(void) {
@@ -61,13 +76,13 @@ UBYTE DriverInit(void) {
     PWMSetClockDivider(slice_num, 50);
     PWMSetEnabled(slice_num, true);
 
-    printf("DriverInit OK\r\n");
+    // printf("DriverInit OK\r\n");
     return 0;
 }
 
 void DriverSetPWM(UBYTE value) {
     if (value > 100) {
-        printf("DriverSetPWM error\r\n");
+        // printf("DriverSetPWM error\r\n");
     } else {
         PWMSetChannelLevel(slice_num, 1, value);
     }

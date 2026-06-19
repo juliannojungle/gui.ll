@@ -6,12 +6,11 @@
 #include "stdio.h"
 #include "hardware/i2c.h"
 #include "hardware/pwm.h"
+#include "HALConfig.h"
 
 #define UBYTE uint8_t
 #define UWORD uint16_t
 #define UDOUBLE uint32_t
-
-#define SPI_PORT spi1
 
 void DigitalWrite(uint pin, UBYTE value) {
     gpio_put(pin, value);
@@ -22,11 +21,11 @@ UBYTE DigitalRead(uint pin) {
 }
 
 void SPIWriteByte(UBYTE value) {
-    spi_write_blocking(SPI_PORT, &value, 1);
+    spi_write_blocking(LCD_SPI, &value, 1);
 }
 
 void SPIWriteNByte(UBYTE pData[], UDOUBLE len) {
-    spi_write_blocking(SPI_PORT, pData, len);
+    spi_write_blocking(LCD_SPI, pData, len);
 }
 
 void I2CWrite(UBYTE addr, UBYTE reg, UBYTE value) {
@@ -66,7 +65,7 @@ void STDIOInitAll(void) {
 }
 
 void SPIInit(uint speed) {
-    spi_init(SPI_PORT, speed);
+    spi_init(LCD_SPI, speed);
 }
 
 void GPIOSetFunction(uint pin, uint function) {

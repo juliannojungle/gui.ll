@@ -2,6 +2,7 @@
 #define _SD_HW_CONFIG_H_
 
 #include "SDConfig.h"
+#include "HALConfig.h"
 
 /* -----------------------------------------------------------------------
  * Default SPI and SD card configuration for RP2040.
