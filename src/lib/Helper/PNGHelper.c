@@ -151,6 +151,12 @@ void DisplayPng(FIL *file) {
     LCD_1IN28_SendCommand(0x29);
     // ####### LCD_1IN28_Display #######
 
+    /* Turn backlight on */
+    DriverGPIOMode(LCD_BL_PIN, GPIO_OUT);
+    DigitalWrite(LCD_CS_PIN, 1);
+    DigitalWrite(LCD_DC_PIN, 0);
+    DigitalWrite(LCD_BL_PIN, 1);
+
     DriverExit();
 
 #if _DEBUG

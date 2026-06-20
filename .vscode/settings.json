@@ -5,6 +5,5 @@
     "*.h": "c",
     "*.c": "c"
   },
-  "git.detectSubmodules": false,
-  "git.autoRepositoryDetection": "openEditors"
+  "git.detectSubmodules": false
 }

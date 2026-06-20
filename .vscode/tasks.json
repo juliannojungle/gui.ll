@@ -2,25 +2,16 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "Copy UF2 to Windows",
-            "type": "shell",
-            "command": "wsl",
-            "args": [
-                "-e", "bash", "-c",
-                "cp ~/gui.ll/build/gui.ll.uf2 /mnt/c/temp"
+            "label": "Build+Flash: Full RP2040",
+            "dependsOn":[
+                "Build: RP2040 Full",
+                "Flash: uf2 to RP2040"
             ],
-            "options": {
-                "cwd": "C:\\"
-            },
-            "presentation": {
-                "reveal": "always",
-                "panel": "shared",
-                "close": true
-            },
+            "dependsOrder": "sequence",
             "problemMatcher": []
         },
         {
-            "label": "Build: Full RP2040",
+            "label": "Build: RP2040 Full",
             "type": "shell",
             "command": "wsl",
             "args": [
@@ -38,8 +29,17 @@
             },
             "problemMatcher": ["$gcc"]
         },
+        // {
+        //     "label": "Build+Flash: Full ESP32",
+        //     "dependsOn":[
+        //       "Build: ESP32 Full",
+        //       "Flash: Attach USB device to WSL"
+        //     ],
+        //     "dependsOrder": "sequence",
+        //     "problemMatcher": []
+        // },
         {
-            "label": "Build: Full ESP32",
+            "label": "Build: ESP32 Full",
             "type": "shell",
             "command": "wsl",
             "args": [
@@ -56,6 +56,15 @@
                 "clear": true
             },
             "problemMatcher": ["$gcc"]
+        },
+        {
+            "label": "Build+Flash: RP2040 Incremental",
+            "dependsOn":[
+                "Build: Incremental",
+                "Flash: uf2 to RP2040"
+            ],
+            "dependsOrder": "sequence",
+            "problemMatcher": []
         },
         {
             "label": "Build: Incremental",
@@ -80,11 +89,86 @@
             "problemMatcher": ["$gcc"]
         },
         {
-            "label": "Setup: ESP32 toolchain in WSL",
+            "label": "Setup: ESP32 toolchain in WSL2",
+            "dependsOn": [
+                "ESP32 toolchain",
+                "Setup usbipd-win"
+            ],
+            "dependsOrder": "sequence",
+            "problemMatcher": []
+        },
+        {
+            "label": "ESP32 toolchain",
             "type": "shell",
             "command": "wsl",
             "args": [
                 "-e", "bash", "-c", "~/gui.ll/Toolchain/ESP32/Setup.sh"
+            ],
+            "options": {
+                "cwd": "C:\\"
+            },
+            "hide": true,
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared",
+                "clear": true
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Setup: RP2040 toolchain in WSL2",
+            "dependsOn": [
+                "RP2040 toolchain",
+                "Setup usbipd-win"
+            ],
+            "dependsOrder": "sequence",
+            "problemMatcher": []
+        },
+        {
+            "label": "RP2040 toolchain",
+            "type": "shell",
+            "command": "wsl",
+            "args": [
+                "-e", "bash", "-c", "bash $HOME/gui.ll/Toolchain/RP2040/Setup.sh"
+            ],
+            "options": {
+                "cwd": "C:\\"
+            },
+            "hide": true,
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared",
+                "clear": true,
+                "focus": true
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Setup usbipd-win",
+            "type": "shell",
+            "command": "cmd",
+            "args": [
+                "/c", "winget install usbipd"
+            ],
+            "options": {
+                "cwd": "C:\\"
+            },
+            "hide": true,
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared",
+                "clear": true,
+                "focus": true
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Setup: Bind RP2040 (admin)",
+            "type": "shell",
+            "command": "powershell",
+            "args": [
+                "-NoProfile", "-ExecutionPolicy", "Bypass",
+                "-File", "${workspaceFolder}/Toolchain/RP2040/Bind.ps1"
             ],
             "options": {
                 "cwd": "C:\\"
@@ -96,12 +180,31 @@
             },
             "problemMatcher": []
         },
+        // {
+        //     "label": "Flash: Attach USB device to WSL",
+        //     "type": "shell",
+        //     "command": "powershell",
+        //     "args": [
+        //         "-NoProfile", "-Command",
+        //         "$line = usbipd list | Select-String -Pattern 'USB.*\\(COM\\d+\\)'; if (-not $line) { Write-Error 'USB serial device not found. Make sure the board is connected and try again.'; exit 1 }; $busid = ($line -split '\\s+')[0].Trim(); Write-Host ('Found device at bus ID: ' + $busid); if ($line -match 'Attached') { Write-Host ('Device ' + $busid + ' is already attached to WSL.'); exit 0 }; if ($line -match 'Not shared') { Write-Error ('Device ' + $busid + ' is not shared yet. Run the \"Setup: Bind USB device (admin)\" task once, then retry.'); exit 1 }; usbipd attach --wsl --busid=$busid"
+        //     ],
+        //     "options": {
+        //         "cwd": "C:\\"
+        //     },
+        //     "presentation": {
+        //         "reveal": "always",
+        //         "panel": "shared",
+        //         "clear": true
+        //     },
+        //     "problemMatcher": []
+        // },
         {
-            "label": "Setup: RP2040 toolchain in WSL",
+            "label": "Flash: uf2 to RP2040",
             "type": "shell",
-            "command": "wsl",
+            "command": "powershell",
             "args": [
-                "-e", "bash", "-c", "$HOME/gui.ll/Toolchain/RP2040/Setup.sh"
+                "-NoProfile", "-ExecutionPolicy", "Bypass",
+                "-File", "${workspaceFolder}/Toolchain/RP2040/Flash.ps1"
             ],
             "options": {
                 "cwd": "C:\\"
