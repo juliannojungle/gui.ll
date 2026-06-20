@@ -63,6 +63,10 @@
                 "Build: Incremental",
                 "Flash: uf2 to RP2040"
             ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
             "dependsOrder": "sequence",
             "problemMatcher": []
         },
@@ -77,10 +81,7 @@
             "options": {
                 "cwd": "C:\\"
             },
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            },
+            "group": "build",
             "presentation": {
                 "reveal": "always",
                 "panel": "shared",
