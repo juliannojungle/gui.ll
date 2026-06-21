@@ -127,7 +127,7 @@ int main(void) { app_entry(); return 0; }  // RP2040 / standard entry
 
 ## 🎨 Drawing Primitives
 
-The `GUI_Paint` module writes directly to the LCD without requiring a full framebuffer in RAM.
+The `Canvas` module writes directly to the LCD without requiring a full framebuffer in RAM.
 
 ```c
 // Canvas setup
@@ -158,7 +158,7 @@ Fill modes: `DRAW_FILL_EMPTY`, `DRAW_FILL_FULL`.
 PNG files are decoded with libpng and written to the display row by row. Memory usage is bounded to a single decoded row at a time — the full image never needs to fit in RAM.
 
 ```c
-sd_card_t *sdcard = sd_get_by_num(0);
+SdCard *sdcard = sd_get_by_num(0);
 FIL file;
 
 if (MountSdCard(sdcard)

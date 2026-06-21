@@ -30,14 +30,14 @@ gui.ll/
 │   │
 │   ├── lib/
 │   │   ├── Helper/
-│   │   │   ├── FileHelper.c        # SD card mount/open/close (parametrized by sd_card_t)
+│   │   │   ├── FileHelper.c        # SD card mount/open/close (parametrized by SdCard)
 │   │   │   └── PNGHelper.c         # PNG decode + LCD display via libpng
 │   │   │
 │   │   ├── Platform/
 │   │   │   ├── RP2040/
 │   │   │   │   ├── HAL.c           # HAL: GPIO, SPI, PWM, I2C (Pico SDK) — LCD SPI uses LCD_SPI from HALConfig.h
 │   │   │   │   ├── HALConfig.h     # SD pins + SD_SPI(spi0); LCD pins + LCD_SPI(spi1); SD_DETECT_PIN
-│   │   │   │   ├── SDConfig.h      # spi_t, sd_card_t struct definitions
+│   │   │   │   ├── SDConfig.h      # spi_t, SdCard struct definitions
 │   │   │   │   ├── SDHWConfig.h    # Default SPI/SD arrays + sd_get_num/sd_get_by_num
 │   │   │   │   ├── RTC.h           # RTC via hardware/rtc.h + get_fattime()
 │   │   │   │   ├── DiskIO.c        # FatFS disk I/O (SPI SD) — real CRC7 on all cmds; faithful no-OS-FatFS handshake; card detect ISR
@@ -48,7 +48,7 @@ gui.ll/
 │   │   │       ├── CMakeLists.txt   # idf_component_register (ESP-IDF component)
 │   │   │       ├── HAL.c           # HAL: GPIO, SPI (ESP-IDF), LEDC PWM compat — LCD SPI uses LCD_SPI from HALConfig.h
 │   │   │       ├── HALConfig.h     # SD pins + SD_SPI(SPI2_HOST); LCD pins + LCD_SPI(SPI3_HOST); SD_DETECT_PIN
-│   │   │       ├── SDConfig.h      # spi_t, sd_card_t struct definitions (ESP32 types)
+│   │   │       ├── SDConfig.h      # spi_t, SdCard struct definitions (ESP32 types)
 │   │   │       ├── SDHWConfig.h    # Default SPI/SD arrays
 │   │   │       ├── RTC.h           # RTC via settimeofday + get_fattime()
 │   │   │       └── DiskIO.c        # FatFS disk I/O (ESP-IDF SPI master) — parity with RP2040: CRC7, manual CS, card detect ISR (IRAM_ATTR)
@@ -97,11 +97,11 @@ platform folder. A single `#include "HAL.c"` in `Sample.c` pulls the right one.
 ### 2. Multi-SD-Card Support
 
 The design supports multiple SPI buses and multiple SD cards. Each platform defines:
-- `SDConfig.h` — struct definitions (`spi_t`, `sd_card_t`, `sd_spi_if_t`)
+- `SDConfig.h` — struct definitions (`spi_t`, `SdCard`, `sd_spi_if_t`)
 - `SDHWConfig.h` — default hardware arrays (`spis[]`, `sd_cards[]`) and
   `sd_get_num()` / `sd_get_by_num()` implementations
 
-The `FileHelper.c` functions are parametrized by `sd_card_t*`.
+The `FileHelper.c` functions are parametrized by `SdCard*`.
 Users expand the arrays in `SDHWConfig.h` to add more SD cards.
 
 ### 3. Entry Point
@@ -270,7 +270,7 @@ Recent work:
 ## Design Decisions Log
 
 1. **FatFS over no-OS-FatFS**: Switched from no-OS-FatFS-SD-SPI-RPi-Pico to pure ChaN FatFS
-   for portability across platforms. The `sd_card_t` parametrization was preserved in
+   for portability across platforms. The `SdCard` parametrization was preserved in
    `SDConfig.h` / `SDHWConfig.h` to maintain multi-card support.
 
 2. **EXTRA_COMPONENT_DIRS over COMPONENT_DIRS**: Using `EXTRA_COMPONENT_DIRS` in ESP32 cmake
