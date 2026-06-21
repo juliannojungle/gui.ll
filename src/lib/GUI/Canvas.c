@@ -1,6 +1,5 @@
-#include "GUI_Paint.h"
+#include "Canvas.h"
 #include "HAL.c"
-// #include "Debug.h"
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h> //memset()
@@ -8,58 +7,40 @@
 
 Canvas canvas;
 
-/******************************************************************************
-function: Create Image
-parameter:
-    image   :   Pointer to the image cache
-    width   :   The width of the picture
-    Height  :   The height of the picture
-    Color   :   Whether the picture is inverted
-******************************************************************************/
-void CanvasNewImage(UBYTE *image, UWORD Width, UWORD Height, UWORD Rotate, UWORD Color) {
+void CanvasNewImage(UBYTE *image, UWORD width, UWORD height, UWORD rotate, UWORD color) {
     canvas.Image = NULL;
     canvas.Image = image;
 
-    canvas.WidthMemory = Width;
-    canvas.HeightMemory = Height;
-    canvas.Color = Color;
+    canvas.WidthMemory = width;
+    canvas.HeightMemory = height;
+    canvas.Color = color;
     canvas.Scale = 2;
 
-    canvas.WidthByte = (Width % 8 == 0)? (Width / 8 ): (Width / 8 + 1);
-    canvas.HeightByte = Height;
+    canvas.WidthByte = (width % 8 == 0)? (width / 8 ): (width / 8 + 1);
+    canvas.HeightByte = height;
 //    printf("WidthByte = %d, HeightByte = %d\r\n", canvas.WidthByte, canvas.HeightByte);
 //    printf(" LCD_WIDTH / 8 = %d\r\n",  122 / 8);
 
-    canvas.Rotate = Rotate;
+    canvas.Rotate = rotate;
     canvas.Flip = FLIP_NONE;
 
-    if (Rotate == ROTATE_0 || Rotate == ROTATE_180) {
-        canvas.Width = Width;
-        canvas.Height = Height;
+    if (rotate == ROTATE_0 || rotate == ROTATE_180) {
+        canvas.Width = width;
+        canvas.Height = height;
     } else {
-        canvas.Width = Height;
-        canvas.Height = Width;
+        canvas.Width = height;
+        canvas.Height = width;
     }
 }
 
-/******************************************************************************
-function: Select Image
-parameter:
-    image : Pointer to the image cache
-******************************************************************************/
 void CanvasSelectImage(UBYTE *image) {
     canvas.Image = image;
 }
 
-/******************************************************************************
-function: Select Image Rotate
-parameter:
-    Rotate : 0,90,180,270
-******************************************************************************/
-void CanvasSetRotate(UWORD Rotate) {
-    if (Rotate == ROTATE_0 || Rotate == ROTATE_90 || Rotate == ROTATE_180 || Rotate == ROTATE_270) {
-        // Debug("Set image Rotate %d\r\n", Rotate);
-        canvas.Rotate = Rotate;
+void CanvasSetRotate(UWORD rotate) {
+    if (rotate == ROTATE_0 || rotate == ROTATE_90 || rotate == ROTATE_180 || rotate == ROTATE_270) {
+        // Debug("Set image Rotate %d\r\n", rotate);
+        canvas.Rotate = rotate;
     } //else {
         // Debug("rotate = 0, 90, 180, 270\r\n");
     // }
@@ -90,11 +71,6 @@ void CanvasSetScale(UBYTE scale) {
     }
 }
 
-/******************************************************************************
-function:    Select Image mirror
-parameter:
-    mirror   :Not mirror,Horizontal mirror,Vertical mirror,Origin mirror
-******************************************************************************/
 void CanvasSetMirroring(UBYTE mirror) {
     if (mirror == FLIP_NONE || mirror == FLIP_HORIZONTAL ||
         mirror == FLIP_VERTICAL || mirror == FLIP_ORIGIN) {
@@ -106,15 +82,8 @@ void CanvasSetMirroring(UBYTE mirror) {
     // }
 }
 
-/******************************************************************************
-function: Draw Pixels
-parameter:
-    Xpoint : At point X
-    Ypoint : At point Y
-    Color  : Painted colors
-******************************************************************************/
-void CanvasSetPixel(UWORD Xpoint, UWORD Ypoint, UWORD Color) {
-    if (Xpoint > canvas.Width || Ypoint > canvas.Height) {
+void CanvasSetPixel(UWORD xPoint, UWORD yPoint, UWORD color) {
+    if (xPoint > canvas.Width || yPoint > canvas.Height) {
         // Debug("Exceeding display boundaries\r\n");
         return;
     }
@@ -123,20 +92,20 @@ void CanvasSetPixel(UWORD Xpoint, UWORD Ypoint, UWORD Color) {
 
     switch (canvas.Rotate) {
         case 0:
-            X = Xpoint;
-            Y = Ypoint;
+            X = xPoint;
+            Y = yPoint;
             break;
         case 90:
-            X = canvas.WidthMemory - Ypoint - 1;
-            Y = Xpoint;
+            X = canvas.WidthMemory - yPoint - 1;
+            Y = xPoint;
             break;
         case 180:
-            X = canvas.WidthMemory - Xpoint - 1;
-            Y = canvas.HeightMemory - Ypoint - 1;
+            X = canvas.WidthMemory - xPoint - 1;
+            Y = canvas.HeightMemory - yPoint - 1;
             break;
         case 270:
-            X = Ypoint;
-            Y = canvas.HeightMemory - Xpoint - 1;
+            X = yPoint;
+            Y = canvas.HeightMemory - xPoint - 1;
             break;
         default: return;
     }
@@ -165,91 +134,68 @@ void CanvasSetPixel(UWORD Xpoint, UWORD Ypoint, UWORD Color) {
     if (canvas.Scale == 2) {
         UDOUBLE Addr = X / 8 + Y * canvas.WidthByte;
         UBYTE Rdata = canvas.Image[Addr];
-        if (Color &0xff == BLACK)
+        if (color &0xff == BLACK)
             canvas.Image[Addr] = Rdata & ~(0x80 >> (X % 8));
         else
             canvas.Image[Addr] = Rdata | (0x80 >> (X % 8));
     } else if (canvas.Scale == 4) {
         UDOUBLE Addr = X / 4 + Y * canvas.WidthByte;
-        Color = Color % 4; //Guaranteed color scale is 4  --- 0~3
+        color = color % 4; //Guaranteed color scale is 4  --- 0~3
         UBYTE Rdata = canvas.Image[Addr];
 
         Rdata = Rdata & (~(0xC0 >> ((X % 4) * 2)));
-        canvas.Image[Addr] = Rdata | ((Color << 6) >> ((X % 4) * 2));
+        canvas.Image[Addr] = Rdata | ((color << 6) >> ((X % 4) * 2));
     } else if (canvas.Scale == 16) {
         UDOUBLE Addr = X / 2 + Y * canvas.WidthByte;
         UBYTE Rdata = canvas.Image[Addr];
-        Color = Color % 16;
+        color = color % 16;
         Rdata = Rdata & (~(0xf0 >> ((X % 2) * 4)));
-        canvas.Image[Addr] = Rdata | ((Color << 4) >> ((X % 2) * 4));
+        canvas.Image[Addr] = Rdata | ((color << 4) >> ((X % 2) * 4));
     } else if (canvas.Scale == 65) {
         UDOUBLE Addr = X * 2 + Y * canvas.WidthByte;
-        canvas.Image[Addr] = 0xff & (Color >> 8);
-        canvas.Image[Addr + 1] = 0xff & Color;
+        canvas.Image[Addr] = 0xff & (color >> 8);
+        canvas.Image[Addr + 1] = 0xff & color;
     }
 }
 
-/******************************************************************************
-function: Clear the color of the picture
-parameter:
-    Color : Painted colors
-******************************************************************************/
-void CanvasClear(UWORD Color) {
+void CanvasClear(UWORD color) {
     if (canvas.Scale == 2 || canvas.Scale == 4) {
         for (UWORD Y = 0; Y < canvas.HeightByte; Y++) {
             for (UWORD X = 0; X < canvas.WidthByte; X++) {//8 pixel =  1 byte
                 UDOUBLE Addr = X + Y * canvas.WidthByte;
-                canvas.Image[Addr] = Color;
+                canvas.Image[Addr] = color;
             }
         }
     } else if (canvas.Scale == 16) {
         for (UWORD Y = 0; Y < canvas.HeightByte; Y++) {
             for (UWORD X = 0; X < canvas.WidthByte; X++ ) {//8 pixel =  1 byte
                 UDOUBLE Addr = X + Y * canvas.WidthByte;
-                Color = Color & 0x0f;
-                canvas.Image[Addr] = (Color << 4) | Color;
+                color = color & 0x0f;
+                canvas.Image[Addr] = (color << 4) | color;
             }
         }
     } else if (canvas.Scale == 65) {
         for (UWORD Y = 0; Y < canvas.HeightByte; Y++) {
             for (UWORD X = 0; X < canvas.WidthByte; X++) {//8 pixel =  1 byte
                 UDOUBLE Addr = X * 2 + Y * canvas.WidthByte;
-                canvas.Image[Addr] = 0xff & (Color >> 8);
-                canvas.Image[Addr+1] = 0xff & Color;
+                canvas.Image[Addr] = 0xff & (color >> 8);
+                canvas.Image[Addr+1] = 0xff & color;
             }
         }
     }
 }
 
-/******************************************************************************
-function: Clear the color of a window
-parameter:
-    Xstart : x starting point
-    Ystart : Y starting point
-    Xend   : x end point
-    Yend   : y end point
-    Color  : Painted colors
-******************************************************************************/
-void CanvasClearArea(UWORD Xstart, UWORD Ystart, UWORD Xend, UWORD Yend, UWORD Color) {
+void CanvasClearArea(UWORD xStart, UWORD yStart, UWORD xEnd, UWORD yEnd, UWORD color) {
     UWORD X, Y;
-    for (Y = Ystart; Y < Yend; Y++) {
-        for (X = Xstart; X < Xend; X++) {//8 pixel =  1 byte
-            CanvasSetPixel(X, Y, Color);
+    for (Y = yStart; Y < yEnd; Y++) {
+        for (X = xStart; X < xEnd; X++) {//8 pixel =  1 byte
+            CanvasSetPixel(X, Y, color);
         }
     }
 }
 
-/******************************************************************************
-function: Draw Point(Xpoint, Ypoint) Fill the color
-parameter:
-    Xpoint        : The Xpoint coordinate of the point
-    Ypoint        : The Ypoint coordinate of the point
-    Color        : Painted color
-    Dot_Pixel    : point size
-    Dot_Style    : point Style
-******************************************************************************/
-void CanvasDrawPoint(UWORD Xpoint, UWORD Ypoint, UWORD Color,
-    PixelSize Dot_Pixel, PixelFillStyle Dot_Style) {
+void CanvasDrawPoint(UWORD xPoint, UWORD yPoint, UWORD color,
+    PixelSize pixelSize, PixelFillStyle pixelFillStyle) {
     if (Xpoint > canvas.Width || Ypoint > canvas.Height) {
         // Debug("CanvasDrawPoint Input exceeds the normal display range\r\n");
         // printf("Xpoint = %d , canvas.Width = %d  \r\n ",Xpoint,canvas.Width);
@@ -258,9 +204,9 @@ void CanvasDrawPoint(UWORD Xpoint, UWORD Ypoint, UWORD Color,
     }
 
     int16_t XDir_Num , YDir_Num;
-    if (Dot_Style == PIXEL_FILL_STYLE_AROUND) {
-        for (XDir_Num = 0; XDir_Num < 2 * Dot_Pixel - 1; XDir_Num++) {
-            for (YDir_Num = 0; YDir_Num < 2 * Dot_Pixel - 1; YDir_Num++) {
+    if (pixelFillStyle == PIXEL_FILL_STYLE_AROUND) {
+        for (XDir_Num = 0; XDir_Num < 2 * pixelSize - 1; XDir_Num++) {
+            for (YDir_Num = 0; YDir_Num < 2 * pixelSize - 1; YDir_Num++) {
                 if (Xpoint + XDir_Num - Dot_Pixel < 0 || Ypoint + YDir_Num - Dot_Pixel < 0)
                     break;
                 // // printf("x = %d, y = %d\r\n", Xpoint + XDir_Num - Dot_Pixel, Ypoint + YDir_Num - Dot_Pixel);
@@ -268,27 +214,16 @@ void CanvasDrawPoint(UWORD Xpoint, UWORD Ypoint, UWORD Color,
             }
         }
     } else {
-        for (XDir_Num = 0; XDir_Num <  Dot_Pixel; XDir_Num++) {
-            for (YDir_Num = 0; YDir_Num <  Dot_Pixel; YDir_Num++) {
+        for (XDir_Num = 0; XDir_Num <  pixelSize; XDir_Num++) {
+            for (YDir_Num = 0; YDir_Num <  pixelSize; YDir_Num++) {
                 CanvasSetPixel(Xpoint + XDir_Num - 1, Ypoint + YDir_Num - 1, Color);
             }
         }
     }
 }
 
-/******************************************************************************
-function: Draw a line of arbitrary slope
-parameter:
-    Xstart ：Starting Xpoint point coordinates
-    Ystart ：Starting Xpoint point coordinates
-    Xend   ：End point Xpoint coordinate
-    Yend   ：End point Ypoint coordinate
-    Color  ：The color of the line segment
-    Line_width : Line width
-    Line_Style: Solid and dotted lines
-******************************************************************************/
-void CanvasDrawLine(UWORD Xstart, UWORD Ystart, UWORD Xend, UWORD Yend,
-    UWORD Color, PixelSize Line_width, LineStyle Line_Style) {
+void CanvasDrawLine(UWORD xStart, UWORD Ystart, UWORD xEnd, UWORD yEnd,
+    UWORD color, PixelSize pixelSize, LineStyle lineStyle) {
     if (Xstart > canvas.Width || Ystart > canvas.Height ||
         Xend > canvas.Width || Yend > canvas.Height) {
         // Debug("CanvasDrawLine Input exceeds the normal display range\r\n");
@@ -311,7 +246,7 @@ void CanvasDrawLine(UWORD Xstart, UWORD Ystart, UWORD Xend, UWORD Yend,
     for (;;) {
         Dotted_Len++;
         //Painted dotted line, 2 point is really virtual
-        if (Line_Style == LINE_STYLE_DOTTED && Dotted_Len % 3 == 0) {
+        if (lineStyle == LINE_STYLE_DOTTED && Dotted_Len % 3 == 0) {
             //Debug("LINE_DOTTED\r\n");
             if(Color)
                 CanvasDrawPoint(Xpoint, Ypoint, BLACK, Line_width, DEFAULT_PIXEL_FILL_STYLE);
@@ -338,26 +273,15 @@ void CanvasDrawLine(UWORD Xstart, UWORD Ystart, UWORD Xend, UWORD Yend,
     }
 }
 
-/******************************************************************************
-function: Draw a rectangle
-parameter:
-    Xstart ：Rectangular  Starting Xpoint point coordinates
-    Ystart ：Rectangular  Starting Xpoint point coordinates
-    Xend   ：Rectangular  End point Xpoint coordinate
-    Yend   ：Rectangular  End point Ypoint coordinate
-    Color  ：The color of the Rectangular segment
-    Line_width: Line width
-    Draw_Fill : Whether to fill the inside of the rectangle
-******************************************************************************/
-void CanvasDrawRectangle(UWORD Xstart, UWORD Ystart, UWORD Xend, UWORD Yend,
-    UWORD Color, PixelSize Line_width, DrawFillStyle Draw_Fill) {
+void CanvasDrawRectangle(UWORD xStart, UWORD yStart, UWORD xEnd, UWORD yEnd,
+    UWORD color, PixelSize lineWidth, DrawFillStyle rectangleFillStyle) {
     if (Xstart > canvas.Width || Ystart > canvas.Height ||
         Xend > canvas.Width || Yend > canvas.Height) {
         // Debug("Input exceeds the normal display range\r\n");
         return;
     }
 
-    if (Draw_Fill) {
+    if (rectangleFillStyle) {
         UWORD Ypoint;
         for(Ypoint = Ystart; Ypoint < Yend; Ypoint++) {
             CanvasDrawLine(Xstart, Ypoint, Xend, Ypoint, Color , Line_width, LINE_STYLE_SOLID);
@@ -370,19 +294,8 @@ void CanvasDrawRectangle(UWORD Xstart, UWORD Ystart, UWORD Xend, UWORD Yend,
     }
 }
 
-/******************************************************************************
-function: Use the 8-point method to draw a circle of the
-            specified size at the specified position->
-parameter:
-    X_Center  ：Center X coordinate
-    Y_Center  ：Center Y coordinate
-    Radius    ：circle Radius
-    Color     ：The color of the ：circle segment
-    Line_width: Line width
-    Draw_Fill : Whether to fill the inside of the Circle
-******************************************************************************/
-void CanvasDrawCircle(UWORD X_Center, UWORD Y_Center, UWORD Radius,
-    UWORD Color, PixelSize Line_width, DrawFillStyle Draw_Fill) {
+void CanvasDrawCircle(UWORD xCenter, UWORD yCenter, UWORD radius,
+    UWORD color, PixelSize lineWidth, DrawFillStyle circleFillStyle) {
     if (X_Center > canvas.Width || Y_Center >= canvas.Height) {
         // Debug("CanvasDrawCircle Input exceeds the normal display range\r\n");
         return;
@@ -397,7 +310,7 @@ void CanvasDrawCircle(UWORD X_Center, UWORD Y_Center, UWORD Radius,
     int16_t Esp = 3 - (Radius << 1 );
 
     int16_t sCountY;
-    if (Draw_Fill == DRAW_FILL_STYLE_FULL) {
+    if (circleFillStyle == DRAW_FILL_STYLE_FULL) {
         while (XCurrent <= YCurrent ) { //Realistic circles
             for (sCountY = XCurrent; sCountY <= YCurrent; sCountY ++ ) {
                 CanvasDrawPoint(X_Center + XCurrent, Y_Center + sCountY, Color, DEFAULT_PIXEL_SIZE, DEFAULT_PIXEL_FILL_STYLE);//1
@@ -441,18 +354,8 @@ void CanvasDrawCircle(UWORD X_Center, UWORD Y_Center, UWORD Radius,
     }
 }
 
-/******************************************************************************
-function: Show English characters
-parameter:
-    Xpoint           ：X coordinate
-    Ypoint           ：Y coordinate
-    Acsii_Char       ：To display the English characters
-    Font             ：A structure pointer that displays a character size
-    Color_Foreground : Select the foreground color
-    Color_Background : Select the background color
-******************************************************************************/
-void CanvasDrawChar(UWORD Xpoint, UWORD Ypoint, const char Acsii_Char,
-    sFONT* Font, UWORD Color_Foreground, UWORD Color_Background) {
+void CanvasDrawChar(UWORD xPoint, UWORD yPoint, const char ASCIIChar,
+    sFONT* font, UWORD foregroundColor, UWORD backgroundColor) {
     UWORD Page, Column;
 
     if (Xpoint > canvas.Width || Ypoint > canvas.Height) {
@@ -460,7 +363,7 @@ void CanvasDrawChar(UWORD Xpoint, UWORD Ypoint, const char Acsii_Char,
         return;
     }
 
-    uint32_t Char_Offset = (Acsii_Char - ' ') * Font->Height * (Font->Width / 8 + (Font->Width % 8 ? 1 : 0));
+    uint32_t Char_Offset = (ASCIIChar - ' ') * Font->Height * (Font->Width / 8 + (Font->Width % 8 ? 1 : 0));
     const unsigned char *ptr = &Font->table[Char_Offset];
 
     for (Page = 0; Page < Font->Height; Page ++ ) {
@@ -490,27 +393,17 @@ void CanvasDrawChar(UWORD Xpoint, UWORD Ypoint, const char Acsii_Char,
     }// Write all
 }
 
-/******************************************************************************
-function:    Display the string
-parameter:
-    Xstart           ：X coordinate
-    Ystart           ：Y coordinate
-    pString          ：The first address of the English string to be displayed
-    Font             ：A structure pointer that displays a character size
-    Color_Foreground : Select the foreground color
-    Color_Background : Select the background color
-******************************************************************************/
-void CanvasDrawStringEN(UWORD Xstart, UWORD Ystart, const char * pString,
-    sFONT* Font, UWORD Color_Foreground, UWORD Color_Background) {
+void CanvasDrawText(UWORD xStart, UWORD yStart, const char * text,
+    sFONT* font, UWORD foregroundColor, UWORD backgroundColor) {
     UWORD Xpoint = Xstart;
     UWORD Ypoint = Ystart;
 
     if (Xstart > canvas.Width || Ystart > canvas.Height) {
-        // Debug("CanvasDrawStringEN Input exceeds the normal display range\r\n");
+        // Debug("CanvasDrawText Input exceeds the normal display range\r\n");
         return;
     }
 
-    while (* pString != '\0') {
+    while (* text != '\0') {
         //if X direction filled , reposition to(Xstart,Ypoint),Ypoint is Y direction plus the Height of the character
         if ((Xpoint + Font->Width ) > canvas.Width ) {
             Xpoint = Xstart;
@@ -526,28 +419,16 @@ void CanvasDrawStringEN(UWORD Xstart, UWORD Ystart, const char * pString,
         CanvasDrawChar(Xpoint, Ypoint, * pString, Font, Color_Foreground, Color_Background);
 
         //The next character of the address
-        pString++;
+        text++;
 
         //The next word of the abscissa increases the font of the broadband
         Xpoint += Font->Width;
     }
 }
 
-
-/******************************************************************************
-function: Display the string
-parameter:
-    Xstart  ：X coordinate
-    Ystart  ：Y coordinate
-    pString ：The first address of the Chinese string and English
-              string to be displayed
-    Font    ：A structure pointer that displays a character size
-    Color_Foreground : Select the foreground color
-    Color_Background : Select the background color
-******************************************************************************/
-void CanvasDrawStringCN(UWORD Xstart, UWORD Ystart, const char * pString, cFONT* font,
-    UWORD Color_Foreground, UWORD Color_Background) {
-    const char* p_text = pString;
+void CanvasDrawTextCN(UWORD xStart, UWORD yStart, const char * text, cFONT* font,
+    UWORD foregroundColor, UWORD backgroundColor) {
+    const char* p_text = text;
     int x = Xstart, y = Ystart;
     int i, j, Num;
 
@@ -637,24 +518,13 @@ void CanvasDrawStringCN(UWORD Xstart, UWORD Ystart, const char * pString, cFONT*
     }
 }
 
-/******************************************************************************
-function:    Display nummber
-parameter:
-    Xstart           ：X coordinate
-    Ystart           : Y coordinate
-    Nummber          : The number displayed
-    Font             ：A structure pointer that displays a character size
-    Digit                         : Fractional width
-    Color_Foreground : Select the foreground color
-    Color_Background : Select the background color
-******************************************************************************/
 #define  ARRAY_LEN 255
-void CanvasDrawNum(UWORD Xpoint, UWORD Ypoint, double Nummber,
-    sFONT* Font, UWORD Digit,UWORD Color_Foreground, UWORD Color_Background) {
-    int16_t Num_Bit = 0, Str_Bit = 0;
-    uint8_t Str_Array[ARRAY_LEN] = {0}, Num_Array[ARRAY_LEN] = {0};
-    uint8_t *pStr = Str_Array;
-    int temp = Nummber;
+void CanvasDrawNum(UWORD xPoint, UWORD yPoint, double number,
+    sFONT* font, UWORD digit, UWORD foregroundColor, UWORD backgroundColor) {
+    int16_t numberBit = 0, textBit = 0;
+    uint8_t textArray[ARRAY_LEN] = {0}, numberArray[ARRAY_LEN] = {0};
+    uint8_t *pStr = textArray;
+    int temp = number;
     float decimals;
     uint8_t i;
 
@@ -664,7 +534,7 @@ void CanvasDrawNum(UWORD Xpoint, UWORD Ypoint, double Nummber,
     }
 
     if (Digit > 0) {
-        decimals = Nummber - temp;
+        decimals = number - temp;
 
         for(i = Digit; i > 0; i--) {
             decimals*=10;
@@ -674,47 +544,37 @@ void CanvasDrawNum(UWORD Xpoint, UWORD Ypoint, double Nummber,
 
         //Converts a number to a string
         for(i=Digit; i>0; i--) {
-            Num_Array[Num_Bit] = temp % 10 + '0';
-            Num_Bit++;
+            numberArray[numberBit] = temp % 10 + '0';
+            numberBit++;
             temp /= 10;
         }
 
-        Num_Array[Num_Bit] = '.';
-        Num_Bit++;
+        numberArray[numberBit] = '.';
+        numberBit++;
     }
 
-    temp = Nummber;
+    temp = number;
 
     //Converts a number to a string
     while (temp) {
-        Num_Array[Num_Bit] = temp % 10 + '0';
-        Num_Bit++;
+        numberArray[numberBit] = temp % 10 + '0';
+        numberBit++;
         temp /= 10;
     }
 
     //The string is inverted
-    while (Num_Bit > 0) {
-        Str_Array[Str_Bit] = Num_Array[Num_Bit - 1];
-        Str_Bit ++;
-        Num_Bit --;
+    while (numberBit > 0) {
+        textArray[textBit] = numberArray[numberBit - 1];
+        textBit ++;
+        numberBit --;
     }
 
     //show
-    CanvasDrawStringEN(Xpoint, Ypoint, (const char*)pStr, Font, Color_Foreground, Color_Background);
+    CanvasDrawText(Xpoint, Ypoint, (const char*)pStr, Font, Color_Foreground, Color_Background);
 }
 
-/******************************************************************************
-function:    Display time
-parameter:
-    Xstart           ：X coordinate
-    Ystart           : Y coordinate
-    pTime            : Time-related structures
-    Font             ：A structure pointer that displays a character size
-    Color_Foreground : Select the foreground color
-    Color_Background : Select the background color
-******************************************************************************/
-void CanvasDrawTime(UWORD Xstart, UWORD Ystart, DateTime *pTime, sFONT* Font,
-    UWORD Color_Foreground, UWORD Color_Background) {
+void CanvasDrawTime(UWORD xStart, UWORD yStart, DateTime *pTime, sFONT* font,
+    UWORD foregroundColor, UWORD backgroundColor) {
     uint8_t value[10] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9'};
     UWORD Dx = Font->Width;
 
@@ -729,53 +589,45 @@ void CanvasDrawTime(UWORD Xstart, UWORD Ystart, DateTime *pTime, sFONT* Font,
     CanvasDrawChar(Xstart + Dx * 6, Ystart, value[pTime->Sec % 10], Font, Color_Foreground, Color_Background);
 }
 
-void CanvasDrawImage(const unsigned char *image, UWORD xStart, UWORD yStart, UWORD W_Image, UWORD H_Image) {
+void CanvasDrawImage(const unsigned char *image, UWORD xStart, UWORD yStart, UWORD imageWidth, UWORD imageHeight) {
     int i, j;
-    for (j = 0; j < H_Image; j++) {
-        for (i = 0; i < W_Image; i++) {
+    for (j = 0; j < imageWidth; j++) {
+        for (i = 0; i < imageHeight; i++) {
             if (xStart + i < canvas.WidthMemory && yStart + j < canvas.HeightMemory) //Exceeded part does not display
-                CanvasSetPixel(xStart + i, yStart + j, (*(image + j * W_Image * 2 + i * 2 + 1)) << 8 | (*(image + j * W_Image * 2 + i * 2)));
+                CanvasSetPixel(xStart + i, yStart + j, (*(image + j * imageHeight * 2 + i * 2 + 1)) << 8 | (*(image + j * imageHeight * 2 + i * 2)));
             //Using arrays is a property of sequential storage, accessing the original array by algorithm
-            //j*W_Image*2                Y offset
+            //j*imageHeight*2                Y offset
             //i*2                     X offset
         }
     }
 }
 
-void CanvasDrawImage1(const unsigned char *image, UWORD xStart, UWORD yStart, UWORD W_Image, UWORD H_Image) {
+void CanvasDrawImage1(const unsigned char *image, UWORD xStart, UWORD yStart, UWORD imageWidth, UWORD imageHeight) {
     int i, j;
-    for (j = 0; j < H_Image; j++) {
-        for (i = 0; i < W_Image; i++) {
+    for (j = 0; j < imageHeight; j++) {
+        for (i = 0; i < imageWidth; i++) {
             if (xStart + i < canvas.HeightMemory  &&  yStart + j < canvas.WidthMemory) //Exceeded part does not display
-                CanvasSetPixel(xStart + i, yStart + j, (*(image + j * W_Image * 2 + i * 2 + 1)) << 8 | (*(image + j * W_Image * 2 + i * 2)));
+                CanvasSetPixel(xStart + i, yStart + j, (*(image + j * imageWidth * 2 + i * 2 + 1)) << 8 | (*(image + j * imageWidth * 2 + i * 2)));
             //Using arrays is a property of sequential storage, accessing the original array by algorithm
-            //j*W_Image*2                Y offset
+            //j*imageWidth*2                Y offset
             //i*2                     X offset
         }
     }
 }
 
-/******************************************************************************
-function:    Display monochrome bitmap
-parameter:
-    image_buffer ：A picture data converted to a bitmap
-info:
-    Use a computer to convert the image into a corresponding array,
-    and then embed the array directly into Imagedata.cpp as a .c file.
-******************************************************************************/
-void CanvasDrawBitmap(const unsigned char* image_buffer) {
+void CanvasDrawBitmap(const unsigned char* imageBuffer) {
     UWORD x, y;
     UDOUBLE Addr = 0;
 
     for (y = 0; y < canvas.HeightByte; y++) {
         for (x = 0; x < canvas.WidthByte; x++) {//8 pixel =  1 byte
             Addr = x + y * canvas.WidthByte;
-            canvas.Image[Addr] = (unsigned char)image_buffer[Addr];
+            canvas.Image[Addr] = (unsigned char)imageBuffer[Addr];
         }
     }
 }
 
-void CanvasDrawBitmapBlock(const unsigned char* image_buffer, UBYTE Region) {
+void CanvasDrawBitmapBlock(const unsigned char* imageBuffer, UBYTE region) {
     UWORD x, y;
     UDOUBLE Addr = 0;
 
@@ -783,18 +635,18 @@ void CanvasDrawBitmapBlock(const unsigned char* image_buffer, UBYTE Region) {
         for (x = 0; x < canvas.WidthByte; x++) {//8 pixel =  1 byte
             Addr = x + y * canvas.WidthByte ;
             canvas.Image[Addr] = \
-            (unsigned char)image_buffer[Addr+ (canvas.HeightByte)*canvas.WidthByte*(Region - 1)];
+            (unsigned char)imageBuffer[Addr+ (canvas.HeightByte)*canvas.WidthByte*(region - 1)];
         }
     }
 }
 
- void CanvasDrawBitmapToArea(unsigned char x,unsigned char y,const unsigned char *pBmp,
-    unsigned char chWidth,unsigned char chHeight) {
-    uint16_t i, j, byteWidth = (chWidth + 7) / 8;
+ void CanvasDrawBitmapToArea(unsigned char x,unsigned char y,const unsigned char *pBitmap,
+    unsigned char areaWidth,unsigned char areaHeight) {
+    uint16_t i, j, byteWidth = (areaWidth + 7) / 8;
 
-    for (j = 0; j < chHeight; j ++) {
-        for (i = 0; i < chWidth; i ++ ) {
-            if (*(pBmp + j * byteWidth + i / 8) & (128 >> (i & 7))) {
+    for (j = 0; j < areaHeight; j ++) {
+        for (i = 0; i < areaWidth; i ++ ) {
+            if (*(pBitmap + j * byteWidth + i / 8) & (128 >> (i & 7))) {
                 CanvasSetPixel(x + i, y + j, 0xffff);
             }
         }

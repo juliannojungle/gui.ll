@@ -1,8 +1,5 @@
-#ifndef __GUI_CANVAS_H
-#define __GUI_CANVAS_H
-
-#include "HAL.c"
-#include "../Fonts/fonts.h"
+#ifndef __CANVAS_H
+#define __CANVAS_H
 
 typedef struct {
     UBYTE *Image;
@@ -65,8 +62,8 @@ typedef enum {
 #define DEFAULT_PIXEL_SIZE PIXEL_SIZE_1X1
 
 typedef enum {
-    PIXEL_FILL_STYLE_AROUND  = 1,   // dot pixel 1 x 1
-    PIXEL_FILL_STYLE_RIGHTUP  ,     // dot pixel 2 X 2
+    PIXEL_FILL_STYLE_AROUND  = 1,
+    PIXEL_FILL_STYLE_RIGHTUP  ,
 } PixelFillStyle;
 #define DEFAULT_PIXEL_FILL_STYLE PIXEL_FILL_STYLE_AROUND
 
@@ -81,12 +78,12 @@ typedef enum {
 } DrawFillStyle;
 
 typedef struct {
-    UWORD	Year;  //0000
-    UBYTE Month; //1 - 12
-    UBYTE Day;   //1 - 30
-    UBYTE Hour;  //0 - 23
-    UBYTE Min;   //0 - 59
-    UBYTE Sec;   //0 - 59
+    UWORD	Year;
+    UBYTE Month;
+    UBYTE Day;
+    UBYTE Hour;
+    UBYTE Min;
+    UBYTE Sec;
 } DateTime;
 
-#endif
+#endif /* __CANVAS_H */

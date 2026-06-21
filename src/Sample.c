@@ -3,7 +3,7 @@
 
 // #include "LCD_1in28.c"
 // #include "font20.c"
-// #include "GUI_Paint.c"
+// #include "Canvas.c"
 
 #include "FileHelper.c"
 #include "PNGHelper.c"
@@ -41,7 +41,7 @@ void app_entry(void) {
 
     while (true) {
         CanvasClear(WHITE);
-        CanvasDrawStringEN(count, count, "Hello, World!", &Font20, BLACK, WHITE);
+        CanvasDrawText(count, count, "Hello, World!", &Font20, BLACK, WHITE);
         LCDDisplayTexture(texture);
 
         count = (count < 256) ? count + 1 : 0;

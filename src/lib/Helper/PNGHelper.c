@@ -10,7 +10,7 @@
 #include "HAL.c"
 #include "LCD_1in28.c"
 #include "font20.c"
-#include "GUI_Paint.h"
+#include "Canvas.h"
 
 typedef struct {
     FIL *file;
