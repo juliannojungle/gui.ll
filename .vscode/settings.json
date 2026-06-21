@@ -1,9 +1,10 @@
 {
-  "editor.indentSize": 4,
-  "explorer.excludeGitIgnore": true,
-  "files.associations": {
-    "*.h": "c",
-    "*.c": "c"
-  },
-  "git.detectSubmodules": false
+    "clangd.path": "/usr/bin/clangd",
+    "editor.indentSize": 4,
+    "explorer.excludeGitIgnore": true,
+    "files.associations": {
+        "*.h": "c",
+        "*.c": "c"
+    },
+    "git.detectSubmodules": false
 }
