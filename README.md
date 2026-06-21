@@ -96,7 +96,7 @@ gui.ll/
 │   │   │   └── ESP32/              # HAL, SPI, DiskIO, RTC (ESP-IDF)
 │   │   ├── Driver/GC9A01/          # LCD driver
 │   │   ├── LCD/                    # Display command layer
-│   │   ├── GUI/                    # Paint / drawing primitives
+│   │   ├── GUI/                    # Canvas / drawing primitives (Canvas.c/.h)
 │   │   └── Fonts/                  # Bitmap font data
 │   └── Dependency/
 │       ├── fatfs/                  # ChaN FatFS
@@ -131,25 +131,25 @@ The `Canvas` module writes directly to the LCD without requiring a full framebuf
 
 ```c
 // Canvas setup
-Paint_NewImage(buffer, 240, 240, ROTATE_0, WHITE);
-Paint_Clear(BLACK);
+CanvasNewImage(buffer, 240, 240, ROTATE_0, WHITE);
+CanvasClear(BLACK);
 
 // Geometry
-Paint_DrawPoint(120, 120, RED, DOT_PIXEL_2X2, DOT_FILL_AROUND);
-Paint_DrawLine(0, 0, 240, 240, WHITE, DOT_PIXEL_1X1, LINE_STYLE_SOLID);
-Paint_DrawRectangle(10, 10, 100, 80, BLUE, DOT_PIXEL_1X1, DRAW_FILL_EMPTY);
-Paint_DrawCircle(120, 120, 60, GREEN, DOT_PIXEL_1X1, DRAW_FILL_FULL);
+CanvasDrawPoint(120, 120, RED, PIXEL_SIZE_2X2, PIXEL_FILL_STYLE_AROUND);
+CanvasDrawLine(0, 0, 240, 240, WHITE, PIXEL_SIZE_1X1, LINE_STYLE_SOLID);
+CanvasDrawRectangle(10, 10, 100, 80, BLUE, PIXEL_SIZE_1X1, DRAW_FILL_STYLE_EMPTY);
+CanvasDrawCircle(120, 120, 60, GREEN, PIXEL_SIZE_1X1, DRAW_FILL_STYLE_FULL);
 
 // Text
-Paint_DrawString_EN(20, 20, "Hello!", &Font16, WHITE, BLACK);
-Paint_DrawNum(20, 50, 3.14, &Font12, 2, YELLOW, BLACK);
-Paint_DrawTime(10, 200, &sPaint_time, &Font12, WHITE, BLACK);
+CanvasDrawText(20, 20, "Hello!", &Font16, WHITE, BLACK);
+CanvasDrawNum(20, 50, 3.14, &Font12, 2, YELLOW, BLACK);
+CanvasDrawTime(10, 200, &dateTime, &Font12, WHITE, BLACK);
 ```
 
 Available colors: `WHITE`, `BLACK`, `RED`, `GREEN`, `BLUE`, `YELLOW`, `CYAN`, `MAGENTA`, `GRAY`, and more.
-Dot sizes: `DOT_PIXEL_1X1` through `DOT_PIXEL_8X8`.
+Pixel sizes: `PIXEL_SIZE_1X1` through `PIXEL_SIZE_8X8`.
 Line styles: `LINE_STYLE_SOLID`, `LINE_STYLE_DOTTED`.
-Fill modes: `DRAW_FILL_EMPTY`, `DRAW_FILL_FULL`.
+Fill modes: `DRAW_FILL_STYLE_EMPTY`, `DRAW_FILL_STYLE_FULL`.
 
 ---
 

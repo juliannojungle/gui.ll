@@ -55,7 +55,7 @@ gui.ll/
 │   │   │
 │   │   ├── Driver/GC9A01/          # LCD driver — uses LCD_* defines from HALConfig.h; DriverInit configures SPI, GPIO and backlight PWM
 │   │   ├── LCD/                     # LCD commands (LCD_1in28)
-│   │   ├── GUI/                     # Paint/drawing utilities
+│   │   ├── GUI/                     # Canvas/drawing utilities (Canvas.c/.h)
 │   │   └── Fonts/                   # Font data
 │   │
 │   └── Dependency/
@@ -79,6 +79,18 @@ gui.ll/
 
 - **PascalCase** for all project file and directory names
 - **Acronyms in UPPERCASE** (HAL, RTC, PNG, SD, IO, HW)
+- **Identifiers** (applied to project code; third-party/port code keeps its original style):
+  - **Types** (structs/typedefs) and **enum type names** in PascalCase: `Canvas`, `SdCard`,
+    `Rotate`, `Flip`, `PixelSize`, `PixelFillStyle`, `LineStyle`, `DrawFillStyle`, `DateTime`.
+  - **Enum values** keep an UPPERCASE, type-namespaced prefix (C enum values share the enclosing
+    scope, so the prefix avoids collisions): `ROTATE_0`, `FLIP_HORIZONTAL`, `PIXEL_SIZE_2X2`,
+    `PIXEL_FILL_STYLE_AROUND`, `LINE_STYLE_SOLID`, `DRAW_FILL_STYLE_EMPTY`.
+  - **Functions** in PascalCase with a module prefix: the drawing API is `Canvas*`
+    (`CanvasNewImage`, `CanvasClear`, `CanvasDrawLine`, `CanvasDrawText`, `CanvasDrawTime`, …).
+  - **Known exceptions (kept in original style on purpose):** the SD/SPI port layer derived from
+    no-OS-FatFS — `sd_get_num()`, `sd_get_by_num()`, and the `spi_t` / `sd_spi_if_t` /
+    `sd_if_type_t` types — stays snake_case to remain a faithful port (Decision 9). Only the
+    application-facing `sd_card_t` was promoted to `SdCard`.
 - **Exceptions** (not renamed):
   - Project meta files: `AGENTS.md`, `.gitmodules`, `.gitignore`, `CMakeLists.txt`
   - IDE directories/files: `.kiro/`, `.vscode/`, `tasks.json`, `settings.json`
@@ -251,6 +263,13 @@ This prevents the git plugin from showing false "modified" files in submodules
   hardware-tested**.
 
 Recent work:
+- **PascalCase identifier pass** (see Naming Convention §0): `GUI_Paint.c/.h` → `Canvas.c/.h`,
+  the `Paint` struct → `Canvas` (global `canvas`), the `Paint_*` drawing API → `Canvas*`
+  (`CanvasNewImage`, `CanvasDrawLine`, `CanvasDrawText`, `CanvasDrawTime`, …), and the drawing
+  enums renamed to PascalCase types with namespaced values (`Rotate`/`ROTATE_*`, `Flip`/`FLIP_*`,
+  `PixelSize`/`PIXEL_SIZE_*`, `PixelFillStyle`/`PIXEL_FILL_STYLE_*`, `LineStyle`/`LINE_STYLE_*`,
+  `DrawFillStyle`/`DRAW_FILL_STYLE_*`); the time struct is now `DateTime`. Also `sd_card_t` → `SdCard`.
+  RP2040 builds and runs after the rename.
 - SD pins / shared-shield design, LCD pin defines, `EPD_*`→`LCD_*`, backlight in `DriverInit`,
   card detect (see Design Decisions 6-8).
 - **SD driver rewritten as a faithful port of no-OS-FatFS** (Design Decision 9): real CRC7 on
