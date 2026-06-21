@@ -50,19 +50,16 @@ void app_entry(void) {
     }
 */
 
-    if (sd_get_num() > 0) {
-        SdCard *sdcard = sd_get_by_num(0);
-        FIL file;
+    FIL file;
 
-        if (MountSdCard(sdcard)
-            && SelectActiveDrive(sdcard)
-            && OpenFile(sdcard, &file, "01.png")) {
-            DisplayPng(&file);
-            CloseFile(&file);
-        }
-
-        UnMountSdCard(sdcard);
+    if (MountSdCard()
+        && SelectActiveDrive()
+        && OpenFile(&file, "01.png")) {
+        DisplayPng(&file);
+        CloseFile(&file);
     }
+
+    UnMountSdCard();
 
     while(true) {
     }

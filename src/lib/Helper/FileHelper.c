@@ -5,23 +5,25 @@
 #include <stdbool.h>
 #include <string.h>
 #include "ff.h"
-#include "SDConfig.h"
-#include "SDHWConfig.h" // Platform-specific default SPI/SD arrays + sd_get_num/sd_get_by_num
 #include "HALConfig.h" // Platform_SDCard_Init declaration
 
+/* FatFS logical volume name (physical drive 0). This is a FatFS-level concept,
+ * identical across platforms, so it lives here rather than in HALConfig.h. */
+#define SD_DRIVE "0:"
+
 /* -----------------------------------------------------------------------
- * File system helper functions (parametrized by SdCard)
+ * File system helper functions (single SD card on FatFS volume SD_DRIVE)
  * ----------------------------------------------------------------------- */
 
 static FATFS fatfs;
 
-bool MountSdCard(SdCard *sdcard) {
+bool MountSdCard(void) {
     if (!Platform_SDCard_Init()) {
         printf("Platform_SDCard_Init failed\n");
         return false;
     }
 
-    FRESULT result = f_mount(&fatfs, sdcard->pcName, 1);
+    FRESULT result = f_mount(&fatfs, SD_DRIVE, 1);
     if (result != FR_OK) {
         printf("f_mount error: %d\n", result);
         return false;
@@ -29,21 +31,21 @@ bool MountSdCard(SdCard *sdcard) {
     return true;
 }
 
-bool SelectActiveDrive(SdCard *sdcard) {
-    FRESULT result = f_chdrive(sdcard->pcName);
+bool SelectActiveDrive(void) {
+    FRESULT result = f_chdrive(SD_DRIVE);
     if (result != FR_OK) {
         printf("f_chdrive error: %d\n", result);
-        f_unmount(sdcard->pcName);
+        f_unmount(SD_DRIVE);
         return false;
     }
     return true;
 }
 
-bool OpenFile(SdCard *sdcard, FIL *file, const char *filename) {
+bool OpenFile(FIL *file, const char *filename) {
     FRESULT result = f_open(file, filename, FA_OPEN_EXISTING | FA_READ);
     if (result != FR_OK && result != FR_EXIST) {
         printf("f_open(%s) error: %d\n", filename, result);
-        f_unmount(sdcard->pcName);
+        f_unmount(SD_DRIVE);
         return false;
     }
     return true;
@@ -56,8 +58,8 @@ void CloseFile(FIL *file) {
     }
 }
 
-void UnMountSdCard(SdCard *sdcard) {
-    f_unmount(sdcard->pcName);
+void UnMountSdCard(void) {
+    f_unmount(SD_DRIVE);
 }
 
 #endif

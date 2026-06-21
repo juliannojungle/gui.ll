@@ -30,15 +30,13 @@ gui.ll/
 │   │
 │   ├── lib/
 │   │   ├── Helper/
-│   │   │   ├── FileHelper.c        # SD card mount/open/close (parametrized by SdCard)
+│   │   │   ├── FileHelper.c        # SD card mount/open/close (single FatFS volume SD_DRIVE)
 │   │   │   └── PNGHelper.c         # PNG decode + LCD display via libpng
 │   │   │
 │   │   ├── Platform/
 │   │   │   ├── RP2040/
 │   │   │   │   ├── HAL.c           # HAL: GPIO, SPI, PWM, I2C (Pico SDK) — LCD SPI uses LCD_SPI from HALConfig.h
-│   │   │   │   ├── HALConfig.h     # SD pins + SD_SPI(spi0); LCD pins + LCD_SPI(spi1); SD_DETECT_PIN
-│   │   │   │   ├── SDConfig.h      # spi_t, SdCard struct definitions
-│   │   │   │   ├── SDHWConfig.h    # Default SPI/SD arrays + sd_get_num/sd_get_by_num
+│   │   │   │   ├── HALConfig.h     # SD pins + SD_SPI(spi0) + SD_SPI_BAUDRATE; LCD pins + LCD_SPI(spi1); SD_DETECT_PIN
 │   │   │   │   ├── RTC.h           # RTC via hardware/rtc.h + get_fattime()
 │   │   │   │   ├── DiskIO.c        # FatFS disk I/O (SPI SD) — real CRC7 on all cmds; faithful no-OS-FatFS handshake; card detect ISR
 │   │   │   │   ├── PreExecutable.cmake   # fatfs lib, patch inclusion
@@ -47,9 +45,7 @@ gui.ll/
 │   │   │   └── ESP32/
 │   │   │       ├── CMakeLists.txt   # idf_component_register (ESP-IDF component)
 │   │   │       ├── HAL.c           # HAL: GPIO, SPI (ESP-IDF), LEDC PWM compat — LCD SPI uses LCD_SPI from HALConfig.h
-│   │   │       ├── HALConfig.h     # SD pins + SD_SPI(SPI2_HOST); LCD pins + LCD_SPI(SPI3_HOST); SD_DETECT_PIN
-│   │   │       ├── SDConfig.h      # spi_t, SdCard struct definitions (ESP32 types)
-│   │   │       ├── SDHWConfig.h    # Default SPI/SD arrays
+│   │   │       ├── HALConfig.h     # SD pins + SD_SPI(SPI2_HOST) + SD_SPI_BAUDRATE; LCD pins + LCD_SPI(SPI3_HOST); SD_DETECT_PIN
 │   │   │       ├── RTC.h           # RTC via settimeofday + get_fattime()
 │   │   │       └── DiskIO.c        # FatFS disk I/O (ESP-IDF SPI master) — parity with RP2040: CRC7, manual CS, card detect ISR (IRAM_ATTR)
 │   │   │
@@ -79,18 +75,23 @@ gui.ll/
 
 - **PascalCase** for all project file and directory names
 - **Acronyms in UPPERCASE** (HAL, RTC, PNG, SD, IO, HW)
-- **Identifiers** (applied to project code; third-party/port code keeps its original style):
-  - **Types** (structs/typedefs) and **enum type names** in PascalCase: `Canvas`, `SdCard`,
-    `Rotate`, `Flip`, `PixelSize`, `PixelFillStyle`, `LineStyle`, `DrawFillStyle`, `DateTime`.
-  - **Enum values** keep an UPPERCASE, type-namespaced prefix (C enum values share the enclosing
-    scope, so the prefix avoids collisions): `ROTATE_0`, `FLIP_HORIZONTAL`, `PIXEL_SIZE_2X2`,
-    `PIXEL_FILL_STYLE_AROUND`, `LINE_STYLE_SOLID`, `DRAW_FILL_STYLE_EMPTY`.
-  - **Functions** in PascalCase with a module prefix: the drawing API is `Canvas*`
+- **Identifiers** (applied to project code; third-party/port code keeps its original style).
+  The casing rules are:
+  - **Functions / methods** → **PascalCase**, with a module prefix: the drawing API is `Canvas*`
     (`CanvasNewImage`, `CanvasClear`, `CanvasDrawLine`, `CanvasDrawText`, `CanvasDrawTime`, …).
-  - **Known exceptions (kept in original style on purpose):** the SD/SPI port layer derived from
-    no-OS-FatFS — `sd_get_num()`, `sd_get_by_num()`, and the `spi_t` / `sd_spi_if_t` /
-    `sd_if_type_t` types — stays snake_case to remain a faithful port (Decision 9). Only the
-    application-facing `sd_card_t` was promoted to `SdCard`.
+  - **Types** (structs/typedefs) and **enum type names** ("classes") → **PascalCase**: `Canvas`,
+    `SdCard`, `Rotate`, `Flip`, `PixelSize`, `PixelFillStyle`, `LineStyle`, `DrawFillStyle`,
+    `DateTime`.
+  - **Variables and function parameters** → **camelCase**: `xPoint`, `lineWidth`, `sdcard`.
+  - **Constants** (macros, `#define`s, enum values) → **UPPER_SNAKE_CASE**: `LCD_BL_PIN`,
+    `DEFAULT_PIXEL_SIZE`, `ROTATE_0`, `FLIP_HORIZONTAL`, `PIXEL_SIZE_2X2`, `LINE_STYLE_SOLID`,
+    `DRAW_FILL_STYLE_EMPTY`. Enum values additionally carry a type-namespaced prefix because C
+    enum values share the enclosing scope, so the prefix avoids collisions.
+  - **Known exceptions (kept in original style on purpose):** the internals of the SD/SPI port
+    in `DiskIO.c`, ported faithfully from no-OS-FatFS — static helpers and types such as
+    `sd_state`, `sd_card_state_t`, `sd_cmd()`, `sd_acquire()`, `crc7()`, plus the FatFS
+    `disk_*` interface required by ChaN FatFS — stay snake_case to remain a faithful port
+    (Decision 9).
 - **Exceptions** (not renamed):
   - Project meta files: `AGENTS.md`, `.gitmodules`, `.gitignore`, `CMakeLists.txt`
   - IDE directories/files: `.kiro/`, `.vscode/`, `tasks.json`, `settings.json`
@@ -106,15 +107,21 @@ The helpers and drivers are platform-agnostic — they call abstract functions
 Include resolution works via cmake `include_directories` pointing to the active
 platform folder. A single `#include "HAL.c"` in `Sample.c` pulls the right one.
 
-### 2. Multi-SD-Card Support
+### 2. Single SD Card
 
-The design supports multiple SPI buses and multiple SD cards. Each platform defines:
-- `SDConfig.h` — struct definitions (`spi_t`, `SdCard`, `sd_spi_if_t`)
-- `SDHWConfig.h` — default hardware arrays (`spis[]`, `sd_cards[]`) and
-  `sd_get_num()` / `sd_get_by_num()` implementations
+The design targets a **single SD card** on one SPI bus. The pins, SPI peripheral and baud rate
+are defined in each platform's `HALConfig.h` (`SD_SPI`, `SD_SPI_SCLK/MOSI/MISO/CS`,
+`SD_SPI_BAUDRATE`, `SD_DETECT_PIN`). `DiskIO.c` reads those defines directly and is wired to
+FatFS physical drive 0.
 
-The `FileHelper.c` functions are parametrized by `SdCard*`.
-Users expand the arrays in `SDHWConfig.h` to add more SD cards.
+`FileHelper.c` mounts/opens/closes that single card using a local `#define SD_DRIVE "0:"` — the
+FatFS logical volume name. `"0:"` is a FatFS-level concept (maps to physical drive 0) and is
+identical across platforms, so it lives in `FileHelper.c`, not in `HALConfig.h`. The helper
+functions take no `SdCard` argument; they operate implicitly on `SD_DRIVE`.
+
+> Multi-card support (the old `spi_t` / `SdCard` structs, `spis[]` / `sd_cards[]` arrays and
+> `sd_get_num()` / `sd_get_by_num()` in `SDConfig.h` / `SDHWConfig.h`) was **removed** — see
+> Decision 12. The hardware (a round LCD board with a single slot) never warranted it.
 
 ### 3. Entry Point
 
@@ -135,6 +142,29 @@ Each platform provides `RTC.h` with:
 - `get_fattime()` — provides FAT timestamps to FatFS (required when `FF_FS_NORTC == 0`)
 
 `get_fattime()` must NOT be `static` — FatFS declares it as extern in `ff.h`.
+
+### 5. Header / Source File Discipline
+
+Target convention for **our own code** (migrate existing code toward this gradually — do NOT do a
+sweeping rewrite; fix files as they are touched):
+
+- **No function/method declarations in `.h`** — and certainly no definitions. Headers carry only
+  type definitions (structs/enums/typedefs), macros and constants.
+- **Function/method definitions always live in `.c`.** Because of the unity-build approach
+  (Decision 5), `.c` files are `#include`d directly, so prototypes in headers are unnecessary —
+  the definition is already visible at the include site.
+- **`extern` variable declarations in `.h` only as a last resort** — when there is no more elegant
+  alternative. The `.c` should "own" the instances/objects (define them); avoid exposing globals
+  through `extern` in a header unless unavoidable.
+
+Known current violations (inherited, to be migrated gradually — they work only because of the
+single-translation-unit build):
+- `Canvas.h` exposes `extern Canvas canvas;` (global via `extern`).
+- `RTC.h` defines `time_init()` / `get_fattime()` (definitions in a header).
+
+These are not failures of the unity-build design — they compile because there is effectively one
+translation unit. They simply don't match the discipline above yet and will be reorganized as the
+surrounding files are touched.
 
 ---
 
@@ -263,6 +293,12 @@ This prevents the git plugin from showing false "modified" files in submodules
   hardware-tested**.
 
 Recent work:
+- **Removed the multi-SD-card abstraction** (Decision 12): deleted `SDConfig.h` and
+  `SDHWConfig.h` on both platforms (`spi_t`, `SdCard`, `sd_spi_if_t`, `sd_if_type_t`, the
+  `spis[]` / `sd_cards[]` arrays and `sd_get_num()` / `sd_get_by_num()` — all dead weight, since
+  `DiskIO.c` reads pins straight from `HALConfig.h`). `FileHelper.c` now uses a local
+  `#define SD_DRIVE "0:"` and its functions take no `SdCard*`; `Sample.c` calls them directly.
+  RP2040 builds and runs.
 - **PascalCase identifier pass** (see Naming Convention §0): `GUI_Paint.c/.h` → `Canvas.c/.h`,
   the `Paint` struct → `Canvas` (global `canvas`), the `Paint_*` drawing API → `Canvas*`
   (`CanvasNewImage`, `CanvasDrawLine`, `CanvasDrawText`, `CanvasDrawTime`, …), and the drawing
@@ -289,8 +325,9 @@ Recent work:
 ## Design Decisions Log
 
 1. **FatFS over no-OS-FatFS**: Switched from no-OS-FatFS-SD-SPI-RPi-Pico to pure ChaN FatFS
-   for portability across platforms. The `SdCard` parametrization was preserved in
-   `SDConfig.h` / `SDHWConfig.h` to maintain multi-card support.
+   for portability across platforms. A `sd_card_t`/`SdCard` parametrization was initially kept in
+   `SDConfig.h` / `SDHWConfig.h` to preserve multi-card support, but was **later removed**
+   (Decision 12) once it proved to be unused dead weight.
 
 2. **EXTRA_COMPONENT_DIRS over COMPONENT_DIRS**: Using `EXTRA_COMPONENT_DIRS` in ESP32 cmake
    adds our component alongside ESP-IDF's built-in components (driver, esp_system, etc.).
@@ -398,3 +435,20 @@ Recent work:
     - When commands fail *intermittently* or *partway through* the handshake with correct CRC,
       suspect power/signal integrity (supply sag, weak source, long flying wires, common ground)
       before rewriting protocol code.
+
+12. **Dropped multi-SD-card support**: The `sd_card_t`/`SdCard` parametrization inherited from
+    no-OS-FatFS (Decision 1) was removed. Investigation showed it was dead weight:
+    - `DiskIO.c` (both platforms) reads pins, SPI instance and baud rate **directly from
+      `HALConfig.h`** — it never touched `spi_t`, `spis[]`, or any SPI/pin field of `SdCard`.
+    - The only field of `sd_cards[]` actually consumed at runtime was `pcName` (`"0:"`), used by
+      FatFS in `FileHelper.c`.
+    - `sd_get_num()` returned `count_of(sd_cards)`, a compile-time `1`, so the `if (sd_get_num() >
+      0)` guard in `Sample.c` was always true.
+
+    Removed `SDConfig.h` and `SDHWConfig.h` on both platforms. `FileHelper.c` now hardcodes the
+    FatFS volume via `#define SD_DRIVE "0:"` (a FatFS-level name, platform-independent — ChaN
+    FatFS uses the same `pdrv 0` everywhere) and its functions take no `SdCard*`. `Sample.c`
+    calls `MountSdCard()` / `SelectActiveDrive()` / `OpenFile(&file, …)` / `UnMountSdCard()`
+    directly. The hardware (single round-LCD board, one SD slot) never justified multi-card
+    support. If multiple cards are ever needed, reintroduce a small parametrization then — don't
+    keep unused abstraction "just in case".

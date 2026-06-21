@@ -158,17 +158,16 @@ Fill modes: `DRAW_FILL_STYLE_EMPTY`, `DRAW_FILL_STYLE_FULL`.
 PNG files are decoded with libpng and written to the display row by row. Memory usage is bounded to a single decoded row at a time — the full image never needs to fit in RAM.
 
 ```c
-SdCard *sdcard = sd_get_by_num(0);
 FIL file;
 
-if (MountSdCard(sdcard)
-    && SelectActiveDrive(sdcard)
-    && OpenFile(sdcard, &file, "image.png")) {
+if (MountSdCard()
+    && SelectActiveDrive()
+    && OpenFile(&file, "image.png")) {
     DisplayPng(&file);
     CloseFile(&file);
 }
 
-UnMountSdCard(sdcard);
+UnMountSdCard();
 ```
 
 ---
