@@ -19,7 +19,7 @@ static spi_t spis[] = {  // One for each SPI.
     }
 };
 
-static sd_card_t sd_cards[] = {  // One for each SD card.
+static SdCard sd_cards[] = {  // One for each SD card.
     {
         .pcName = "0:",             // Name used to mount device
         .type = SD_IF_SPI,
@@ -37,7 +37,7 @@ size_t sd_get_num(void) {
     return count_of(sd_cards);
 }
 
-sd_card_t *sd_get_by_num(size_t num) {
+SdCard *sd_get_by_num(size_t num) {
     if (num < sd_get_num()) {
         return &sd_cards[num];
     } else {

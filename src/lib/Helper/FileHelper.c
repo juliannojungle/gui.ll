@@ -10,12 +10,12 @@
 #include "HALConfig.h" // Platform_SDCard_Init declaration
 
 /* -----------------------------------------------------------------------
- * File system helper functions (parametrized by sd_card_t)
+ * File system helper functions (parametrized by SdCard)
  * ----------------------------------------------------------------------- */
 
 static FATFS fatfs;
 
-bool MountSdCard(sd_card_t *sdcard) {
+bool MountSdCard(SdCard *sdcard) {
     if (!Platform_SDCard_Init()) {
         printf("Platform_SDCard_Init failed\n");
         return false;
@@ -29,7 +29,7 @@ bool MountSdCard(sd_card_t *sdcard) {
     return true;
 }
 
-bool SelectActiveDrive(sd_card_t *sdcard) {
+bool SelectActiveDrive(SdCard *sdcard) {
     FRESULT result = f_chdrive(sdcard->pcName);
     if (result != FR_OK) {
         printf("f_chdrive error: %d\n", result);
@@ -39,7 +39,7 @@ bool SelectActiveDrive(sd_card_t *sdcard) {
     return true;
 }
 
-bool OpenFile(sd_card_t *sdcard, FIL *file, const char *filename) {
+bool OpenFile(SdCard *sdcard, FIL *file, const char *filename) {
     FRESULT result = f_open(file, filename, FA_OPEN_EXISTING | FA_READ);
     if (result != FR_OK && result != FR_EXIST) {
         printf("f_open(%s) error: %d\n", filename, result);
@@ -56,7 +56,7 @@ void CloseFile(FIL *file) {
     }
 }
 
-void UnMountSdCard(sd_card_t *sdcard) {
+void UnMountSdCard(SdCard *sdcard) {
     f_unmount(sdcard->pcName);
 }
 

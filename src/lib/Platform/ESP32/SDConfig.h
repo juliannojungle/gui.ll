@@ -45,7 +45,7 @@ typedef struct {
     bool use_card_detect;       // Whether to use card detect GPIO
     int card_detect_gpio;       // Card detect GPIO pin
     bool card_detected_true;    // What the GPIO reads when card is present
-} sd_card_t;
+} SdCard;
 
 /*-----------------------------------------------------------------------*/
 /* Macros                                                                */
@@ -60,6 +60,6 @@ typedef struct {
 /*-----------------------------------------------------------------------*/
 
 size_t sd_get_num(void);
-sd_card_t *sd_get_by_num(size_t num);
+SdCard *sd_get_by_num(size_t num);
 
 #endif /* _SD_CONFIG_H_ */
