@@ -14,13 +14,9 @@
 #include "LCD_1in28.h"
 #include "HALConfig.h"
 
-LCD_1IN28_ATTRIBUTES LCD_1IN28;
+LCD_ATTRIBUTES LCD;
 
-/******************************************************************************
-function :  Hardware reset
-parameter:
-******************************************************************************/
-static void LCD_1IN28_Reset(void)
+static void LCDReset(void)
 {
     DigitalWrite(LCD_RST_PIN, 1);
     Delay(100);
@@ -30,12 +26,7 @@ static void LCD_1IN28_Reset(void)
     Delay(100);
 }
 
-/******************************************************************************
-function : send command
-parameter:
-     Reg : Command register
-******************************************************************************/
-static void LCD_1IN28_SendCommand(UBYTE Reg)
+static void LCDSendCommand(UBYTE Reg)
 {
     DigitalWrite(LCD_DC_PIN, 0);
     DigitalWrite(LCD_CS_PIN, 0);
@@ -43,12 +34,7 @@ static void LCD_1IN28_SendCommand(UBYTE Reg)
     DigitalWrite(LCD_CS_PIN, 1);
 }
 
-/******************************************************************************
-function : send data
-parameter:
-    Data : Write data
-******************************************************************************/
-static void LCD_1IN28_SendData_8Bit(UBYTE Data)
+static void LCDSendData8Bit(UBYTE Data)
 {
     DigitalWrite(LCD_DC_PIN, 1);
     DigitalWrite(LCD_CS_PIN, 0);
@@ -56,12 +42,15 @@ static void LCD_1IN28_SendData_8Bit(UBYTE Data)
     DigitalWrite(LCD_CS_PIN, 1);
 }
 
-/******************************************************************************
-function : send data
-parameter:
-    Data : Write data
-******************************************************************************/
-static void LCD_1IN28_SendData_16Bit(UWORD Data)
+static void LCDSendCommandData8Bit(UBYTE command, UBYTE data[], int dataSize)
+{
+    LCDSendCommand(command);
+    for (int i = 0; i < dataSize; i++) {
+        LCDSendData8Bit(data[i]);
+    }
+}
+
+static void LCDSendData16Bit(UWORD Data)
 {
     DigitalWrite(LCD_DC_PIN, 1);
     DigitalWrite(LCD_CS_PIN, 0);
@@ -70,310 +59,87 @@ static void LCD_1IN28_SendData_16Bit(UWORD Data)
     DigitalWrite(LCD_CS_PIN, 1);
 }
 
-/******************************************************************************
-function : Initialize the lcd register
-parameter:
-******************************************************************************/
-static void LCD_1IN28_InitReg(void)
+static void LCDInitRegister(void)
 {
-    LCD_1IN28_SendCommand(0x11); /* Sleep mode OFF */
-
+    LCDSendCommand(0x11); /* Sleep mode OFF */
     Delay(120); /* Delay 120ms */
-
-    LCD_1IN28_SendCommand(0xEF); /* Inter register enable 2 */
-
-    LCD_1IN28_SendCommand(0xEB);
-    LCD_1IN28_SendData_8Bit(0x14);
-
-    /* BEGIN set inter_command HIGH */
-    LCD_1IN28_SendCommand(0xFE); /* Inter register enable 1 */
-    LCD_1IN28_SendCommand(0xEF); /* Inter register enable 2 */
-    /* END set inter_command HIGH */
-
-    LCD_1IN28_SendCommand(0xEB);
-    LCD_1IN28_SendData_8Bit(0x14);
-
-    LCD_1IN28_SendCommand(0x84);
-    LCD_1IN28_SendData_8Bit(0x40);
-
-    LCD_1IN28_SendCommand(0x85);
-    LCD_1IN28_SendData_8Bit(0xFF);
-
-    LCD_1IN28_SendCommand(0x86);
-    LCD_1IN28_SendData_8Bit(0xFF);
-
-    LCD_1IN28_SendCommand(0x87);
-    LCD_1IN28_SendData_8Bit(0xFF);
-
-    LCD_1IN28_SendCommand(0x88);
-    LCD_1IN28_SendData_8Bit(0x0A);
-
-    LCD_1IN28_SendCommand(0x89);
-    LCD_1IN28_SendData_8Bit(0x21);
-
-    LCD_1IN28_SendCommand(0x8A);
-    LCD_1IN28_SendData_8Bit(0x00);
-
-    LCD_1IN28_SendCommand(0x8B);
-    LCD_1IN28_SendData_8Bit(0x80);
-
-    LCD_1IN28_SendCommand(0x8C);
-    LCD_1IN28_SendData_8Bit(0x01);
-
-    LCD_1IN28_SendCommand(0x8D);
-    LCD_1IN28_SendData_8Bit(0x01);
-
-    LCD_1IN28_SendCommand(0x8E);
-    LCD_1IN28_SendData_8Bit(0xFF);
-
-    LCD_1IN28_SendCommand(0x8F);
-    LCD_1IN28_SendData_8Bit(0xFF);
-
-    /* Display function control */
-    LCD_1IN28_SendCommand(0xB6);
-    LCD_1IN28_SendData_8Bit(0x00);
-    LCD_1IN28_SendData_8Bit(0x00);
-    /* END Display function control */
-
-    /* Memory access control - defined on LCD_1IN28_SetAttributes */
-    // LCD_1IN28_SendCommand(0x36);
-    // LCD_1IN28_SendData_8Bit(0x48);
-    /* END Memory access control */
-
-    /* Pixel format */
-    LCD_1IN28_SendCommand(0x3A);
-    LCD_1IN28_SendData_8Bit(0x05);
-    /* END Pixel format */
-
-    LCD_1IN28_SendCommand(0x90);
-    LCD_1IN28_SendData_8Bit(0x08);
-    LCD_1IN28_SendData_8Bit(0x08);
-    LCD_1IN28_SendData_8Bit(0x08);
-    LCD_1IN28_SendData_8Bit(0x08);
-
-    LCD_1IN28_SendCommand(0xBD);
-    LCD_1IN28_SendData_8Bit(0x06);
-
-    LCD_1IN28_SendCommand(0xBC);
-    LCD_1IN28_SendData_8Bit(0x00);
-
-    LCD_1IN28_SendCommand(0xFF);
-    LCD_1IN28_SendData_8Bit(0x60);
-    LCD_1IN28_SendData_8Bit(0x01);
-    LCD_1IN28_SendData_8Bit(0x04);
-
-    /* Voltage regulator 1a */
-    LCD_1IN28_SendCommand(0xC3);
-    LCD_1IN28_SendData_8Bit(0x13);
-    /* END Voltage regulator 1a */
-
-    /* Voltage regulator 1b */
-    LCD_1IN28_SendCommand(0xC4);
-    LCD_1IN28_SendData_8Bit(0x13);
-    /* END Voltage regulator 1b */
-
-    /* Voltage regulator 2a */
-    LCD_1IN28_SendCommand(0xC9);
-    LCD_1IN28_SendData_8Bit(0x22);
-    /* END Voltage regulator 2a */
-
-    LCD_1IN28_SendCommand(0xBE);
-    LCD_1IN28_SendData_8Bit(0x11);
-
-    LCD_1IN28_SendCommand(0xE1);
-    LCD_1IN28_SendData_8Bit(0x10);
-    LCD_1IN28_SendData_8Bit(0x0E);
-
-    LCD_1IN28_SendCommand(0xDF);
-    LCD_1IN28_SendData_8Bit(0x21);
-    LCD_1IN28_SendData_8Bit(0x0c);
-    LCD_1IN28_SendData_8Bit(0x02);
-
-    /* Set gamma1 */
-    LCD_1IN28_SendCommand(0xF0);
-    LCD_1IN28_SendData_8Bit(0x45);
-    LCD_1IN28_SendData_8Bit(0x09);
-    LCD_1IN28_SendData_8Bit(0x08);
-    LCD_1IN28_SendData_8Bit(0x08);
-    LCD_1IN28_SendData_8Bit(0x26);
-    LCD_1IN28_SendData_8Bit(0x2A);
-    /* END Set gamma1 */
-
-    /* Set gamma2 */
-    LCD_1IN28_SendCommand(0xF1);
-    LCD_1IN28_SendData_8Bit(0x43);
-    LCD_1IN28_SendData_8Bit(0x70);
-    LCD_1IN28_SendData_8Bit(0x72);
-    LCD_1IN28_SendData_8Bit(0x36);
-    LCD_1IN28_SendData_8Bit(0x37);
-    LCD_1IN28_SendData_8Bit(0x6F);
-    /* END Set gamma2 */
-
-    /* Set gamma3 */
-    LCD_1IN28_SendCommand(0xF2);
-    LCD_1IN28_SendData_8Bit(0x45);
-    LCD_1IN28_SendData_8Bit(0x09);
-    LCD_1IN28_SendData_8Bit(0x08);
-    LCD_1IN28_SendData_8Bit(0x08);
-    LCD_1IN28_SendData_8Bit(0x26);
-    LCD_1IN28_SendData_8Bit(0x2A);
-    /* END Set gamma3 */
-
-    /* Set gamma4 */
-    LCD_1IN28_SendCommand(0xF3);
-    LCD_1IN28_SendData_8Bit(0x43);
-    LCD_1IN28_SendData_8Bit(0x70);
-    LCD_1IN28_SendData_8Bit(0x72);
-    LCD_1IN28_SendData_8Bit(0x36);
-    LCD_1IN28_SendData_8Bit(0x37);
-    LCD_1IN28_SendData_8Bit(0x6F);
-    /* END Set gamma4 */
-
-    LCD_1IN28_SendCommand(0xED);
-    LCD_1IN28_SendData_8Bit(0x1B);
-    LCD_1IN28_SendData_8Bit(0x0B);
-
-    LCD_1IN28_SendCommand(0xAE);
-    LCD_1IN28_SendData_8Bit(0x77);
-
-    LCD_1IN28_SendCommand(0xCD);
-    LCD_1IN28_SendData_8Bit(0x63);
-
-    LCD_1IN28_SendCommand(0x70);
-    LCD_1IN28_SendData_8Bit(0x07);
-    LCD_1IN28_SendData_8Bit(0x07);
-    LCD_1IN28_SendData_8Bit(0x04);
-    LCD_1IN28_SendData_8Bit(0x0E);
-    LCD_1IN28_SendData_8Bit(0x0F);
-    LCD_1IN28_SendData_8Bit(0x09);
-    LCD_1IN28_SendData_8Bit(0x07);
-    LCD_1IN28_SendData_8Bit(0x08);
-    LCD_1IN28_SendData_8Bit(0x03);
-
-    /* Frame rate */
-    LCD_1IN28_SendCommand(0xE8);
-    LCD_1IN28_SendData_8Bit(0x34);
-    /* END Frame rate */
-
-    LCD_1IN28_SendCommand(0x62);
-    LCD_1IN28_SendData_8Bit(0x18);
-    LCD_1IN28_SendData_8Bit(0x0D);
-    LCD_1IN28_SendData_8Bit(0x71);
-    LCD_1IN28_SendData_8Bit(0xED);
-    LCD_1IN28_SendData_8Bit(0x70);
-    LCD_1IN28_SendData_8Bit(0x70);
-    LCD_1IN28_SendData_8Bit(0x18);
-    LCD_1IN28_SendData_8Bit(0x0F);
-    LCD_1IN28_SendData_8Bit(0x71);
-    LCD_1IN28_SendData_8Bit(0xEF);
-    LCD_1IN28_SendData_8Bit(0x70);
-    LCD_1IN28_SendData_8Bit(0x70);
-
-    LCD_1IN28_SendCommand(0x63);
-    LCD_1IN28_SendData_8Bit(0x18);
-    LCD_1IN28_SendData_8Bit(0x11);
-    LCD_1IN28_SendData_8Bit(0x71);
-    LCD_1IN28_SendData_8Bit(0xF1);
-    LCD_1IN28_SendData_8Bit(0x70);
-    LCD_1IN28_SendData_8Bit(0x70);
-    LCD_1IN28_SendData_8Bit(0x18);
-    LCD_1IN28_SendData_8Bit(0x13);
-    LCD_1IN28_SendData_8Bit(0x71);
-    LCD_1IN28_SendData_8Bit(0xF3);
-    LCD_1IN28_SendData_8Bit(0x70);
-    LCD_1IN28_SendData_8Bit(0x70);
-
-    LCD_1IN28_SendCommand(0x64);
-    LCD_1IN28_SendData_8Bit(0x28);
-    LCD_1IN28_SendData_8Bit(0x29);
-    LCD_1IN28_SendData_8Bit(0xF1);
-    LCD_1IN28_SendData_8Bit(0x01);
-    LCD_1IN28_SendData_8Bit(0xF1);
-    LCD_1IN28_SendData_8Bit(0x00);
-    LCD_1IN28_SendData_8Bit(0x07);
-
-    LCD_1IN28_SendCommand(0x66);
-    LCD_1IN28_SendData_8Bit(0x3C);
-    LCD_1IN28_SendData_8Bit(0x00);
-    LCD_1IN28_SendData_8Bit(0xCD);
-    LCD_1IN28_SendData_8Bit(0x67);
-    LCD_1IN28_SendData_8Bit(0x45);
-    LCD_1IN28_SendData_8Bit(0x45);
-    LCD_1IN28_SendData_8Bit(0x10);
-    LCD_1IN28_SendData_8Bit(0x00);
-    LCD_1IN28_SendData_8Bit(0x00);
-    LCD_1IN28_SendData_8Bit(0x00);
-
-    LCD_1IN28_SendCommand(0x67);
-    LCD_1IN28_SendData_8Bit(0x00);
-    LCD_1IN28_SendData_8Bit(0x3C);
-    LCD_1IN28_SendData_8Bit(0x00);
-    LCD_1IN28_SendData_8Bit(0x00);
-    LCD_1IN28_SendData_8Bit(0x00);
-    LCD_1IN28_SendData_8Bit(0x01);
-    LCD_1IN28_SendData_8Bit(0x54);
-    LCD_1IN28_SendData_8Bit(0x10);
-    LCD_1IN28_SendData_8Bit(0x32);
-    LCD_1IN28_SendData_8Bit(0x98);
-
-    LCD_1IN28_SendCommand(0x74);
-    LCD_1IN28_SendData_8Bit(0x10);
-    LCD_1IN28_SendData_8Bit(0x85);
-    LCD_1IN28_SendData_8Bit(0x80);
-    LCD_1IN28_SendData_8Bit(0x00);
-    LCD_1IN28_SendData_8Bit(0x00);
-    LCD_1IN28_SendData_8Bit(0x4E);
-    LCD_1IN28_SendData_8Bit(0x00);
-
-    LCD_1IN28_SendCommand(0x98);
-    LCD_1IN28_SendData_8Bit(0x3e);
-    LCD_1IN28_SendData_8Bit(0x07);
-
-    LCD_1IN28_SendCommand(0x35); /* Tearing effect ON */
-
-    LCD_1IN28_SendCommand(0x21); /* Display color inversion ON */
-
-    LCD_1IN28_SendCommand(0x11); /* Sleep mode OFF */
-
+    LCDSendCommand(0xEF); /* Inter register enable 2 */
+    LCDSendCommandData8Bit(0xEB, (UBYTE[]){0x14}, 1);
+    LCDSendCommand(0xFE); /* set inter_command HIGH: Inter register enable 1 */
+    LCDSendCommand(0xEF); /* set inter_command HIGH: Inter register enable 2 */
+    LCDSendCommandData8Bit(0xEB, (UBYTE[]){0x14}, 1);
+    LCDSendCommandData8Bit(0x84, (UBYTE[]){0x40}, 1);
+    LCDSendCommandData8Bit(0x85, (UBYTE[]){0xFF}, 1);
+    LCDSendCommandData8Bit(0x86, (UBYTE[]){0xFF}, 1);
+    LCDSendCommandData8Bit(0x87, (UBYTE[]){0xFF}, 1);
+    LCDSendCommandData8Bit(0x88, (UBYTE[]){0x0A}, 1);
+    LCDSendCommandData8Bit(0x89, (UBYTE[]){0x21}, 1);
+    LCDSendCommandData8Bit(0x8A, (UBYTE[]){0x00}, 1);
+    LCDSendCommandData8Bit(0x8B, (UBYTE[]){0x80}, 1);
+    LCDSendCommandData8Bit(0x8C, (UBYTE[]){0x01}, 1);
+    LCDSendCommandData8Bit(0x8D, (UBYTE[]){0x01}, 1);
+    LCDSendCommandData8Bit(0x8E, (UBYTE[]){0xFF}, 1);
+    LCDSendCommandData8Bit(0x8F, (UBYTE[]){0xFF}, 1);
+    LCDSendCommandData8Bit(0xB6, (UBYTE[]){0x00, 0x00}, 2); /* Display function control */
+    // LCDSendCommandData8Bit(0x36, (UBYTE[]){0x48}, 1); /* Memory access control - defined on LCDSetAttributes */
+    LCDSendCommandData8Bit(0x3A, (UBYTE[]){0x05}, 1); /* Pixel format */
+    LCDSendCommandData8Bit(0x90, (UBYTE[]){0x08,0x08,0x08,0x08}, 4);
+    LCDSendCommandData8Bit(0xBD, (UBYTE[]){0x06}, 1);
+    LCDSendCommandData8Bit(0xBC, (UBYTE[]){0x00}, 1);
+    LCDSendCommandData8Bit(0xFF, (UBYTE[]){0x60, 0x01, 0x04}, 3);
+    LCDSendCommandData8Bit(0xC3, (UBYTE[]){0x13}, 1); /* Voltage regulator 1a */
+    LCDSendCommandData8Bit(0xC4, (UBYTE[]){0x13}, 1); /* Voltage regulator 1b */
+    LCDSendCommandData8Bit(0xC9, (UBYTE[]){0x22}, 1); /* Voltage regulator 2a */
+    LCDSendCommandData8Bit(0xBE, (UBYTE[]){0x11}, 1);
+    LCDSendCommandData8Bit(0xE1, (UBYTE[]){0x10, 0x0E}, 2);
+    LCDSendCommandData8Bit(0xDF, (UBYTE[]){0x21, 0x0c, 0x02}, 3);
+    LCDSendCommandData8Bit(0xF0, (UBYTE[]){0x45, 0x09, 0x08, 0x08, 0x26, 0x2A}, 6); /* Set gamma1 */
+    LCDSendCommandData8Bit(0xF1, (UBYTE[]){0x43, 0x70, 0x72, 0x36, 0x37, 0x6F}, 6); /* Set gamma2 */
+    LCDSendCommandData8Bit(0xF2, (UBYTE[]){0x45, 0x09, 0x08, 0x08, 0x26, 0x2A}, 6); /* Set gamma3 */
+    LCDSendCommandData8Bit(0xF3, (UBYTE[]){0x43, 0x70, 0x72, 0x36, 0x37, 0x6F}, 6); /* Set gamma4 */
+    LCDSendCommandData8Bit(0xED, (UBYTE[]){0x1B, 0x0B}, 2);
+    LCDSendCommandData8Bit(0xAE, (UBYTE[]){0x77}, 1);
+    LCDSendCommandData8Bit(0xCD, (UBYTE[]){0x63}, 1);
+    LCDSendCommandData8Bit(0x70, (UBYTE[]){0x07, 0x07, 0x04, 0x0E, 0x0F, 0x09, 0x07, 0x08, 0x03}, 9);
+    LCDSendCommandData8Bit(0xE8, (UBYTE[]){0x34}, 1); /* Frame rate */
+    LCDSendCommandData8Bit(0x62, (UBYTE[]){0x18, 0x0D, 0x71, 0xED, 0x70, 0x70, 0x18, 0x0F, 0x71, 0xEF, 0x70, 0x70}, 12);
+    LCDSendCommandData8Bit(0x63, (UBYTE[]){0x18, 0x11, 0x71, 0xF1, 0x70, 0x70, 0x18, 0x13, 0x71, 0xF3, 0x70, 0x70}, 12);
+    LCDSendCommandData8Bit(0x64, (UBYTE[]){0x28, 0x29, 0xF1, 0x01, 0xF1, 0x00, 0x07}, 7);
+    LCDSendCommandData8Bit(0x66, (UBYTE[]){0x3C, 0x00, 0xCD, 0x67, 0x45, 0x45, 0x10, 0x00, 0x00, 0x00}, 10);
+    LCDSendCommandData8Bit(0x67, (UBYTE[]){0x00, 0x3C, 0x00, 0x00, 0x00, 0x01, 0x54, 0x10, 0x32, 0x98}, 10);
+    LCDSendCommandData8Bit(0x74, (UBYTE[]){0x10, 0x85, 0x80, 0x00, 0x00, 0x4E, 0x00}, 7);
+    LCDSendCommandData8Bit(0x98, (UBYTE[]){0x3e, 0x07}, 2);
+    LCDSendCommand(0x35); /* Tearing effect ON */
+    LCDSendCommand(0x21); /* Display color inversion ON */
+    LCDSendCommand(0x11); /* Sleep mode OFF */
     Delay(12); /* Delay 12ms */
-
-    LCD_1IN28_SendCommand(0x29); /* Display ON */
-
+    LCDSendCommand(0x29); /* Display ON */
     Delay(20); /* Delay 20ms */
 }
 
-/********************************************************************************
-function: Set the resolution and scanning method of the screen
-parameter:
-    Scan_dir:   Scan direction
-********************************************************************************/
-static void LCD_1IN28_SetAttributes(UBYTE Scan_dir)
+static void LCDSetAttributes(UBYTE Scan_dir)
 {
     //Get the screen scan direction
-    LCD_1IN28.SCAN_DIR = Scan_dir;
+    LCD.SCAN_DIR = Scan_dir;
     UBYTE MemoryAccessReg = 0x00;
 
     //Get GRAM and LCD width and height
     if(Scan_dir == HORIZONTAL) {
-        LCD_1IN28.HEIGHT = LCD_1IN28_WIDTH;
-        LCD_1IN28.WIDTH = LCD_1IN28_HEIGHT;
+        LCD.HEIGHT = LCD_1IN28_WIDTH;
+        LCD.WIDTH = LCD_1IN28_HEIGHT;
         MemoryAccessReg = 0x48;
     } else {
-        LCD_1IN28.HEIGHT = LCD_1IN28_HEIGHT;
-        LCD_1IN28.WIDTH = LCD_1IN28_WIDTH;
+        LCD.HEIGHT = LCD_1IN28_HEIGHT;
+        LCD.WIDTH = LCD_1IN28_WIDTH;
         MemoryAccessReg = 0x24;
     }
 
     // Set the read / write scan direction of the frame memory
-    LCD_1IN28_SendCommand(0x36); //MX, MY, RGB mode
-    LCD_1IN28_SendData_8Bit(MemoryAccessReg); //0x08 set RGB
+    //MX, MY, RGB mode; 0x08 set RGB
+    LCDSendCommandData8Bit(0x36, (UBYTE[]){MemoryAccessReg}, 1);
 }
 
-/********************************************************************************
-function : Initialize the lcd
-parameter:
-********************************************************************************/
-int LCD_1IN28_Init(UBYTE Scan_dir)
+int LCDInitialize(UBYTE Scan_dir)
 {
     int driverResult = DriverInit();
 
@@ -381,117 +147,74 @@ int LCD_1IN28_Init(UBYTE Scan_dir)
         return driverResult;
 
     DriverSetPWM(90);
-    //Hardware reset
-    LCD_1IN28_Reset();
-
-    //Set the resolution and scanning method of the screen
-    LCD_1IN28_SetAttributes(Scan_dir);
-
-    //Set the initialization register
-    LCD_1IN28_InitReg();
-
+    LCDReset(); //Hardware reset
+    LCDSetAttributes(Scan_dir); //Set the resolution and scanning method of the screen
+    LCDInitRegister(); //Set the initialization register
     return 0;
 }
 
-/********************************************************************************
-function: Sets the start position and size of the display area
-parameter:
-    Xstart: X direction Start coordinates
-    Ystart: Y direction Start coordinates
-    Xend  : X direction end coordinates
-    Yend  : Y direction end coordinates
-********************************************************************************/
-void LCD_1IN28_SetWindows(UWORD Xstart, UWORD Ystart, UWORD Xend, UWORD Yend)
+void LCDSetDisplayArea(UWORD Xstart, UWORD Ystart, UWORD Xend, UWORD Yend)
 {
-    //set the X coordinates
-    LCD_1IN28_SendCommand(0x2A);
-    LCD_1IN28_SendData_8Bit(0x00);
-    LCD_1IN28_SendData_8Bit(Xstart);
-    LCD_1IN28_SendData_8Bit(0x00);
-    LCD_1IN28_SendData_8Bit(Xend-1);
-
-    //set the Y coordinates
-    LCD_1IN28_SendCommand(0x2B);
-    LCD_1IN28_SendData_8Bit(0x00);
-    LCD_1IN28_SendData_8Bit(Ystart);
-    LCD_1IN28_SendData_8Bit(0x00);
-    LCD_1IN28_SendData_8Bit(Yend-1);
-
-    LCD_1IN28_SendCommand(0X2C);
+    LCDSendCommandData8Bit(0x2A, (UBYTE[]){0x00, Xstart, 0x00, Xend-1}, 4); //set the X coordinates
+    LCDSendCommandData8Bit(0x2B, (UBYTE[]){0x00, Ystart, 0x00, Yend-1}, 4); //set the Y coordinates
+    LCDSendCommand(0X2C);
     // printf("%d %d\r\n",x,y);
 }
 
-/******************************************************************************
-function :  Clear screen
-parameter:
-******************************************************************************/
-void LCD_1IN28_Clear(UWORD Color)
+void LCDClear(UWORD FillColor)
 {
     UWORD j;
-    UWORD Image[LCD_1IN28.WIDTH*LCD_1IN28.HEIGHT];
+    UWORD Image[LCD.WIDTH*LCD.HEIGHT];
+    FillColor = ((FillColor<<8)&0xff00)|(FillColor>>8);
 
-    Color = ((Color<<8)&0xff00)|(Color>>8);
-
-    for (j = 0; j < LCD_1IN28.HEIGHT*LCD_1IN28.WIDTH; j++) {
-        Image[j] = Color;
+    for (j = 0; j < LCD.HEIGHT*LCD.WIDTH; j++) {
+        Image[j] = FillColor;
     }
 
-    LCD_1IN28_SetWindows(0, 0, LCD_1IN28.WIDTH, LCD_1IN28.HEIGHT);
+    LCDSetDisplayArea(0, 0, LCD.WIDTH, LCD.HEIGHT);
     DigitalWrite(LCD_DC_PIN, 1);
     DigitalWrite(LCD_CS_PIN, 0);
 
-    for (j = 0; j < LCD_1IN28.HEIGHT; j++) {
-        SPIWriteNByte((uint8_t *)&Image[j*LCD_1IN28.WIDTH], LCD_1IN28.WIDTH*2);
+    for (j = 0; j < LCD.HEIGHT; j++) {
+        SPIWriteNByte((uint8_t *)&Image[j*LCD.WIDTH], LCD.WIDTH*2);
     }
 
     DigitalWrite(LCD_CS_PIN, 1);
 }
 
-/******************************************************************************
-function :  Sends the image buffer in RAM to displays
-parameter:
-******************************************************************************/
-void LCD_1IN28_Display(UWORD *Image)
+void LCDDisplayImage(UWORD *Image) /* uses full display area available in LCD */
 {
     UWORD j;
-    LCD_1IN28_SetWindows(0, 0, LCD_1IN28.WIDTH, LCD_1IN28.HEIGHT);
+    LCDSetDisplayArea(0, 0, LCD.WIDTH, LCD.HEIGHT);
     DigitalWrite(LCD_DC_PIN, 1);
     DigitalWrite(LCD_CS_PIN, 0);
 
-    for (j = 0; j < LCD_1IN28.HEIGHT; j++) {
-        SPIWriteNByte((uint8_t *)&Image[j*LCD_1IN28.WIDTH], LCD_1IN28.WIDTH*2);
+    for (j = 0; j < LCD.HEIGHT; j++) {
+        SPIWriteNByte((uint8_t *)&Image[j*LCD.WIDTH], LCD.WIDTH*2);
     }
 
     DigitalWrite(LCD_CS_PIN, 1);
-    LCD_1IN28_SendCommand(0x29);
+    LCDSendCommand(0x29);
 }
 
-void LCD_1IN28_DisplayWindows(UWORD Xstart, UWORD Ystart, UWORD Xend, UWORD Yend, UWORD *Image)
+void LCDDisplayImageInArea(UWORD Xstart, UWORD Ystart, UWORD Xend, UWORD Yend, UWORD *Image)
 {
     UDOUBLE Addr = 0;
     UWORD j;
-    LCD_1IN28_SetWindows(Xstart, Ystart, Xend , Yend);
+    LCDSetDisplayArea(Xstart, Ystart, Xend , Yend);
     DigitalWrite(LCD_DC_PIN, 1);
     DigitalWrite(LCD_CS_PIN, 0);
 
     for (j = Ystart; j < Yend - 1; j++) {
-        Addr = Xstart + j * LCD_1IN28.WIDTH ;
+        Addr = Xstart + j * LCD.WIDTH ;
         SPIWriteNByte((uint8_t *)&Image[Addr], (Xend-Xstart)*2);
     }
 
     DigitalWrite(LCD_CS_PIN, 1);
 }
 
-void LCD_1IN28_DisplayPoint(UWORD X, UWORD Y, UWORD Color)
+void LCDDisplayImagePoint(UWORD X, UWORD Y, UWORD Color)
 {
-    LCD_1IN28_SetWindows(X,Y,X,Y);
-    LCD_1IN28_SendData_16Bit(Color);
-}
-
-void Handler_1IN28_LCD(int signo)
-{
-    //System Exit
-    printf("\r\nHandler:Program stop\r\n");
-    DriverExit();
-    exit(0);
+    LCDSetDisplayArea(X,Y,X,Y);
+    LCDSendData16Bit(Color);
 }

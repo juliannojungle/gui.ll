@@ -88,7 +88,4 @@ void DriverSetPWM(UBYTE value) {
     }
 }
 
-void DriverExit(void) {
-}
-
 #endif

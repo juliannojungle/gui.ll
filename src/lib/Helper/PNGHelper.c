@@ -95,20 +95,20 @@ void DisplayPng(FIL *file) {
 #endif
 
     /* LCD Init */
-    if (LCD_1IN28_Init(HORIZONTAL) != 0) {
+    if (LCDInitialize(HORIZONTAL) != 0) {
         png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
         return;
     }
 
-    LCD_1IN28_Clear(BLACK);
+    LCDClear(BLACK);
 
     png_bytep row_pointers = NULL;
     int col, row;
-    int maxCol = width > LCD_1IN28.WIDTH ? LCD_1IN28.WIDTH : width;     // won't print outside display.
-    int maxRow = height > LCD_1IN28.HEIGHT ? LCD_1IN28.HEIGHT : height; // won't print outside display.
+    int maxCol = width > LCD.WIDTH ? LCD.WIDTH : width;     // won't print outside display.
+    int maxRow = height > LCD.HEIGHT ? LCD.HEIGHT : height; // won't print outside display.
 
-    // ####### LCD_1IN28_Display #######
-    LCD_1IN28_SetWindows(0, 0, maxCol, maxRow);
+    // ####### LCDDisplayImage #######
+    LCDSetDisplayArea(0, 0, maxCol, maxRow);
     DigitalWrite(LCD_DC_PIN, 1);
     DigitalWrite(LCD_CS_PIN, 0);
 
@@ -148,16 +148,14 @@ void DisplayPng(FIL *file) {
     }
 
     DigitalWrite(LCD_CS_PIN, 1);
-    LCD_1IN28_SendCommand(0x29);
-    // ####### LCD_1IN28_Display #######
+    LCDSendCommand(0x29);
+    // ####### LCDDisplayImage #######
 
     /* Turn backlight on */
     DriverGPIOMode(LCD_BL_PIN, GPIO_OUT);
     DigitalWrite(LCD_CS_PIN, 1);
     DigitalWrite(LCD_DC_PIN, 0);
     DigitalWrite(LCD_BL_PIN, 1);
-
-    DriverExit();
 
 #if _DEBUG
     printf("Done! Destroying read struct...\n");

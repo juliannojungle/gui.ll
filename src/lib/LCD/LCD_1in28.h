@@ -32,14 +32,12 @@ typedef struct{
     UWORD WIDTH;
     UWORD HEIGHT;
     UBYTE SCAN_DIR;
-}LCD_1IN28_ATTRIBUTES;
-extern LCD_1IN28_ATTRIBUTES LCD_1IN28;
+}LCD_ATTRIBUTES;
+extern LCD_ATTRIBUTES LCD;
 
-int LCD_1IN28_Init(UBYTE Scan_dir);
-void LCD_1IN28_Clear(UWORD Color);
-void LCD_1IN28_Display(UWORD *Image);
-void LCD_1IN28_DisplayWindows(UWORD Xstart, UWORD Ystart, UWORD Xend, UWORD Yend, UWORD *Image);
-void LCD_1IN28_DisplayPoint(UWORD X, UWORD Y, UWORD Color);
-
-void Handler_1IN28_LCD(int signo);
+int LCDInitialize(UBYTE Scan_dir);
+void LCDClear(UWORD Color);
+void LCDDisplayImage(UWORD *Image);
+void LCDDisplayImageInArea(UWORD Xstart, UWORD Ystart, UWORD Xend, UWORD Yend, UWORD *Image);
+void LCDDisplayImagePoint(UWORD X, UWORD Y, UWORD Color);
 #endif
