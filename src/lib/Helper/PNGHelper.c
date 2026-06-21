@@ -107,7 +107,7 @@ void DisplayPng(FIL *file) {
     int maxCol = width > LCD.WIDTH ? LCD.WIDTH : width;     // won't print outside display.
     int maxRow = height > LCD.HEIGHT ? LCD.HEIGHT : height; // won't print outside display.
 
-    // ####### LCDDisplayImage #######
+    // ####### LCDDisplayTexture #######
     LCDSetDisplayArea(0, 0, maxCol, maxRow);
     DigitalWrite(LCD_DC_PIN, 1);
     DigitalWrite(LCD_CS_PIN, 0);
@@ -149,7 +149,7 @@ void DisplayPng(FIL *file) {
 
     DigitalWrite(LCD_CS_PIN, 1);
     LCDSendCommand(0x29);
-    // ####### LCDDisplayImage #######
+    // ####### LCDDisplayTexture #######
 
     /* Turn backlight on */
     DriverGPIOMode(LCD_BL_PIN, GPIO_OUT);

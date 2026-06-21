@@ -158,7 +158,6 @@ void LCDSetDisplayArea(UWORD Xstart, UWORD Ystart, UWORD Xend, UWORD Yend)
     LCDSendCommandData8Bit(0x2A, (UBYTE[]){0x00, Xstart, 0x00, Xend-1}, 4); //set the X coordinates
     LCDSendCommandData8Bit(0x2B, (UBYTE[]){0x00, Ystart, 0x00, Yend-1}, 4); //set the Y coordinates
     LCDSendCommand(0X2C);
-    // printf("%d %d\r\n",x,y);
 }
 
 void LCDClear(UWORD FillColor)
@@ -182,7 +181,7 @@ void LCDClear(UWORD FillColor)
     DigitalWrite(LCD_CS_PIN, 1);
 }
 
-void LCDDisplayImage(UWORD *Image) /* uses full display area available in LCD */
+void LCDDisplayTexture(UWORD *Image) /* uses full display area available in LCD */
 {
     UWORD j;
     LCDSetDisplayArea(0, 0, LCD.WIDTH, LCD.HEIGHT);
@@ -197,7 +196,7 @@ void LCDDisplayImage(UWORD *Image) /* uses full display area available in LCD */
     LCDSendCommand(0x29);
 }
 
-void LCDDisplayImageInArea(UWORD Xstart, UWORD Ystart, UWORD Xend, UWORD Yend, UWORD *Image)
+void LCDDisplayTextureInArea(UWORD Xstart, UWORD Ystart, UWORD Xend, UWORD Yend, UWORD *Image)
 {
     UDOUBLE Addr = 0;
     UWORD j;
@@ -213,7 +212,7 @@ void LCDDisplayImageInArea(UWORD Xstart, UWORD Ystart, UWORD Xend, UWORD Yend, U
     DigitalWrite(LCD_CS_PIN, 1);
 }
 
-void LCDDisplayImagePoint(UWORD X, UWORD Y, UWORD Color)
+void LCDDisplayTexturePoint(UWORD X, UWORD Y, UWORD Color)
 {
     LCDSetDisplayArea(X,Y,X,Y);
     LCDSendData16Bit(Color);

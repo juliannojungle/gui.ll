@@ -37,7 +37,7 @@ extern LCD_ATTRIBUTES LCD;
 
 int LCDInitialize(UBYTE Scan_dir);
 void LCDClear(UWORD Color);
-void LCDDisplayImage(UWORD *Image);
-void LCDDisplayImageInArea(UWORD Xstart, UWORD Ystart, UWORD Xend, UWORD Yend, UWORD *Image);
-void LCDDisplayImagePoint(UWORD X, UWORD Y, UWORD Color);
+void LCDDisplayTexture(UWORD *Image);
+void LCDDisplayTextureInArea(UWORD Xstart, UWORD Ystart, UWORD Xend, UWORD Yend, UWORD *Image);
+void LCDDisplayTexturePoint(UWORD X, UWORD Y, UWORD Color);
 #endif
