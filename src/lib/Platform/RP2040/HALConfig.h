@@ -55,6 +55,4 @@
 #define LCD_SPI spi1
 #endif
 
-bool Platform_SDCard_Init(void);
-
 #endif /* HAL_CONFIG_H */

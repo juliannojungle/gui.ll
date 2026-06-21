@@ -5,7 +5,12 @@
 #include <stdbool.h>
 #include <string.h>
 #include "ff.h"
-#include "HALConfig.h" // Platform_SDCard_Init declaration
+
+/* SDCardInit is defined in the platform DiskIO.c, which is compiled as a
+ * separate translation unit (linked via the fatfs library) rather than being
+ * #included into this one. Forward-declared here (in the caller) so we keep
+ * function declarations out of headers — see AGENTS.md §5. */
+bool SDCardInit(void);
 
 /* FatFS logical volume name (physical drive 0). This is a FatFS-level concept,
  * identical across platforms, so it lives here rather than in HALConfig.h. */
@@ -18,8 +23,8 @@
 static FATFS fatfs;
 
 bool MountSdCard(void) {
-    if (!Platform_SDCard_Init()) {
-        printf("Platform_SDCard_Init failed\n");
+    if (!SDCardInit()) {
+        printf("SDCardInit failed\n");
         return false;
     }
 

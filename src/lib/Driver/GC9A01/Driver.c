@@ -70,7 +70,7 @@ UBYTE DriverInit(void) {
 
     // PWM Config (backlight)
     GPIOSetFunction(LCD_BL_PIN, GPIO_FUNC_PWM);
-    slice_num = pwm_gpio_to_slice_num(LCD_BL_PIN);
+    slice_num = PWMGPIOToSliceNum(LCD_BL_PIN);
     PWMSetWrap(slice_num, 100);
     PWMSetChannelLevel(slice_num, PWM_CHAN_B, 1);
     PWMSetClockDivider(slice_num, 50);

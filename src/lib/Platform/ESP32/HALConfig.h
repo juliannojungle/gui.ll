@@ -56,6 +56,4 @@
 #define LCD_SPI SPI3_HOST
 #endif
 
-bool Platform_SDCard_Init(void);
-
 #endif /* HAL_CONFIG_H */

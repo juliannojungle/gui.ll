@@ -83,15 +83,26 @@ gui.ll/
     `SdCard`, `Rotate`, `Flip`, `PixelSize`, `PixelFillStyle`, `LineStyle`, `DrawFillStyle`,
     `DateTime`.
   - **Variables and function parameters** → **camelCase**: `xPoint`, `lineWidth`, `sdcard`.
+  - **Struct / "class" attributes (members)** → **PascalCase**: `canvas.Width`, `canvas.Height`,
+    `sdState.SectorCount`, `sdState.HighCapacity`, `dateTime.Year`.
   - **Constants** (macros, `#define`s, enum values) → **UPPER_SNAKE_CASE**: `LCD_BL_PIN`,
     `DEFAULT_PIXEL_SIZE`, `ROTATE_0`, `FLIP_HORIZONTAL`, `PIXEL_SIZE_2X2`, `LINE_STYLE_SOLID`,
     `DRAW_FILL_STYLE_EMPTY`. Enum values additionally carry a type-namespaced prefix because C
     enum values share the enclosing scope, so the prefix avoids collisions.
-  - **Known exceptions (kept in original style on purpose):** the internals of the SD/SPI port
-    in `DiskIO.c`, ported faithfully from no-OS-FatFS — static helpers and types such as
-    `sd_state`, `sd_card_state_t`, `sd_cmd()`, `sd_acquire()`, `crc7()`, plus the FatFS
-    `disk_*` interface required by ChaN FatFS — stay snake_case to remain a faithful port
-    (Decision 9).
+  - **Known exceptions (kept in original style on purpose):** only names that are a **contract
+    with an external dependency** stay off-convention:
+    - The FatFS diskio interface ChaN FatFS calls by name: `disk_initialize`, `disk_status`,
+      `disk_read`, `disk_write`, `disk_ioctl` (and `get_fattime`), plus FatFS types/constants
+      (`DSTATUS`, `DRESULT`, `BYTE`, `RES_OK`, `STA_NOINIT`, …).
+    - Pico SDK / ESP-IDF API calls (`spi_write_blocking`, `gpio_put`, `spi_device_transmit`, …).
+    - `HAL.c` provides a set of Pico-SDK-compatible **constants** (`GPIO_FUNC_SPI`, `GPIO_IN`,
+      `GPIO_OUT`, `GPIO_FUNC_PWM`, `PWM_CHAN_B`, …) so the platform-agnostic `Driver.c` compiles
+      unchanged on both targets. These are `#define`s, so they already fit the UPPER_SNAKE_CASE
+      constant rule — they just happen to share names with the Pico SDK by design. HAL.c
+      *functions* follow the project convention (`PWMGPIOToSliceNum`, `DigitalWrite`, …).
+
+    Everything else in `DiskIO.c` (our own port internals — `SdCmd`, `SdAcquire`, `Crc7`,
+    `SdCardState`, `sdState`, `SDCardInit`, …) now follows the project convention.
 - **Exceptions** (not renamed):
   - Project meta files: `AGENTS.md`, `.gitmodules`, `.gitignore`, `CMakeLists.txt`
   - IDE directories/files: `.kiro/`, `.vscode/`, `tasks.json`, `settings.json`
@@ -293,6 +304,22 @@ This prevents the git plugin from showing false "modified" files in submodules
   hardware-tested**.
 
 Recent work:
+- **Moved the `SDCardInit` prototype out of `HALConfig.h`** (§5 discipline): the header had a
+  function declaration (a §5 violation) only because `SDCardInit` lives in the separately-compiled
+  `DiskIO.c` (fatfs lib) and the caller `FileHelper.c` needed a prototype across TUs. The prototype
+  is now a forward declaration inside `FileHelper.c` (the caller); both `HALConfig.h` are back to
+  pure `#define`s. RP2040 builds and links.
+- **ESP32 `HAL.c` internal identifiers standardized**: private statics/locals renamed to the
+  project convention — `lcd_spi_handle`→`lcdSpiHandle`, `pwm_slice_pin`→`pwmSlicePin`, and locals
+  `bus_cfg`/`dev_cfg`/`timer_cfg`/`ch_cfg`→`busCfg`/`devCfg`/`timerCfg`/`chCfg`. (Not compile-tested
+  here — only RP2040 has a configured build, and it doesn't exercise the ESP32 HAL.)
+- **Standardized `DiskIO.c` to the project naming convention** (both platforms): the no-OS-FatFS
+  port internals were renamed to PascalCase functions/types + camelCase locals + PascalCase struct
+  members (`sd_cmd`→`SdCmd`, `sd_acquire`→`SdAcquire`, `crc7`→`Crc7`, `sd_card_state_t`→
+  `SdCardState`, `sd_state`→`sdState`, members `Initialized`/`SectorCount`/…). `Platform_SDCard_Init`
+  → `SDCardInit` (dropped the `Platform` prefix; updated both `HALConfig.h` and `FileHelper.c`).
+  Only external-contract names stay off-convention (FatFS `disk_*` + types, Pico/ESP-IDF APIs, and
+  the `HAL.c` Pico-SDK compat shims). Logic is byte-for-byte the same; RP2040 builds and runs.
 - **Removed the multi-SD-card abstraction** (Decision 12): deleted `SDConfig.h` and
   `SDHWConfig.h` on both platforms (`spi_t`, `SdCard`, `sd_spi_if_t`, `sd_if_type_t`, the
   `spis[]` / `sd_cards[]` arrays and `sd_get_num()` / `sd_get_by_num()` — all dead weight, since
@@ -393,19 +420,21 @@ Recent work:
    - RP2040: GP5 — ESP32-S3: GP39
    - Switch type: **normally open**, closes to GND when card is present
    - Firmware configures internal pull-up; `card_detected_true = 0` (LOW = present)
-   - ISR registered on both edges (insert and remove) resets `sd_state.initialized = false`,
+   - ISR registered on both edges (insert and remove) resets `sdState.Initialized = false`,
      forcing `disk_initialize()` to run again on the next `MountSdCard()` call
-   - `Platform_SDCard_Init()` checks the detect pin before attempting SPI — returns `false`
+   - `SDCardInit()` checks the detect pin before attempting SPI — returns `false`
      immediately if card is absent, avoiding the ~1s SPI timeout
    - RP2040: ISR via `gpio_set_irq_enabled_with_callback` (Pico SDK)
    - ESP32-S3: ISR via `gpio_isr_handler_add` with `IRAM_ATTR` (required by ESP-IDF)
 
 9. **SD SPI driver is a faithful port of no-OS-FatFS**: `DiskIO.c` on both platforms mirrors the
-   proven no-OS-FatFS-SD-SPI-RPi-Pico init/command logic. Key points that MUST be preserved:
+   proven no-OS-FatFS-SD-SPI-RPi-Pico init/command logic. (Identifiers were renamed to the
+   project convention — §0 — but the init/command *logic* is unchanged.) Key points that MUST be
+   preserved:
    - **Real CRC7 on every command** (table from no-OS-FatFS `crc.c`), not just CMD0/CMD8.
      Some cards reject commands with a dummy CRC even in SPI mode. CMD59 enables CRC on the card.
-   - **CS held LOW continuously** through the whole init handshake (one `sd_acquire` at the
-     start, one `sd_release` at the end) — no per-command CS toggling, no deselect pulses.
+   - **CS held LOW continuously** through the whole init handshake (one `SdAcquire` at the
+     start, one `SdRelease` at the end) — no per-command CS toggling, no deselect pulses.
    - Handshake order: 74+ init clocks (CS high) → CMD0 (retried) → CMD8 (SDv2 detect) → CMD59 →
      ACMD41 loop until idle bit clears → CMD58 (CCS/capacity) → read CSD.
    - **Block vs byte addressing**: SDHC/SDXC use block addressing; SDSC multiplies the LBA by 512.
