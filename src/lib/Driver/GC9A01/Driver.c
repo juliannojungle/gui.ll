@@ -88,4 +88,47 @@ void DriverSetPWM(UBYTE value) {
     }
 }
 
+static void DriverReset(void)
+{
+    DigitalWrite(LCD_RST_PIN, 1);
+    Delay(100);
+    DigitalWrite(LCD_RST_PIN, 0);
+    Delay(100);
+    DigitalWrite(LCD_RST_PIN, 1);
+    Delay(100);
+}
+
+static void DriverSendCommand(UBYTE Reg)
+{
+    DigitalWrite(LCD_DC_PIN, 0);
+    DigitalWrite(LCD_CS_PIN, 0);
+    SPIWriteByte(Reg);
+    DigitalWrite(LCD_CS_PIN, 1);
+}
+
+static void DriverSendData8Bit(UBYTE Data)
+{
+    DigitalWrite(LCD_DC_PIN, 1);
+    DigitalWrite(LCD_CS_PIN, 0);
+    SPIWriteByte(Data);
+    DigitalWrite(LCD_CS_PIN, 1);
+}
+
+static void DriverSendCommandData8Bit(UBYTE command, UBYTE data[], int dataSize)
+{
+    DriverSendCommand(command);
+    for (int i = 0; i < dataSize; i++) {
+        DriverSendData8Bit(data[i]);
+    }
+}
+
+static void DriverSendData16Bit(UWORD Data)
+{
+    DigitalWrite(LCD_DC_PIN, 1);
+    DigitalWrite(LCD_CS_PIN, 0);
+    SPIWriteByte((Data >> 8) & 0xFF);
+    SPIWriteByte(Data & 0xFF);
+    DigitalWrite(LCD_CS_PIN, 1);
+}
+
 #endif

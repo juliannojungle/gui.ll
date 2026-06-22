@@ -148,7 +148,7 @@ void DisplayPng(FIL *file) {
     }
 
     DigitalWrite(LCD_CS_PIN, 1);
-    LCDSendCommand(0x29);
+    DriverSendCommand(0x29);
     // ####### LCDDisplayTexture #######
 
     /* Turn backlight on */
