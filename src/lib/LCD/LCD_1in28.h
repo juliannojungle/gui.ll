@@ -14,6 +14,8 @@
 #ifndef __LCD_1IN28_H
 #define __LCD_1IN28_H
 
+#include "Types.h"
+
 #define LCD_1IN28_HEIGHT 240
 #define LCD_1IN28_WIDTH 240
 
@@ -25,5 +27,14 @@ typedef struct{
     UWORD HEIGHT;
     UBYTE SCAN_DIR;
 }LCD_ATTRIBUTES;
+
+/* The single LCD attribute instance is defined in LCD_1in28.c. */
+extern LCD_ATTRIBUTES LCD;
+
+/* Public LCD API — definitions in LCD_1in28.c */
+int LCDInitialize(UBYTE Scan_dir);
+void LCDSetDisplayArea(UWORD Xstart, UWORD Ystart, UWORD Xend, UWORD Yend);
+void LCDClear(UWORD FillColor);
+void LCDDisplayTexture(UWORD *Image);
 
 #endif

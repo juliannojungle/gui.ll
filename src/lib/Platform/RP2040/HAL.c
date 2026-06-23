@@ -1,15 +1,8 @@
 #ifndef _HAL_C_
 #define _HAL_C_
 
-#include "pico/stdlib.h"
+#include "HAL.h"
 #include "pico/stdio_usb.h"
-#include "hardware/spi.h"
-#include "hardware/pwm.h"
-#include "HALConfig.h"
-
-#define UBYTE uint8_t
-#define UWORD uint16_t
-#define UDOUBLE uint32_t
 
 void DigitalWrite(uint pin, UBYTE value) {
     gpio_put(pin, value);

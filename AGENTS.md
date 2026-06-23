@@ -29,28 +29,29 @@ gui.ll/
 │   ├── Sample.c                    # Entry point (app_entry → main or app_main)
 │   │
 │   ├── lib/
+│   │   ├── Types.h                 # Shared scalar aliases (UBYTE/UWORD/UDOUBLE)
 │   │   ├── Helper/
-│   │   │   ├── FileHelper.c        # SD card mount/open/close (single FatFS volume SD_DRIVE)
-│   │   │   └── PNGHelper.c         # PNG decode + LCD display via libpng
+│   │   │   ├── FileHelper.c/.h     # SD card mount/open/close (single FatFS volume SD_DRIVE)
+│   │   │   └── PNGHelper.c/.h      # PNG decode + LCD display via libpng
 │   │   │
 │   │   ├── Platform/
 │   │   │   ├── RP2040/
-│   │   │   │   ├── HAL.c           # HAL: GPIO, SPI, PWM, I2C (Pico SDK) — LCD SPI uses LCD_SPI from HALConfig.h
+│   │   │   │   ├── HAL.c/.h        # HAL: GPIO, SPI, PWM, I2C (Pico SDK) — LCD SPI uses LCD_SPI from HALConfig.h
 │   │   │   │   ├── HALConfig.h     # SD pins + SD_SPI(spi0) + SD_SPI_BAUDRATE; LCD pins + LCD_SPI(spi1); SD_DETECT_PIN
-│   │   │   │   ├── RTC.h           # RTC via hardware/rtc.h + get_fattime()
+│   │   │   │   ├── RTC.c/.h        # RTC via hardware/rtc.h; defines time_init() + get_fattime()
 │   │   │   │   ├── DiskIO.c        # FatFS disk I/O (SPI SD) — real CRC7 on all cmds; faithful no-OS-FatFS handshake; card detect ISR
 │   │   │   │   ├── PreExecutable.cmake   # fatfs lib, patch inclusion
 │   │   │   │   └── PostExecutable.cmake  # zlib, libpng, link libraries
 │   │   │   │
 │   │   │   └── ESP32/
 │   │   │       ├── CMakeLists.txt   # idf_component_register (ESP-IDF component)
-│   │   │       ├── HAL.c           # HAL: GPIO, SPI (ESP-IDF), LEDC PWM compat — LCD SPI uses LCD_SPI from HALConfig.h
+│   │   │       ├── HAL.c/.h        # HAL: GPIO, SPI (ESP-IDF), LEDC PWM compat — LCD SPI uses LCD_SPI from HALConfig.h
 │   │   │       ├── HALConfig.h     # SD pins + SD_SPI(SPI2_HOST) + SD_SPI_BAUDRATE; LCD pins + LCD_SPI(SPI3_HOST); SD_DETECT_PIN
-│   │   │       ├── RTC.h           # RTC via settimeofday + get_fattime()
+│   │   │       ├── RTC.c/.h        # RTC via settimeofday; defines time_init() + get_fattime()
 │   │   │       └── DiskIO.c        # FatFS disk I/O (ESP-IDF SPI master) — parity with RP2040: CRC7, manual CS, card detect ISR (IRAM_ATTR)
 │   │   │
-│   │   ├── Driver/GC9A01/          # LCD driver — uses LCD_* defines from HALConfig.h; DriverInit configures SPI, GPIO and backlight PWM
-│   │   ├── LCD/                     # LCD commands (LCD_1in28)
+│   │   ├── Driver/GC9A01/          # LCD driver (Driver.c/.h) — uses LCD_* defines from HALConfig.h; DriverInit configures SPI, GPIO and backlight PWM
+│   │   ├── LCD/                     # LCD commands (LCD_1in28.c/.h)
 │   │   ├── GUI/                     # Canvas/drawing utilities (Canvas.c/.h)
 │   │   └── Fonts/                   # Font data
 │   │
@@ -113,10 +114,13 @@ gui.ll/
 
 All platform-specific code lives under `src/lib/Platform/<PLATFORM_NAME>/`.
 The helpers and drivers are platform-agnostic — they call abstract functions
-(`DigitalWrite`, `SPIWriteByte`, `Delay`, etc.) defined in each platform's `HAL.c`.
+(`DigitalWrite`, `SPIWriteByte`, `Delay`, etc.) declared in each platform's `HAL.h` and
+defined in the matching `HAL.c`.
 
-Include resolution works via cmake `include_directories` pointing to the active
-platform folder. A single `#include "HAL.c"` in `Sample.c` pulls the right one.
+Include resolution works via cmake `include_directories` pointing to the active platform folder,
+so a single `#include "HAL.h"` resolves to the right platform's HAL. The HAL `.c` for the
+selected platform is added to the build's source list (RP2040: `add_executable`; ESP32:
+`idf_component_register SRCS`).
 
 ### 2. Single SD Card
 
@@ -148,34 +152,37 @@ int main(void) { app_entry(); return 0; }  // RP2040 entry
 
 ### 4. RTC / Timestamps
 
-Each platform provides `RTC.h` with:
+Each platform provides an `RTC.h` (prototype) + `RTC.c` (definitions) pair with:
 - `time_init()` — initializes timekeeping (hardware RTC on RP2040, settimeofday on ESP32)
 - `get_fattime()` — provides FAT timestamps to FatFS (required when `FF_FS_NORTC == 0`)
 
-`get_fattime()` must NOT be `static` — FatFS declares it as extern in `ff.h`.
+`get_fattime()` must NOT be `static` — FatFS declares it as extern in `ff.h`. It is defined in
+`RTC.c` (exactly one definition) rather than in the header.
 
 ### 5. Header / Source File Discipline
 
-Target convention for **our own code** (migrate existing code toward this gradually — do NOT do a
-sweeping rewrite; fix files as they are touched):
+The project uses **standard C separate compilation**: every `.c` is its own translation unit,
+compiled to a `.o` and linked (see Decision 5). Each module is a `.c`/`.h` pair, so headers carry
+the **public interface** of the module:
 
-- **No function/method declarations in `.h`** — and certainly no definitions. Headers carry only
-  type definitions (structs/enums/typedefs), macros and constants.
-- **Function/method definitions always live in `.c`.** Because of the unity-build approach
-  (Decision 5), `.c` files are `#include`d directly, so prototypes in headers are unnecessary —
-  the definition is already visible at the include site.
-- **`extern` variable declarations in `.h` only as a last resort** — when there is no more elegant
-  alternative. The `.c` should "own" the instances/objects (define them); avoid exposing globals
-  through `extern` in a header unless unavoidable.
+- **Each module's `.h` declares its public symbols** — function prototypes for the functions
+  defined in the matching `.c`, plus the type definitions (structs/enums/typedefs), macros and
+  constants that callers need. A `.c` includes its own `.h` (and the `.h` of any module it calls).
+- **Function/method definitions always live in `.c`.** Never define functions in headers — that
+  causes duplicate-symbol link errors when the header is included by more than one `.c`. Mark
+  helpers that are private to a `.c` as `static`; only non-`static` functions belong in the `.h`.
+- **Shared globals are owned by one `.c` and exposed via `extern` in the `.h`** (e.g.
+  `extern Canvas canvas;` in `Canvas.h`, owned by `Canvas.c`; `extern LCD_ATTRIBUTES LCD;` in
+  `LCD_1in28.h`, owned by `LCD_1in28.c`). Keep shared globals to a minimum, but `extern` in a
+  header is the normal, accepted mechanism — not a last resort.
+- **External-contract names stay off-convention**, as before: FatFS `disk_*` / `get_fattime`
+  (declared by `ff.h`), Pico SDK / ESP-IDF APIs, and the `HAL.h` Pico-SDK compat constants.
 
-Known current violations (inherited, to be migrated gradually — they work only because of the
-single-translation-unit build):
-- `Canvas.h` exposes `extern Canvas canvas;` (global via `extern`).
-- `RTC.h` defines `time_init()` / `get_fattime()` (definitions in a header).
-
-These are not failures of the unity-build design — they compile because there is effectively one
-translation unit. They simply don't match the discipline above yet and will be reorganized as the
-surrounding files are touched.
+> Historical note: this project previously used a unity build (`#include "X.c"`), which made
+> prototypes in headers unnecessary and was the reason an earlier version of this rule *forbade*
+> declarations in headers. That approach broke IDE/clangd intelligence (only `Sample.c` appeared
+> in `compile_commands.json`), so the project migrated to traditional separate compilation. The
+> old "no declarations in `.h`" rule is therefore retired — prototypes in headers are now required.
 
 ---
 
@@ -300,10 +307,35 @@ This prevents the git plugin from showing false "modified" files in submodules
 ## Current Status (as of last session)
 
 - **RP2040**: Builds and runs. SD card init + read confirmed working on a solid prototype.
-- **ESP32-S3**: Builds successfully (`.bin`); SD path rewritten for parity but **not yet
+- **ESP32-S3**: Last confirmed `.bin` build predates the separate-compilation migration; the
+  parity changes for it are **not compile-tested**. SD path rewritten for parity but **not yet
   hardware-tested**.
 
 Recent work:
+- **Migrated from unity build to standard separate compilation** (Decision 5 / §5 rewritten):
+  each `.c` is now its own translation unit compiled to a `.o` and linked, instead of `.c` files
+  being `#include`d into `Sample.c`. Motivation: under the unity build only `Sample.c` appeared in
+  `compile_commands.json`, so clangd had no compile command for the other `.c` files and couldn't
+  resolve their includes/types (e.g. `ff.h`, project types, `SHOWDEBUG` all flagged red in
+  `PNGHelper.c`). Changes:
+  - New shared header `src/lib/Types.h` holds the `UBYTE`/`UWORD`/`UDOUBLE` aliases (were `#define`
+    macros inside each `HAL.c`); added `src/lib` to the include path on both platforms.
+  - New public headers with prototypes: `HAL.h` (RP2040 + ESP32), `Driver.h`, `FileHelper.h`,
+    `PNGHelper.h`. `Canvas.h`/`LCD_1in28.h` gained their prototypes + `extern` for the `canvas` /
+    `LCD` globals.
+  - `RTC.h` split into `RTC.h` (prototype) + `RTC.c` (definitions of `time_init()` + `get_fattime()`)
+    so `get_fattime()` has exactly one definition (was defined in the header → would duplicate
+    across TUs).
+  - `Driver.c`: the helpers called from other TUs (`DriverReset`, `DriverSendCommand`,
+    `DriverSendData8Bit`, `DriverSendCommandData8Bit`, `DriverSendData16Bit`) lost `static`;
+    `slice_num` is now `static UDOUBLE` (file-local). All `#include "X.c"` were replaced by
+    `#include "X.h"` in `Sample.c`, `PNGHelper.c`, `LCD_1in28.c`, `Canvas.c`, `FileHelper.c`.
+  - Build: root `CMakeLists.txt` now lists the common TUs in `GUILL_COMMON_SRCS`; RP2040's
+    `add_executable` adds them + `RP2040/HAL.c` + `RP2040/RTC.c`; ESP32's `idf_component_register
+    SRCS` lists the same common TUs + `ESP32/HAL.c` + `ESP32/RTC.c`, with `src/lib` added to
+    `INCLUDE_DIRS`. RP2040 **builds and links**; `compile_commands.json` now has an entry per `.c`
+    and clangd reports no diagnostics on `PNGHelper.c`/`Sample.c`/`Driver.c`/`Canvas.c`. ESP32
+    changes are **parity-only, not compile-tested** (no ESP32 build configured locally).
 - **Moved the `SDCardInit` prototype out of `HALConfig.h`** (§5 discipline): the header had a
   function declaration (a §5 violation) only because `SDCardInit` lives in the separately-compiled
   `DiskIO.c` (fatfs lib) and the caller `FileHelper.c` needed a prototype across TUs. The prototype
@@ -366,9 +398,18 @@ Recent work:
 4. **Setup scripts in `Toolchain/`**: Avoids cmd.exe escaping issues with complex inline
    bash commands in tasks.json. Scripts are idempotent and self-documenting.
 
-5. **`#include "HAL.c"` pattern**: The project uses a single-translation-unit approach
-   where .c files are included directly (not compiled separately). This is intentional —
-   do not refactor into separate compilation units unless explicitly requested.
+5. **Separate compilation (each `.c` is its own translation unit)**: The project compiles every
+   `.c` independently to a `.o` and links them. Each module is a `.c`/`.h` pair; the header
+   declares the module's public prototypes, types and `extern` globals (see §5). Add new `.c`
+   files to the build source list (RP2040: `add_executable` via `GUILL_COMMON_SRCS` +
+   platform sources; ESP32: `idf_component_register SRCS`). Shared scalar aliases
+   (`UBYTE`/`UWORD`/`UDOUBLE`) live in `src/lib/Types.h`.
+
+   > Superseded approach: the project originally used a **unity build** — `.c` files were
+   > `#include`d directly (`#include "HAL.c"`) so the whole program was one translation unit.
+   > It was abandoned because only `Sample.c` ended up in `compile_commands.json`, so clangd
+   > couldn't resolve includes/types in any other `.c` (no IDE intelligence). The migration to
+   > separate compilation fixed that; do not reintroduce the `#include "X.c"` pattern.
 
 6. **LCD pin ownership**: All LCD GPIO definitions (`LCD_DC_PIN`, `LCD_CS_PIN`, `LCD_CLK_PIN`,
    `LCD_MOSI_PIN`, `LCD_RST_PIN`, `LCD_BL_PIN`) live exclusively in each platform's `HALConfig.h`.

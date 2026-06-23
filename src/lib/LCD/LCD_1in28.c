@@ -16,7 +16,8 @@
 
 #include "LCD_1in28.h"
 #include "HALConfig.h"
-#include "Driver.c"
+#include "HAL.h"
+#include "Driver.h"
 
 LCD_ATTRIBUTES LCD;
 

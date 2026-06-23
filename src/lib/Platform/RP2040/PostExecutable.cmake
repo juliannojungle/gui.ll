@@ -4,6 +4,7 @@ set(CMAKE_CXX_COMPILER /usr/bin/arm-none-eabi-g++)
 
 ###### Waveshare Pico_code/c/lib/GUI for graphics
 set(PICO_CODE_LIB ${CMAKE_SOURCE_DIR}/src/lib)
+include_directories(${PICO_CODE_LIB})
 include_directories(${PICO_CODE_LIB}/Platform/RP2040)
 include_directories(${PICO_CODE_LIB}/Driver/GC9A01)
 include_directories(${PICO_CODE_LIB}/Fonts)

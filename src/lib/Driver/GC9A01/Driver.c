@@ -30,8 +30,10 @@
 #define _DRIVER_C_
 
 #include "HALConfig.h"
+#include "HAL.h"
+#include "Driver.h"
 
-uint slice_num;
+static UDOUBLE slice_num;
 
 void DriverGPIOMode(UWORD pin, UWORD mode) {
     GPIOInit(pin);
@@ -88,7 +90,7 @@ void DriverSetPWM(UBYTE value) {
     }
 }
 
-static void DriverReset(void)
+void DriverReset(void)
 {
     DigitalWrite(LCD_RST_PIN, 1);
     Delay(100);
@@ -98,7 +100,7 @@ static void DriverReset(void)
     Delay(100);
 }
 
-static void DriverSendCommand(UBYTE Reg)
+void DriverSendCommand(UBYTE Reg)
 {
     DigitalWrite(LCD_DC_PIN, 0);
     DigitalWrite(LCD_CS_PIN, 0);
@@ -106,7 +108,7 @@ static void DriverSendCommand(UBYTE Reg)
     DigitalWrite(LCD_CS_PIN, 1);
 }
 
-static void DriverSendData8Bit(UBYTE Data)
+void DriverSendData8Bit(UBYTE Data)
 {
     DigitalWrite(LCD_DC_PIN, 1);
     DigitalWrite(LCD_CS_PIN, 0);
@@ -114,7 +116,7 @@ static void DriverSendData8Bit(UBYTE Data)
     DigitalWrite(LCD_CS_PIN, 1);
 }
 
-static void DriverSendCommandData8Bit(UBYTE command, UBYTE data[], int dataSize)
+void DriverSendCommandData8Bit(UBYTE command, UBYTE data[], int dataSize)
 {
     DriverSendCommand(command);
     for (int i = 0; i < dataSize; i++) {
@@ -122,7 +124,7 @@ static void DriverSendCommandData8Bit(UBYTE command, UBYTE data[], int dataSize)
     }
 }
 
-static void DriverSendData16Bit(UWORD Data)
+void DriverSendData16Bit(UWORD Data)
 {
     DigitalWrite(LCD_DC_PIN, 1);
     DigitalWrite(LCD_CS_PIN, 0);

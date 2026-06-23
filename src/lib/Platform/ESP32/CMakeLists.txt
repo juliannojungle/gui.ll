@@ -15,6 +15,14 @@ include(${PROJ_ROOT}/src/Dependency/fatfs.ffconf_patch.cmake)
 idf_component_register(
     SRCS
         "${PROJ_ROOT}/src/Sample.c"
+        "${PLATFORM_SRC}/HAL.c"
+        "${PLATFORM_SRC}/RTC.c"
+        "${PROJ_ROOT}/src/lib/Driver/GC9A01/Driver.c"
+        "${PROJ_ROOT}/src/lib/LCD/LCD_1in28.c"
+        "${PROJ_ROOT}/src/lib/GUI/Canvas.c"
+        "${PROJ_ROOT}/src/lib/Fonts/font20.c"
+        "${PROJ_ROOT}/src/lib/Helper/FileHelper.c"
+        "${PROJ_ROOT}/src/lib/Helper/PNGHelper.c"
         "${FATFS_SRC}/ff.c"
         "${FATFS_SRC}/ffsystem.c"
         "${FATFS_SRC}/ffunicode.c"
@@ -50,6 +58,7 @@ idf_component_register(
         "${FATFS_SRC}"
         "${ZLIB_SRC}"
         "${PNG_SRC}"
+        "${PROJ_ROOT}/src/lib"
         "${PLATFORM_SRC}"
         "${PROJ_ROOT}/src/lib/Driver/GC9A01"
         "${PROJ_ROOT}/src/lib/Fonts"

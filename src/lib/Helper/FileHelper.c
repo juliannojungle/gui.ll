@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include "ff.h"
+#include "FileHelper.h"
 
 /* SDCardInit is defined in the platform DiskIO.c, which is compiled as a
  * separate translation unit (linked via the fatfs library) rather than being

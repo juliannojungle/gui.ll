@@ -4,6 +4,18 @@ cmake_minimum_required(VERSION 3.16)
 # Generate compile_commands.json (consumed by clangd for code intelligence)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# Platform-agnostic translation units, shared by both targets. Platform-specific
+# sources (HAL.c, RTC.c, DiskIO.c) are added per-platform below.
+set(GUILL_COMMON_SRCS
+    ${CMAKE_SOURCE_DIR}/src/Sample.c
+    ${CMAKE_SOURCE_DIR}/src/lib/Driver/GC9A01/Driver.c
+    ${CMAKE_SOURCE_DIR}/src/lib/LCD/LCD_1in28.c
+    ${CMAKE_SOURCE_DIR}/src/lib/GUI/Canvas.c
+    ${CMAKE_SOURCE_DIR}/src/lib/Fonts/font20.c
+    ${CMAKE_SOURCE_DIR}/src/lib/Helper/FileHelper.c
+    ${CMAKE_SOURCE_DIR}/src/lib/Helper/PNGHelper.c
+)
+
 # Platform selection
 if(NOT DEFINED PLATFORM_NAME)
     set(PLATFORM_NAME "RP2040")
@@ -41,7 +53,11 @@ else() # RP2040 (default)
     # Include platform-specific cmake fragments
     include(${CMAKE_SOURCE_DIR}/src/lib/Platform/RP2040/PreExecutable.cmake)
 
-    add_executable(${PROJECT_NAME} src/Sample.c)
+    add_executable(${PROJECT_NAME}
+        ${GUILL_COMMON_SRCS}
+        src/lib/Platform/RP2040/HAL.c
+        src/lib/Platform/RP2040/RTC.c
+    )
 
     include(${CMAKE_SOURCE_DIR}/src/lib/Platform/RP2040/PostExecutable.cmake)
 

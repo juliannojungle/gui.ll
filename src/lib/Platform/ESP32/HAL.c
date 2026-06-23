@@ -1,28 +1,16 @@
 #ifndef _HAL_C_
 #define _HAL_C_
 
+#include "HAL.h"
+
 #include "driver/spi_master.h"
 #include "driver/gpio.h"
 #include "driver/ledc.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "HALConfig.h"
 
 #include <stdio.h>
-#include <stdint.h>
-
-#define UBYTE uint8_t
-#define UWORD uint16_t
-#define UDOUBLE uint32_t
-
-/* Compatibility defines for Driver.c (RP2040 Pico SDK constants) */
-#define GPIO_IN         0
-#define GPIO_OUT        1
-#define GPIO_FUNC_SPI   0  // No-op on ESP32 (SPI pins configured in SPIInit)
-#define GPIO_FUNC_PWM   0  // No-op on ESP32 (PWM configured via LEDC)
-#define GPIO_FUNC_I2C   0  // No-op on ESP32 (I2C pins configured in I2CInit)
-#define PWM_CHAN_B      1
 
 static spi_device_handle_t lcdSpiHandle = NULL;
 

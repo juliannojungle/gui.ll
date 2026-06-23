@@ -1,12 +1,12 @@
-#include "HAL.c"
+#include "HAL.h"
 #include "RTC.h" // rtc for file's timestamp.
 
-// #include "LCD_1in28.c"
-// #include "font20.c"
-// #include "Canvas.c"
+// #include "LCD_1in28.h"
+// #include "font20.h"
+// #include "Canvas.h"
 
-#include "FileHelper.c"
-#include "PNGHelper.c"
+#include "FileHelper.h"
+#include "PNGHelper.h"
 
 void app_entry(void) {
     STDIOInitAll();

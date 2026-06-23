@@ -6,12 +6,12 @@
 #include <png.h>
 #define PNG_READ_SUPPORTED
 
-#include "Driver.c"
-#include "HAL.c"
-#include "LCD_1in28.c"
-#include "font20.c"
+#include "HAL.h"
+#include "Driver.h"
+#include "LCD_1in28.h"
 #include "Canvas.h"
 #include "Debug.h"
+#include "PNGHelper.h"
 
 void CustomReadData(png_structrp pngPointer, png_bytep data, size_t length) {
     SHOWDEBUG(".");
