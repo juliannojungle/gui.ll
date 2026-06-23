@@ -9,7 +9,6 @@
 #include "HAL.h"
 #include "Driver.h"
 #include "LCD_1in28.h"
-#include "Canvas.h"
 #include "Debug.h"
 #include "PNGHelper.h"
 
