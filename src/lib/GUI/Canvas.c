@@ -1,9 +1,7 @@
 #include "Canvas.h"
-#include "HAL.h"
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h> //memset()
-#include <math.h>
 
 Canvas canvas;
 

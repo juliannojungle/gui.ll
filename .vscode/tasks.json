@@ -185,7 +185,8 @@
             "presentation": {
                 "reveal": "always",
                 "panel": "shared",
-                "clear": true
+                "clear": true,
+                "focus": true
             },
             "problemMatcher": []
         },
@@ -239,14 +240,18 @@
         {
             "label": "Setup: Bind RP2040 (admin)",
             "type": "shell",
-            "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"$(wslpath -w ${workspaceFolder}/Toolchain/RP2040/Bind.ps1)\"",
+            "command": "bash",
+            "args": [
+                "-c", "bash ${workspaceFolder}/Toolchain/RP2040/Bind.sh"
+            ],
             "options": {
                 "cwd": "${workspaceFolder}"
             },
             "presentation": {
                 "reveal": "always",
                 "panel": "shared",
-                "clear": true
+                "clear": true,
+                "focus": true
             },
             "problemMatcher": []
         },
@@ -267,7 +272,10 @@
         {
             "label": "Flash: uf2 to RP2040",
             "type": "shell",
-            "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"$(wslpath -w ${workspaceFolder}/Toolchain/RP2040/Flash.ps1)\"",
+            "command": "bash",
+            "args": [
+                "-c", "bash $HOME/gui.ll/Toolchain/RP2040/Flash.sh"
+            ],
             "options": {
                 "cwd": "${workspaceFolder}"
             },
