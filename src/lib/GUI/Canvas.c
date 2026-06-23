@@ -132,7 +132,7 @@ void CanvasSetPixel(UWORD xPoint, UWORD yPoint, UWORD color) {
     if (canvas.Scale == 2) {
         UDOUBLE Addr = X / 8 + Y * canvas.WidthByte;
         UBYTE Rdata = canvas.Image[Addr];
-        if (color &0xff == BLACK)
+        if ((color & 0xff) == BLACK)
             canvas.Image[Addr] = Rdata & ~(0x80 >> (X % 8));
         else
             canvas.Image[Addr] = Rdata | (0x80 >> (X % 8));

@@ -2,8 +2,10 @@
 #include "RTC.h" // rtc for file's timestamp.
 
 // #include "LCD_1in28.h"
-// #include "font20.h"
+// #include "fonts.h"
 // #include "Canvas.h"
+// #include <stdlib.h>
+// #include <stdio.h>
 
 #include "FileHelper.h"
 #include "PNGHelper.h"
@@ -45,7 +47,7 @@ void app_entry(void) {
         LCDDisplayTexture(texture);
 
         count = (count < 256) ? count + 1 : 0;
-        // printf("%d\n", count);
+        printf("%d\n", count);
         Delay(100);
     }
 */
