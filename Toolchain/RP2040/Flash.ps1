@@ -6,7 +6,7 @@
 #   attach BOOTSEL (RP2 Boot) device to WSL ->
 #   picotool load (the -x flag reboots the board into the app afterwards).
 #
-# Requires the device to be bound first (run "Setup: Bind USB device (admin)"
+# Requires the device to be bound first (run "Setup: Bind RP2040 (admin)"
 # once). attach is idempotent and does not require admin.
 
 $ErrorActionPreference = 'Stop'
@@ -46,7 +46,7 @@ function Invoke-Attach($dev) {
         return
     }
     if (-not $dev.Shared) {
-        Write-Error "Bus ID $($dev.Busid) is not shared yet. Run the ""Setup: Bind USB device (admin)"" task once, then retry."
+        Write-Error "Bus ID $($dev.Busid) is not shared yet. Run the ""Setup: Bind RP2040 (admin)"" task once, then retry."
         exit 1
     }
     Write-Host "Attaching bus ID $($dev.Busid) to WSL..."

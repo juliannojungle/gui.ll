@@ -1,9 +1,6 @@
 If:
     PathMatch: .*
 
-PathMappings:
-    "\\\\wsl.localhost\\Ubuntu\\home\\juliannojungle\\gui.ll": "/home/juliannojungle/gui.ll/"
-
 CompileFlags:
     Add: [
         "-DDEBUGMSGS",

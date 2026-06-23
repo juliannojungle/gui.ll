@@ -13,13 +13,13 @@
         {
             "label": "Build: RP2040 Full",
             "type": "shell",
-            "command": "wsl",
+            "command": "bash",
             "args": [
-                "-e", "bash", "-c",
+                "-c",
                 "cd ~/gui.ll && rm -rf build && mkdir build && cd build && cmake .. -DPLATFORM_NAME=RP2040 && make"
             ],
             "options": {
-                "cwd": "C:\\"
+                "cwd": "${workspaceFolder}"
             },
             "group": "build",
             "presentation": {
@@ -41,13 +41,13 @@
         {
             "label": "Build: ESP32 Full",
             "type": "shell",
-            "command": "wsl",
+            "command": "bash",
             "args": [
-                "-e", "bash", "-c",
+                "-c",
                 "source ~/esp-idf/export.sh && cd ~/gui.ll && rm -rf build && idf.py -DPLATFORM_NAME=ESP32 build"
             ],
             "options": {
-                "cwd": "C:\\"
+                "cwd": "${workspaceFolder}"
             },
             "group": "build",
             "presentation": {
@@ -60,13 +60,13 @@
         {
             "label": "Build: RP2040 Full (DEBUGMSGS)",
             "type": "shell",
-            "command": "wsl",
+            "command": "bash",
             "args": [
-                "-e", "bash", "-c",
+                "-c",
                 "cd ~/gui.ll && rm -rf build && mkdir build && cd build && cmake .. -DPLATFORM_NAME=RP2040 -DDEBUGMSGS=ON && make"
             ],
             "options": {
-                "cwd": "C:\\"
+                "cwd": "${workspaceFolder}"
             },
             "group": "build",
             "presentation": {
@@ -79,13 +79,13 @@
         {
             "label": "Build: ESP32 Full (DEBUGMSGS)",
             "type": "shell",
-            "command": "wsl",
+            "command": "bash",
             "args": [
-                "-e", "bash", "-c",
+                "-c",
                 "source ~/esp-idf/export.sh && cd ~/gui.ll && rm -rf build && idf.py -DPLATFORM_NAME=ESP32 -DDEBUGMSGS=ON build"
             ],
             "options": {
-                "cwd": "C:\\"
+                "cwd": "${workspaceFolder}"
             },
             "group": "build",
             "presentation": {
@@ -111,13 +111,13 @@
         {
             "label": "Build: Incremental",
             "type": "shell",
-            "command": "wsl",
+            "command": "bash",
             "args": [
-                "-e", "bash", "-c",
+                "-c",
                 "cd ~/gui.ll/build && if [ -f build.ninja ]; then source ~/esp-idf/export.sh 2>/dev/null && ninja; else make; fi"
             ],
             "options": {
-                "cwd": "C:\\"
+                "cwd": "${workspaceFolder}"
             },
             "group": "build",
             "presentation": {
@@ -139,12 +139,12 @@
         {
             "label": "ESP32 toolchain",
             "type": "shell",
-            "command": "wsl",
+            "command": "bash",
             "args": [
-                "-e", "bash", "-c", "~/gui.ll/Toolchain/ESP32/Setup.sh"
+                "-c", "~/gui.ll/Toolchain/ESP32/Setup.sh"
             ],
             "options": {
-                "cwd": "C:\\"
+                "cwd": "${workspaceFolder}"
             },
             "hide": true,
             "presentation": {
@@ -166,12 +166,12 @@
         {
             "label": "RP2040 toolchain",
             "type": "shell",
-            "command": "wsl",
+            "command": "bash",
             "args": [
-                "-e", "bash", "-c", "bash $HOME/gui.ll/Toolchain/RP2040/Setup.sh"
+                "-c", "bash $HOME/gui.ll/Toolchain/RP2040/Setup.sh"
             ],
             "options": {
-                "cwd": "C:\\"
+                "cwd": "${workspaceFolder}"
             },
             "hide": true,
             "presentation": {
@@ -185,12 +185,12 @@
         {
             "label": "Setup usbipd-win",
             "type": "shell",
-            "command": "cmd",
+            "command": "winget.exe",
             "args": [
-                "/c", "winget install usbipd"
+                "install", "usbipd"
             ],
             "options": {
-                "cwd": "C:\\"
+                "cwd": "${workspaceFolder}"
             },
             "hide": true,
             "presentation": {
@@ -204,13 +204,9 @@
         {
             "label": "Setup: Bind RP2040 (admin)",
             "type": "shell",
-            "command": "powershell",
-            "args": [
-                "-NoProfile", "-ExecutionPolicy", "Bypass",
-                "-File", "${workspaceFolder}/Toolchain/RP2040/Bind.ps1"
-            ],
+            "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"$(wslpath -w ${workspaceFolder}/Toolchain/RP2040/Bind.ps1)\"",
             "options": {
-                "cwd": "C:\\"
+                "cwd": "${workspaceFolder}"
             },
             "presentation": {
                 "reveal": "always",
@@ -222,13 +218,9 @@
         // {
         //     "label": "Flash: Attach USB device to WSL",
         //     "type": "shell",
-        //     "command": "powershell",
-        //     "args": [
-        //         "-NoProfile", "-Command",
-        //         "$line = usbipd list | Select-String -Pattern 'USB.*\\(COM\\d+\\)'; if (-not $line) { Write-Error 'USB serial device not found. Make sure the board is connected and try again.'; exit 1 }; $busid = ($line -split '\\s+')[0].Trim(); Write-Host ('Found device at bus ID: ' + $busid); if ($line -match 'Attached') { Write-Host ('Device ' + $busid + ' is already attached to WSL.'); exit 0 }; if ($line -match 'Not shared') { Write-Error ('Device ' + $busid + ' is not shared yet. Run the \"Setup: Bind USB device (admin)\" task once, then retry.'); exit 1 }; usbipd attach --wsl --busid=$busid"
-        //     ],
+        //     "command": "powershell.exe -NoProfile -Command \"$line = usbipd list | Select-String -Pattern 'USB.*\\(COM\\d+\\)'; if (-not $line) { Write-Error 'USB serial device not found. Make sure the board is connected and try again.'; exit 1 }; $busid = ($line -split '\\s+')[0].Trim(); Write-Host ('Found device at bus ID: ' + $busid); if ($line -match 'Attached') { Write-Host ('Device ' + $busid + ' is already attached to WSL.'); exit 0 }; if ($line -match 'Not shared') { Write-Error ('Device ' + $busid + ' is not shared yet. Run the \"Setup: Bind RP2040 (admin)\" task once, then retry.'); exit 1 }; usbipd attach --wsl --busid=$busid\"",
         //     "options": {
-        //         "cwd": "C:\\"
+        //         "cwd": "${workspaceFolder}"
         //     },
         //     "presentation": {
         //         "reveal": "always",
@@ -240,13 +232,9 @@
         {
             "label": "Flash: uf2 to RP2040",
             "type": "shell",
-            "command": "powershell",
-            "args": [
-                "-NoProfile", "-ExecutionPolicy", "Bypass",
-                "-File", "${workspaceFolder}/Toolchain/RP2040/Flash.ps1"
-            ],
+            "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"$(wslpath -w ${workspaceFolder}/Toolchain/RP2040/Flash.ps1)\"",
             "options": {
-                "cwd": "C:\\"
+                "cwd": "${workspaceFolder}"
             },
             "presentation": {
                 "reveal": "always",
