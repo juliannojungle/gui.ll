@@ -1,9 +1,9 @@
 #include "HAL.h"
 #include "RTC.h" // rtc for file's timestamp.
 
-// #include "LCD_1in28.h"
+#include "LCD_1in28.h"
+#include "Canvas.h"
 // #include "fonts.h"
-// #include "Canvas.h"
 // #include <stdlib.h>
 // #include <stdio.h>
 
@@ -13,37 +13,27 @@
 void app_entry(void) {
     STDIOInitAll();
     time_init();
+    // Delay(3000); // give us time to start serial monitor
 
-#ifdef DEBUGMSGS
-    Delay(3000); // give us time to start serial monitor
-#endif
+    /* LCD Init */
+    LCDInitialize(HORIZONTAL);
+    LCDClear(BLACK);
 
 /*
-    // LCD Init
-    LCDInitialize(HORIZONTAL);
-    LCDClear(WHITE);
+    UDOUBLE imageSize = LCD.HEIGHT * LCD.WIDTH * 2;
+    UWORD *texture = (UWORD *) malloc(imageSize); // Allocate framebuffer
 
-    // Turn backlight on
-    GPIOSetDir(LCD_BL_PIN, GPIO_OUT);
-    DigitalWrite(LCD_CS_PIN, 1);
-    DigitalWrite(LCD_DC_PIN, 0);
-    DigitalWrite(LCD_BL_PIN, 1);
-
-    // Allocate framebuffer
-    UDOUBLE imageSize = LCD_1IN28_HEIGHT * LCD_1IN28_WIDTH * 2;
-    UWORD *texture;
-
-    if ((texture = (UWORD *) malloc(imageSize)) == NULL) {
-        exit(0);
+    if (texture == NULL) {
+        exit(EXIT_FAILURE);
     }
 
-    CanvasNewImage((UBYTE *)texture, LCD.WIDTH, LCD.HEIGHT, ROTATE_0, WHITE);
+    CanvasNewImage((UBYTE *)texture, LCD.WIDTH, LCD.HEIGHT, ROTATE_0, BLACK);
     CanvasSetScale(65);
     int count = 0;
 
     while (true) {
         CanvasClear(WHITE);
-        CanvasDrawText(count, count, "Hello, World!", &Font20, BLACK, WHITE);
+        CanvasDrawText(count, 130, "Hello, World!", &Font20, WHITE, BLACK);
         LCDDisplayTexture(texture);
 
         count = (count < 256) ? count + 1 : 0;

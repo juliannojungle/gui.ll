@@ -32,6 +32,7 @@ typedef struct{
 extern LCD_ATTRIBUTES LCD;
 
 /* Public LCD API — definitions in LCD_1in28.c */
+void LCDTurnBacklightOn(void);
 int LCDInitialize(UBYTE Scan_dir);
 void LCDSetDisplayArea(UWORD Xstart, UWORD Ystart, UWORD Xend, UWORD Yend);
 void LCDClear(UWORD FillColor);

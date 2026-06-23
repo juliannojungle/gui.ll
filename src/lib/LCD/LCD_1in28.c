@@ -101,6 +101,15 @@ static void LCDSetAttributes(UBYTE Scan_dir)
     DriverSendCommandData8Bit(0x36, (UBYTE[]){MemoryAccessReg}, 1);
 }
 
+void LCDTurnBacklightOn(void)
+{
+    /* Turn backlight on */
+    DriverGPIOMode(LCD_BL_PIN, GPIO_OUT);
+    DigitalWrite(LCD_CS_PIN, 1);
+    DigitalWrite(LCD_DC_PIN, 0);
+    DigitalWrite(LCD_BL_PIN, 1);
+}
+
 int LCDInitialize(UBYTE Scan_dir)
 {
     int driverResult = DriverInit();
@@ -112,6 +121,7 @@ int LCDInitialize(UBYTE Scan_dir)
     DriverReset(); //Hardware reset
     LCDSetAttributes(Scan_dir); //Set the resolution and scanning method of the screen
     LCDInitRegister(); //Set the initialization register
+    LCDTurnBacklightOn();
     return 0;
 }
 

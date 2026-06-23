@@ -45,19 +45,32 @@ void DisplayPng(FIL *file) {
     SHOWDEBUG("Setting up the custom read function\n");
     png_set_read_fn(png_ptr, file, CustomReadData);
 
+    // State the error handler must clean up. Declared before setjmp and marked
+    // volatile so their values survive a longjmp (C99 7.13.2.1).
+    volatile png_bytep row_pointers = NULL;
+    volatile bool lcdSelected = false;
     SHOWDEBUG("Setting up LongJump\n");
 
-    if (setjmp(png_jmpbuf(png_ptr)) == 0) {
-        SHOWDEBUG("LongJump set\n");
-    } else {
-        SHOWDEBUG("We got a LongJump, destroying read struct\n");
+    if (setjmp(png_jmpbuf(png_ptr)) != 0) {
+        // Any libpng error from here on jumps back to this point.
+        SHOWDEBUG("We got a LongJump from a libpng error, cleaning up\n");
+
+        if (row_pointers != NULL) {
+            png_free(png_ptr, row_pointers);
+        }
+
+        if (lcdSelected) {
+            DigitalWrite(LCD_CS_PIN, 1);
+        }
+
         png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
         return;
     }
 
-    // The call to png_read_info() gives us all of the information from the
-    // PNG file before the first IDAT (image data chunk). REQUIRED.
+    SHOWDEBUG("LongJump set\n");
     SHOWDEBUG("Reading info\n");
+    /* A call to png_read_info gives us all information about the
+       PNG file before the first IDAT (image data chunk). REQUIRED. */
     png_read_info(png_ptr, info_ptr);
 
     SHOWDEBUG("\nParsing image info\n");
@@ -65,25 +78,17 @@ void DisplayPng(FIL *file) {
     int bit_depth, color_type, interlace_type;
     png_get_IHDR(png_ptr, info_ptr, &width, &height, &bit_depth, &color_type, &interlace_type, NULL, NULL);
     SHOWDEBUG("PNG info: width: %d, height: %d, bit_depth: %d\n", width, height, bit_depth);
-    SHOWDEBUG("Initialize display\n");
 
-    /* LCD Init */
-    if (LCDInitialize(HORIZONTAL) != 0) {
-        png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
-        return;
-    }
-
-    LCDClear(BLACK);
-
-    png_bytep row_pointers = NULL;
     int col, row;
     int maxCol = width > LCD.WIDTH ? LCD.WIDTH : width;     // won't print outside display.
     int maxRow = height > LCD.HEIGHT ? LCD.HEIGHT : height; // won't print outside display.
 
     // ####### LCDDisplayTexture #######
+    SHOWDEBUG("Set display area\n");
     LCDSetDisplayArea(0, 0, maxCol, maxRow);
     DigitalWrite(LCD_DC_PIN, 1);
     DigitalWrite(LCD_CS_PIN, 0);
+    lcdSelected = true;
 
     int num_palette = 0;
     png_colorp palette = NULL;
@@ -93,8 +98,9 @@ void DisplayPng(FIL *file) {
     }
 
     for (row = 0; row < maxRow; row++) {
-        row_pointers = (png_bytep)png_malloc(png_ptr, png_get_rowbytes(png_ptr, info_ptr));
-        png_read_rows(png_ptr, &row_pointers, NULL, 1);
+        png_bytep rowBuffer = (png_bytep)png_malloc(png_ptr, png_get_rowbytes(png_ptr, info_ptr));
+        row_pointers = rowBuffer; // track for cleanup before any call that may longjmp
+        png_read_rows(png_ptr, &rowBuffer, NULL, 1);
 
         for (col = 0; col < maxCol; col++) {
             png_byte red, green, blue;
@@ -116,19 +122,14 @@ void DisplayPng(FIL *file) {
             SPIWriteByte(((green & 0b00011100) << 3) | ((blue & 0b11111000) >> 3));
         }
 
-        png_free(png_ptr, row_pointers);
+        png_free(png_ptr, rowBuffer);
         row_pointers = NULL;
     }
 
     DigitalWrite(LCD_CS_PIN, 1);
+    lcdSelected = false;
     DriverSendCommand(0x29);
     // ####### LCDDisplayTexture #######
-
-    /* Turn backlight on */
-    DriverGPIOMode(LCD_BL_PIN, GPIO_OUT);
-    DigitalWrite(LCD_CS_PIN, 1);
-    DigitalWrite(LCD_DC_PIN, 0);
-    DigitalWrite(LCD_BL_PIN, 1);
 
     SHOWDEBUG("Done! Destroying read struct\n");
     png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
