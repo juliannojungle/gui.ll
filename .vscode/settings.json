@@ -10,5 +10,6 @@
         "*.h": "c",
         "*.c": "c"
     },
-    "git.detectSubmodules": false
+    "git.detectSubmodules": false,
+    "git.autoRepositoryDetection": "openEditors"
 }
