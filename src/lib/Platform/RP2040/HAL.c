@@ -2,9 +2,8 @@
 #define _HAL_C_
 
 #include "pico/stdlib.h"
+#include "pico/stdio_usb.h"
 #include "hardware/spi.h"
-#include "stdio.h"
-#include "hardware/i2c.h"
 #include "hardware/pwm.h"
 #include "HALConfig.h"
 
@@ -28,22 +27,6 @@ void SPIWriteNByte(UBYTE pData[], UDOUBLE len) {
     spi_write_blocking(LCD_SPI, pData, len);
 }
 
-void I2CWrite(UBYTE addr, UBYTE reg, UBYTE value) {
-    UBYTE data[2] = { reg, value };
-    i2c_write_blocking(i2c1, addr, data, 2, false);
-}
-
-void I2CWriteNByte(UBYTE addr, UBYTE *pData, UDOUBLE len) {
-    i2c_write_blocking(i2c1, addr, pData, len, false);
-}
-
-UBYTE I2CReadByte(UBYTE addr, UBYTE reg) {
-    UBYTE buf;
-    i2c_write_blocking(i2c1, addr, &reg, 1, true);
-    i2c_read_blocking(i2c1, addr, &buf, 1, false);
-    return buf;
-}
-
 void GPIOInit(uint pin) {
     gpio_init(pin);
 }
@@ -62,6 +45,7 @@ void Delay(uint milliseconds) {
 
 void STDIOInitAll(void) {
     stdio_init_all();
+    stdio_set_translate_crlf(&stdio_usb, false);
 }
 
 void SPIInit(uint speed) {
@@ -90,10 +74,6 @@ void PWMSetClockDivider(uint slice, float divider) {
 
 void PWMSetEnabled(uint slice, bool enable) {
     pwm_set_enabled(slice, enable);
-}
-
-void I2CInit(uint speed) {
-    i2c_init(i2c1, speed);
 }
 
 #endif /* _HAL_C_ */

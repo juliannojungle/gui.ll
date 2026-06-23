@@ -58,6 +58,44 @@
             "problemMatcher": ["$gcc"]
         },
         {
+            "label": "Build: RP2040 Full (DEBUGMSGS)",
+            "type": "shell",
+            "command": "wsl",
+            "args": [
+                "-e", "bash", "-c",
+                "cd ~/gui.ll && rm -rf build && mkdir build && cd build && cmake .. -DPLATFORM_NAME=RP2040 -DDEBUGMSGS=ON && make"
+            ],
+            "options": {
+                "cwd": "C:\\"
+            },
+            "group": "build",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared",
+                "clear": true
+            },
+            "problemMatcher": ["$gcc"]
+        },
+        {
+            "label": "Build: ESP32 Full (DEBUGMSGS)",
+            "type": "shell",
+            "command": "wsl",
+            "args": [
+                "-e", "bash", "-c",
+                "source ~/esp-idf/export.sh && cd ~/gui.ll && rm -rf build && idf.py -DPLATFORM_NAME=ESP32 -DDEBUGMSGS=ON build"
+            ],
+            "options": {
+                "cwd": "C:\\"
+            },
+            "group": "build",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared",
+                "clear": true
+            },
+            "problemMatcher": ["$gcc"]
+        },
+        {
             "label": "Build+Flash: RP2040 Incremental",
             "dependsOn":[
                 "Build: Incremental",
@@ -213,7 +251,8 @@
             "presentation": {
                 "reveal": "always",
                 "panel": "shared",
-                "clear": true
+                "clear": true,
+                "focus": true
             },
             "problemMatcher": []
         }

@@ -12,8 +12,8 @@ void app_entry(void) {
     STDIOInitAll();
     time_init();
 
-#if _DEBUG
-    Delay(3000);
+#ifdef DEBUGMSGS
+    Delay(3000); // give us time to start serial monitor
 #endif
 
 /*

@@ -156,16 +156,4 @@ void PWMSetEnabled(uint32_t slice, bool enable) {
     }
 }
 
-void I2CInit(uint32_t speed) {
-    // TODO: implement ESP32 I2C initialization if needed
-    (void)speed;
-}
-
-void I2CWrite(UBYTE addr, UBYTE reg, UBYTE value) {
-    // TODO: implement ESP32 I2C write if needed
-    (void)addr;
-    (void)reg;
-    (void)value;
-}
-
 #endif /* _HAL_C_ */

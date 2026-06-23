@@ -1,0 +1,19 @@
+If:
+    PathMatch: .*
+
+PathMappings:
+    "\\\\wsl.localhost\\Ubuntu\\home\\juliannojungle\\gui.ll": "/home/juliannojungle/gui.ll/"
+
+CompileFlags:
+    Add: [
+        "-DDEBUGMSGS",
+        "-target", "arm-none-eabi",
+        "--target=arm-none-eabi"
+    ]
+    Remove: [
+        "-mthumb", 
+        "-mcpu=*", 
+        "-mfpu=*", 
+        "-mfloat-abi=*"
+    ]
+    CompilationDatabase: build

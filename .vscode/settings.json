@@ -1,5 +1,12 @@
 {
-    "clangd.path": "/usr/bin/clangd",
+    "clangd.path": "wsl.exe",
+    "clangd.arguments": [
+        "-d", "Ubuntu",
+        "-e", "clangd",
+        "--query-driver=/usr/bin/arm-none-eabi-gcc,/usr/bin/arm-none-eabi-g++",
+        "--path-mappings=${workspaceFolder}=/home/juliannojungle/gui.ll"
+    ],
+    "clangd.restartAfterCrash": true,
     "editor.indentSize": 4,
     "explorer.excludeGitIgnore": true,
     "files.associations": {

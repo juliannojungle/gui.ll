@@ -11,88 +11,61 @@
 #include "LCD_1in28.c"
 #include "font20.c"
 #include "Canvas.h"
+#include "Debug.h"
 
-typedef struct {
-    FIL *file;
-} custom_file;
-
-void custom_read_data(png_structrp png_ptr, png_bytep data, size_t length) {
-#if _DEBUG
-    printf("Custom read data...\n");
-#endif
+void CustomReadData(png_structrp pngPointer, png_bytep data, size_t length) {
+    SHOWDEBUG(".");
     UINT bytesRead;
-    // custom_file *filep = (custom_file*)png_get_io_ptr(png_ptr);
-    // f_read(filep->file, data, length, &bytesRead);
-    f_read((FIL*)png_get_io_ptr(png_ptr), data, length, &bytesRead);
+    f_read((FIL*)png_get_io_ptr(pngPointer), data, length, &bytesRead);
 }
 
-static void error(png_structp png_ptr, const char *message)
+static void ShowError(png_structp pngPointer, const char *message)
 {
-    printf("Error from libpng: %s\n", message);
+    SHOWDEBUG("Error from libpng: %s\n", message);
 }
 
 void DisplayPng(FIL *file) {
-#if _DEBUG
-    printf("Creating read structure...\n");
-#endif
-    png_structp png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, error, NULL);
+    SHOWDEBUG("Creating read structure\n");
+    png_structp png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, ShowError, NULL);
 
     if (png_ptr == NULL) {
-        printf("png_create_read_struct error\n");
+        SHOWDEBUG("png_create_read_struct error\n");
         return;
     }
 
-#if _DEBUG
-    printf("Allocating memory for image information...\n");
-#endif
+    SHOWDEBUG("Allocating memory for image information\n");
     png_infop info_ptr = png_create_info_struct(png_ptr);
 
     if (info_ptr == NULL) {
-        printf("png_create_info_struct error\n");
+        SHOWDEBUG("png_create_info_struct error\n");
         png_destroy_read_struct(&png_ptr, NULL, NULL);
         return;
     }
 
-#if _DEBUG
-    printf("Setting up the custom read function...\n");
-#endif
-    // custom_file filep;
-    // filep.file = &file;
-    // png_set_read_fn(png_ptr, &filep, custom_read_data);
-    png_set_read_fn(png_ptr, file, custom_read_data);
+    SHOWDEBUG("Setting up the custom read function\n");
+    png_set_read_fn(png_ptr, file, CustomReadData);
 
-#if _DEBUG
-    printf("Setting up LongJump...\n");
-#endif
+    SHOWDEBUG("Setting up LongJump\n");
 
     if (setjmp(png_jmpbuf(png_ptr)) == 0) {
-#if _DEBUG
-        printf("LongJump set...\n");
-#endif
+        SHOWDEBUG("LongJump set\n");
     } else {
-        printf("We got a LongJump, destroying read struct...\n");
+        SHOWDEBUG("We got a LongJump, destroying read struct\n");
         png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
         return;
     }
 
     // The call to png_read_info() gives us all of the information from the
     // PNG file before the first IDAT (image data chunk). REQUIRED.
-#if _DEBUG
-    printf("Reading info...\n");
-#endif
+    SHOWDEBUG("Reading info\n");
     png_read_info(png_ptr, info_ptr);
 
-#if _DEBUG
-    printf("Parsing image info...\n");
-#endif
+    SHOWDEBUG("\nParsing image info\n");
     png_uint_32 width, height;
     int bit_depth, color_type, interlace_type;
     png_get_IHDR(png_ptr, info_ptr, &width, &height, &bit_depth, &color_type, &interlace_type, NULL, NULL);
-#if _DEBUG
-    printf("PNG info: width: %d, height: %d, bit_depth: %d\n", width, height, bit_depth);
-
-    printf("Initialize display...\n");
-#endif
+    SHOWDEBUG("PNG info: width: %d, height: %d, bit_depth: %d\n", width, height, bit_depth);
+    SHOWDEBUG("Initialize display\n");
 
     /* LCD Init */
     if (LCDInitialize(HORIZONTAL) != 0) {
@@ -157,9 +130,7 @@ void DisplayPng(FIL *file) {
     DigitalWrite(LCD_DC_PIN, 0);
     DigitalWrite(LCD_BL_PIN, 1);
 
-#if _DEBUG
-    printf("Done! Destroying read struct...\n");
-#endif
+    SHOWDEBUG("Done! Destroying read struct\n");
     png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
 }
 

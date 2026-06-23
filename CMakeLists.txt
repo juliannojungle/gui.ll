@@ -1,9 +1,19 @@
 # version requirements
 cmake_minimum_required(VERSION 3.16)
 
+# Generate compile_commands.json (consumed by clangd for code intelligence)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 # Platform selection
 if(NOT DEFINED PLATFORM_NAME)
     set(PLATFORM_NAME "RP2040")
+endif()
+
+# Optional debug messages: pass -DDEBUGMSGS (no value needed) at configure time to
+# define the DEBUGMSGS macro for the build (used via #ifdef DEBUGMSGS in the sources).
+# Guarded with DEFINED so it triggers whether CMake stores it as "ON" or as an empty value.
+if(DEFINED DEBUGMSGS)
+    add_compile_definitions(DEBUGMSGS)
 endif()
 
 # Build system per platform
