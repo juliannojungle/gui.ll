@@ -27,7 +27,14 @@
                 "panel": "shared",
                 "clear": true
             },
-            "problemMatcher": ["$gcc"]
+            "problemMatcher": {
+                "owner": "gcc",
+                "fileLocation": ["autoDetect", "${workspaceFolder}"],
+                "pattern": {
+                    "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
+                    "file": 1, "line": 2, "column": 3, "severity": 4, "message": 5
+                }
+            }
         },
         // {
         //     "label": "Build+Flash: Full ESP32",
@@ -55,7 +62,14 @@
                 "panel": "shared",
                 "clear": true
             },
-            "problemMatcher": ["$gcc"]
+            "problemMatcher": {
+                "owner": "gcc",
+                "fileLocation": ["autoDetect", "${workspaceFolder}"],
+                "pattern": {
+                    "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
+                    "file": 1, "line": 2, "column": 3, "severity": 4, "message": 5
+                }
+            }
         },
         {
             "label": "Build: RP2040 Full (DEBUGMSGS)",
@@ -74,7 +88,14 @@
                 "panel": "shared",
                 "clear": true
             },
-            "problemMatcher": ["$gcc"]
+            "problemMatcher": {
+                "owner": "gcc",
+                "fileLocation": ["autoDetect", "${workspaceFolder}"],
+                "pattern": {
+                    "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
+                    "file": 1, "line": 2, "column": 3, "severity": 4, "message": 5
+                }
+            }
         },
         {
             "label": "Build: ESP32 Full (DEBUGMSGS)",
@@ -93,7 +114,14 @@
                 "panel": "shared",
                 "clear": true
             },
-            "problemMatcher": ["$gcc"]
+            "problemMatcher": {
+                "owner": "gcc",
+                "fileLocation": ["autoDetect", "${workspaceFolder}"],
+                "pattern": {
+                    "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
+                    "file": 1, "line": 2, "column": 3, "severity": 4, "message": 5
+                }
+            }
         },
         {
             "label": "Build+Flash: RP2040 Incremental",
@@ -125,7 +153,14 @@
                 "panel": "shared",
                 "clear": true
             },
-            "problemMatcher": ["$gcc"]
+            "problemMatcher": {
+                "owner": "gcc",
+                "fileLocation": ["autoDetect", "${workspaceFolder}"],
+                "pattern": {
+                    "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
+                    "file": 1, "line": 2, "column": 3, "severity": 4, "message": 5
+                }
+            }
         },
         {
             "label": "Setup: ESP32 toolchain in WSL2",
