@@ -3,9 +3,7 @@ If:
 
 CompileFlags:
     Add: [
-        "-DDEBUGMSGS",
-        "-target", "arm-none-eabi",
-        "--target=arm-none-eabi"
+        "-DDEBUGMSGS"
     ]
     Remove: [
         "-mthumb", 
