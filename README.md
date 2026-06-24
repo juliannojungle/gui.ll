@@ -69,6 +69,20 @@ Currently supports **RP2040** (Raspberry Pi Pico) and **ESP32** from a single co
 
 ---
 
+## 📚 LCD Driver Datasheet (reference)
+
+The GC9A01A LCD driver datasheet is versioned in `Documentation/` in two complementary forms:
+
+| File | Role |
+|---|---|
+| [`Documentation/GC9A01A.md`](Documentation/GC9A01A.md) | **Primary / quick data source.** Markdown conversion (mostly used for quick ai insights) — search here first for registers, command opcodes, parameter bit fields, defaults, memory layout and timings. Section 6 (commands) is a faithful reproduction with bit-layout tables and verbatim Description/Restriction. |
+| [`Documentation/GC9A01A.pdf`](Documentation/GC9A01A.pdf) | **Secondary source for disambiguation.** The original 192-page PDF — consult it to resolve any doubt, and for graphical waveform/timing diagrams (not extracted into the markdown). |
+
+> Figures and diagrams are described in text in the markdown, not embedded as images. When
+> precision matters, the PDF is the ground truth.
+
+---
+
 ## 📋 Software Requirements
 
 - **Host**: Linux or Windows 10 PC with [WSL 2 (Windows Subsystem Linux)](https://learn.microsoft.com/pt-br/windows/wsl/install) - Ubuntu is recommended — code edited on Windows, compiled inside WSL
@@ -102,6 +116,10 @@ gui.ll/
 │       ├── fatfs/                  # ChaN FatFS
 │       ├── libpng/                 # libpng
 │       └── zlib/                   # zlib (libpng dependency)
+├── Documentation/
+│   ├── GC9A01A.pdf                 # LCD driver datasheet (original PDF)
+│   ├── GC9A01A.md                  # Datasheet as markdown (primary data source)
+│   └── Image/                      # Pinout reference images
 └── Toolchain/
     ├── RP2040/Setup.sh
     └── ESP32/Setup.sh

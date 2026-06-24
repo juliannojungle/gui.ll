@@ -12,6 +12,30 @@ Target devices (both expose 2×20 pin headers at 1.27mm pitch with an embedded r
 
 ---
 
+## Reference Documentation (GC9A01A datasheet)
+
+The LCD driver datasheet lives in `Documentation/` and is versioned in two forms that serve
+different roles:
+
+- **`Documentation/GC9A01A.md`** — **primary / quick data source.** A markdown conversion of the
+  datasheet. Use this first when looking up registers, command opcodes, parameter bit fields,
+  defaults, memory layout, timing values, etc. Section 6 (commands) is a faithful reproduction:
+  each command has its bit-layout table (D/CX, RDX, WRX, D17-8, D7..D0, HEX), the verbatim
+  Description (with embedded tables rendered as markdown) and verbatim Restriction.
+- **`Documentation/GC9A01A.pdf`** — **secondary source, for disambiguation.** The original 192-page
+  PDF. Consult it only to resolve any doubt or ambiguity in the markdown (e.g. graphical
+  waveform/timing diagrams and figures, which were summarized in text and not extracted as images).
+
+Notes / known limitations of the markdown:
+- Figures and graphical diagrams are described in text, **not** embedded as images (intentional —
+  images are not extracted).
+- Sections 1–5 and 7 reproduce all tables, but some prose/figure captions are summarized; section 6
+  is verbatim. When precision matters, cross-check against the PDF.
+- The markdown was produced from text/table extraction (pdfplumber + pdftotext); obvious OCR typos
+  were corrected, but the PDF remains the ground truth.
+
+---
+
 ## Project Structure
 
 ```
@@ -20,6 +44,11 @@ gui.ll/
 ├── AGENTS.md                       # This file
 ├── .gitmodules                     # Submodule config (all locked with update=none)
 ├── .gitignore                      # build/, sdkconfig
+│
+├── Documentation/
+│   ├── GC9A01A.pdf                 # LCD driver datasheet (original, 192 pages) — versioned
+│   ├── GC9A01A.md                  # Markdown conversion of the datasheet — versioned
+│   └── Image/                      # RP2040 / ESP32-S3 pinout reference images
 │
 ├── Toolchain/
 │   ├── RP2040/Setup.sh             # Installs arm-none-eabi-gcc, pico-sdk
