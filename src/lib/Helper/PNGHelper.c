@@ -66,10 +66,8 @@ void DisplayPng(FIL *file) {
         return;
     }
 
-    SHOWDEBUG("LongJump set\n");
     SHOWDEBUG("Reading info\n");
-    /* A call to png_read_info gives us all information about the
-       PNG file before the first IDAT (image data chunk). REQUIRED. */
+    /* png_read_info gets information about PNG file before the first IDAT (image data chunk). REQUIRED. */
     png_read_info(png_ptr, info_ptr);
 
     SHOWDEBUG("\nParsing image info\n");
@@ -127,7 +125,7 @@ void DisplayPng(FIL *file) {
 
     DigitalWrite(LCD_CS_PIN, 1);
     lcdSelected = false;
-    DriverSendCommand(0x29);
+    DriverSendCommand(0x29); /* Ensure display ON */
     // ####### LCDDisplayTexture #######
 
     SHOWDEBUG("Done! Destroying read struct\n");

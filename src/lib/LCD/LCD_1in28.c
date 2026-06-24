@@ -79,26 +79,26 @@ static void LCDInitRegister(void)
     Delay(20); /* Delay 20ms */
 }
 
-static void LCDSetAttributes(UBYTE Scan_dir)
+static void LCDSetAttributes(UBYTE scanDirection)
 {
     //Get the screen scan direction
-    LCD.SCAN_DIR = Scan_dir;
-    UBYTE MemoryAccessReg = 0x00;
+    LCD.SCAN_DIR = scanDirection;
+    UBYTE memoryAccessReg = 0x00;
 
     //Get GRAM and LCD width and height
-    if(Scan_dir == HORIZONTAL) {
+    if(scanDirection == HORIZONTAL) {
         LCD.HEIGHT = LCD_1IN28_WIDTH;
         LCD.WIDTH = LCD_1IN28_HEIGHT;
-        MemoryAccessReg = 0x48;
+        memoryAccessReg = 0x48;
     } else {
         LCD.HEIGHT = LCD_1IN28_HEIGHT;
         LCD.WIDTH = LCD_1IN28_WIDTH;
-        MemoryAccessReg = 0x24;
+        memoryAccessReg = 0x24;
     }
 
     // Set the read / write scan direction of the frame memory
     //MX, MY, RGB mode; 0x08 set RGB
-    DriverSendCommandData8Bit(0x36, (UBYTE[]){MemoryAccessReg}, 1);
+    DriverSendCommandData8Bit(0x36, (UBYTE[]){memoryAccessReg}, 1);
 }
 
 void LCDTurnBacklightOn(void)
@@ -110,36 +110,36 @@ void LCDTurnBacklightOn(void)
     DigitalWrite(LCD_BL_PIN, 1);
 }
 
-int LCDInitialize(UBYTE Scan_dir)
+int LCDInitialize(UBYTE scanDirection)
 {
-    int driverResult = DriverInit();
+    int initResult = DriverInit();
 
-    if (driverResult != 0)
-        return driverResult;
+    if (initResult != 0)
+        return initResult;
 
     DriverSetPWM(90);
     DriverReset(); //Hardware reset
-    LCDSetAttributes(Scan_dir); //Set the resolution and scanning method of the screen
+    LCDSetAttributes(scanDirection); //Set the resolution and scanning method of the screen
     LCDInitRegister(); //Set the initialization register
     LCDTurnBacklightOn();
     return 0;
 }
 
-void LCDSetDisplayArea(UWORD Xstart, UWORD Ystart, UWORD Xend, UWORD Yend)
+void LCDSetDisplayArea(UWORD xStart, UWORD yStart, UWORD xEnd, UWORD yEnd)
 {
-    DriverSendCommandData8Bit(0x2A, (UBYTE[]){0x00, Xstart, 0x00, Xend-1}, 4); //set the X coordinates
-    DriverSendCommandData8Bit(0x2B, (UBYTE[]){0x00, Ystart, 0x00, Yend-1}, 4); //set the Y coordinates
+    DriverSendCommandData8Bit(0x2A, (UBYTE[]){0x00, xStart, 0x00, xEnd-1}, 4); //set the X coordinates
+    DriverSendCommandData8Bit(0x2B, (UBYTE[]){0x00, yStart, 0x00, yEnd-1}, 4); //set the Y coordinates
     DriverSendCommand(0X2C);
 }
 
-void LCDClear(UWORD FillColor)
+void LCDClear(UWORD fillColor)
 {
     UWORD j;
-    UWORD Image[LCD.WIDTH*LCD.HEIGHT];
-    FillColor = ((FillColor<<8)&0xff00)|(FillColor>>8);
+    UWORD image[LCD.WIDTH*LCD.HEIGHT];
+    fillColor = ((fillColor<<8)&0xff00)|(fillColor>>8);
 
     for (j = 0; j < LCD.HEIGHT*LCD.WIDTH; j++) {
-        Image[j] = FillColor;
+        image[j] = fillColor;
     }
 
     LCDSetDisplayArea(0, 0, LCD.WIDTH, LCD.HEIGHT);
@@ -147,13 +147,13 @@ void LCDClear(UWORD FillColor)
     DigitalWrite(LCD_CS_PIN, 0);
 
     for (j = 0; j < LCD.HEIGHT; j++) {
-        SPIWriteNByte((uint8_t *)&Image[j*LCD.WIDTH], LCD.WIDTH*2);
+        SPIWriteNByte((uint8_t *)&image[j*LCD.WIDTH], LCD.WIDTH*2);
     }
 
     DigitalWrite(LCD_CS_PIN, 1);
 }
 
-void LCDDisplayTexture(UWORD *Image) /* uses full display area available in LCD */
+void LCDDisplayTexture(UWORD *image) /* uses full display area available in LCD */
 {
     UWORD j;
     LCDSetDisplayArea(0, 0, LCD.WIDTH, LCD.HEIGHT);
@@ -161,33 +161,33 @@ void LCDDisplayTexture(UWORD *Image) /* uses full display area available in LCD 
     DigitalWrite(LCD_CS_PIN, 0);
 
     for (j = 0; j < LCD.HEIGHT; j++) {
-        SPIWriteNByte((uint8_t *)&Image[j*LCD.WIDTH], LCD.WIDTH*2);
+        SPIWriteNByte((uint8_t *)&image[j*LCD.WIDTH], LCD.WIDTH*2);
     }
 
     DigitalWrite(LCD_CS_PIN, 1);
-    DriverSendCommand(0x29);
+    DriverSendCommand(0x29); /* Ensure display ON */
 }
 
-// void LCDDisplayTextureInArea(UWORD Xstart, UWORD Ystart, UWORD Xend, UWORD Yend, UWORD *Image)
+// void LCDDisplayTextureInArea(UWORD xStart, UWORD yStart, UWORD xEnd, UWORD yEnd, UWORD *image)
 // {
 //     UDOUBLE Addr = 0;
 //     UWORD j;
-//     LCDSetDisplayArea(Xstart, Ystart, Xend , Yend);
+//     LCDSetDisplayArea(xStart, yStart, xEnd , yEnd);
 //     DigitalWrite(LCD_DC_PIN, 1);
 //     DigitalWrite(LCD_CS_PIN, 0);
 
-//     for (j = Ystart; j < Yend - 1; j++) {
-//         Addr = Xstart + j * LCD.WIDTH ;
-//         SPIWriteNByte((uint8_t *)&Image[Addr], (Xend-Xstart)*2);
+//     for (j = yStart; j < yEnd - 1; j++) {
+//         Addr = xStart + j * LCD.WIDTH ;
+//         SPIWriteNByte((uint8_t *)&image[Addr], (xEnd-xStart)*2);
 //     }
 
 //     DigitalWrite(LCD_CS_PIN, 1);
 // }
 
-// void LCDDisplayTexturePoint(UWORD X, UWORD Y, UWORD Color)
+// void LCDDisplayTexturePoint(UWORD x, UWORD y, UWORD color)
 // {
-//     LCDSetDisplayArea(X,Y,X,Y);
-//     DriverSendData16Bit(Color);
+//     LCDSetDisplayArea(x,y,x,y);
+//     DriverSendData16Bit(color);
 // }
 
 #endif /* __LCD_1IN28_ */
