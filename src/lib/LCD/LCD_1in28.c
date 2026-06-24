@@ -153,10 +153,10 @@ void LCDClear(UWORD fillColor)
     DigitalWrite(LCD_CS_PIN, 1);
 }
 
-void LCDDisplayTexture(UWORD *image) /* uses full display area available in LCD */
+void LCDDisplayTexture(UWORD *image)
 {
     UWORD j;
-    LCDSetDisplayArea(0, 0, LCD.WIDTH, LCD.HEIGHT);
+    LCDSetDisplayArea(0, 0, LCD.WIDTH, LCD.HEIGHT); /* full screen */
     DigitalWrite(LCD_DC_PIN, 1);
     DigitalWrite(LCD_CS_PIN, 0);
 
@@ -168,26 +168,26 @@ void LCDDisplayTexture(UWORD *image) /* uses full display area available in LCD 
     DriverSendCommand(0x29); /* Ensure display ON */
 }
 
-// void LCDDisplayTextureInArea(UWORD xStart, UWORD yStart, UWORD xEnd, UWORD yEnd, UWORD *image)
-// {
-//     UDOUBLE Addr = 0;
-//     UWORD j;
-//     LCDSetDisplayArea(xStart, yStart, xEnd , yEnd);
-//     DigitalWrite(LCD_DC_PIN, 1);
-//     DigitalWrite(LCD_CS_PIN, 0);
+void LCDDisplayTextureInArea(UWORD xStart, UWORD yStart, UWORD xEnd, UWORD yEnd, UWORD *image)
+{
+    UDOUBLE addr = 0;
+    UWORD j;
+    LCDSetDisplayArea(xStart, yStart, xEnd , yEnd);
+    DigitalWrite(LCD_DC_PIN, 1);
+    DigitalWrite(LCD_CS_PIN, 0);
 
-//     for (j = yStart; j < yEnd - 1; j++) {
-//         Addr = xStart + j * LCD.WIDTH ;
-//         SPIWriteNByte((uint8_t *)&image[Addr], (xEnd-xStart)*2);
-//     }
+    for (j = yStart; j < yEnd - 1; j++) {
+        addr = xStart + j * LCD.WIDTH ;
+        SPIWriteNByte((uint8_t *)&image[addr], (xEnd-xStart)*2);
+    }
 
-//     DigitalWrite(LCD_CS_PIN, 1);
-// }
+    DigitalWrite(LCD_CS_PIN, 1);
+}
 
-// void LCDDisplayTexturePoint(UWORD x, UWORD y, UWORD color)
-// {
-//     LCDSetDisplayArea(x,y,x,y);
-//     DriverSendData16Bit(color);
-// }
+void LCDDisplayTexturePoint(UWORD x, UWORD y, UWORD color)
+{
+    LCDSetDisplayArea(x,y,x,y);
+    DriverSendData16Bit(color);
+}
 
 #endif /* __LCD_1IN28_ */
