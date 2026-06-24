@@ -3,7 +3,7 @@ set(PICO_CODE_LIB ${CMAKE_SOURCE_DIR}/src/lib)
 include_directories(${PICO_CODE_LIB}/Platform/ESP32)
 include_directories(${PICO_CODE_LIB}/Driver/GC9A01)
 include_directories(${PICO_CODE_LIB}/Fonts)
-include_directories(${PICO_CODE_LIB}/LCD)
+include_directories(${PICO_CODE_LIB}/LCD/1in28)
 include_directories(${PICO_CODE_LIB}/GUI)
 include_directories(${PICO_CODE_LIB}/Helper)
 

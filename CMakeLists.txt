@@ -9,7 +9,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(GUILL_COMMON_SRCS
     ${CMAKE_SOURCE_DIR}/src/Sample.c
     ${CMAKE_SOURCE_DIR}/src/lib/Driver/GC9A01/Driver.c
-    ${CMAKE_SOURCE_DIR}/src/lib/LCD/LCD_1in28.c
+    ${CMAKE_SOURCE_DIR}/src/lib/LCD/1in28/LCDSetup.c
+    ${CMAKE_SOURCE_DIR}/src/lib/LCD/1in28/LCDRenderer.c
     ${CMAKE_SOURCE_DIR}/src/lib/GUI/Canvas.c
     ${CMAKE_SOURCE_DIR}/src/lib/Fonts/font20.c
     ${CMAKE_SOURCE_DIR}/src/lib/Helper/FileHelper.c

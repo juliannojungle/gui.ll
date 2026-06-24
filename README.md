@@ -95,7 +95,7 @@ gui.ll/
 │   │   │   ├── RP2040/             # HAL, SPI, DiskIO, RTC (Pico SDK)
 │   │   │   └── ESP32/              # HAL, SPI, DiskIO, RTC (ESP-IDF)
 │   │   ├── Driver/GC9A01/          # LCD driver
-│   │   ├── LCD/                    # Display command layer
+│   │   ├── LCD/1in28/              # Display layer: LCDSetup (init) + LCDRenderer (blit)
 │   │   ├── GUI/                    # Canvas / drawing primitives (Canvas.c/.h)
 │   │   └── Fonts/                  # Bitmap font data
 │   └── Dependency/

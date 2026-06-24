@@ -1,7 +1,8 @@
 #include "HAL.h"
 #include "RTC.h" // rtc for file's timestamp.
 
-#include "LCD_1in28.h"
+#include "LCDSetup.h"
+#include "LCDRenderer.h"
 #include "Canvas.h"
 // #include "fonts.h"
 // #include <stdlib.h>
@@ -16,7 +17,7 @@ void app_entry(void) {
     // Delay(3000); // give us time to start serial monitor
 
     /* LCD Init */
-    LCDInitialize(HORIZONTAL);
+    LCDInitialize();
     LCDClear(BLACK);
 
 /*

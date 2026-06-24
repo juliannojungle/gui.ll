@@ -18,7 +18,8 @@ idf_component_register(
         "${PLATFORM_SRC}/HAL.c"
         "${PLATFORM_SRC}/RTC.c"
         "${PROJ_ROOT}/src/lib/Driver/GC9A01/Driver.c"
-        "${PROJ_ROOT}/src/lib/LCD/LCD_1in28.c"
+        "${PROJ_ROOT}/src/lib/LCD/1in28/LCDSetup.c"
+        "${PROJ_ROOT}/src/lib/LCD/1in28/LCDRenderer.c"
         "${PROJ_ROOT}/src/lib/GUI/Canvas.c"
         "${PROJ_ROOT}/src/lib/Fonts/font20.c"
         "${PROJ_ROOT}/src/lib/Helper/FileHelper.c"
@@ -62,7 +63,7 @@ idf_component_register(
         "${PLATFORM_SRC}"
         "${PROJ_ROOT}/src/lib/Driver/GC9A01"
         "${PROJ_ROOT}/src/lib/Fonts"
-        "${PROJ_ROOT}/src/lib/LCD"
+        "${PROJ_ROOT}/src/lib/LCD/1in28"
         "${PROJ_ROOT}/src/lib/GUI"
         "${PROJ_ROOT}/src/lib/Helper"
     REQUIRES

@@ -1,21 +1,8 @@
-/*****************************************************************************
-* | File        :   LCD_1in28.c
-* | Author      :   Waveshare team, Julianno F. C. Silva (@juliannojungle)
-* | Function    :   Hardware underlying interface
-* | Info        :
-*                Used to shield the underlying layers of each master
-*                and enhance portability
-*----------------
-* | This version:   V1.0
-* | Date        :   2023-03-26
-* | Info        :   Basic version
-*
-******************************************************************************/
-#ifndef __LCD_1IN28_
-#define __LCD_1IN28_
+#ifndef __LCD_SETUP_C
+#define __LCD_SETUP_C
 
-#include "LCD_1in28.h"
-#include "HALConfig.h"
+#include <stdlib.h>
+#include "LCDSetup.h"
 #include "HAL.h"
 #include "Driver.h"
 
@@ -81,113 +68,35 @@ static void LCDInitRegister(void)
 
 static void LCDSetAttributes(UBYTE scanDirection)
 {
-    //Get the screen scan direction
     LCD.SCAN_DIR = scanDirection;
     UBYTE memoryAccessReg = 0x00;
 
-    //Get GRAM and LCD width and height
     if(scanDirection == HORIZONTAL) {
-        LCD.HEIGHT = LCD_1IN28_WIDTH;
-        LCD.WIDTH = LCD_1IN28_HEIGHT;
+        LCD.HEIGHT = LCD_WIDTH;
+        LCD.WIDTH = LCD_HEIGHT;
         memoryAccessReg = 0x48;
     } else {
-        LCD.HEIGHT = LCD_1IN28_HEIGHT;
-        LCD.WIDTH = LCD_1IN28_WIDTH;
+        LCD.HEIGHT = LCD_HEIGHT;
+        LCD.WIDTH = LCD_WIDTH;
         memoryAccessReg = 0x24;
     }
 
-    // Set the read / write scan direction of the frame memory
-    //MX, MY, RGB mode; 0x08 set RGB
+    /* set scan and refresh direction + color channel order RGB (not using BGR here)*/
     DriverSendCommandData8Bit(0x36, (UBYTE[]){memoryAccessReg}, 1);
 }
 
-void LCDTurnBacklightOn(void)
+int LCDInitialize()
 {
-    /* Turn backlight on */
-    DriverGPIOMode(LCD_BL_PIN, GPIO_OUT);
-    DigitalWrite(LCD_CS_PIN, 1);
-    DigitalWrite(LCD_DC_PIN, 0);
-    DigitalWrite(LCD_BL_PIN, 1);
-}
+    int initResult = DriverInitialize();
 
-int LCDInitialize(UBYTE scanDirection)
-{
-    int initResult = DriverInit();
-
-    if (initResult != 0)
+    if (initResult != EXIT_SUCCESS)
         return initResult;
 
-    DriverSetPWM(90);
-    DriverReset(); //Hardware reset
-    LCDSetAttributes(scanDirection); //Set the resolution and scanning method of the screen
-    LCDInitRegister(); //Set the initialization register
-    LCDTurnBacklightOn();
-    return 0;
+    DriverHardwareReset();
+    LCDSetAttributes(HORIZONTAL);
+    LCDInitRegister();
+    DriverSetBacklightBrightness(90);
+    return EXIT_SUCCESS;
 }
 
-void LCDSetDisplayArea(UWORD xStart, UWORD yStart, UWORD xEnd, UWORD yEnd)
-{
-    DriverSendCommandData8Bit(0x2A, (UBYTE[]){0x00, xStart, 0x00, xEnd-1}, 4); //set the X coordinates
-    DriverSendCommandData8Bit(0x2B, (UBYTE[]){0x00, yStart, 0x00, yEnd-1}, 4); //set the Y coordinates
-    DriverSendCommand(0X2C);
-}
-
-void LCDClear(UWORD fillColor)
-{
-    UWORD j;
-    UWORD image[LCD.WIDTH*LCD.HEIGHT];
-    fillColor = ((fillColor<<8)&0xff00)|(fillColor>>8);
-
-    for (j = 0; j < LCD.HEIGHT*LCD.WIDTH; j++) {
-        image[j] = fillColor;
-    }
-
-    LCDSetDisplayArea(0, 0, LCD.WIDTH, LCD.HEIGHT);
-    DigitalWrite(LCD_DC_PIN, 1);
-    DigitalWrite(LCD_CS_PIN, 0);
-
-    for (j = 0; j < LCD.HEIGHT; j++) {
-        SPIWriteNByte((uint8_t *)&image[j*LCD.WIDTH], LCD.WIDTH*2);
-    }
-
-    DigitalWrite(LCD_CS_PIN, 1);
-}
-
-void LCDDisplayTexture(UWORD *image)
-{
-    UWORD j;
-    LCDSetDisplayArea(0, 0, LCD.WIDTH, LCD.HEIGHT); /* full screen */
-    DigitalWrite(LCD_DC_PIN, 1);
-    DigitalWrite(LCD_CS_PIN, 0);
-
-    for (j = 0; j < LCD.HEIGHT; j++) {
-        SPIWriteNByte((uint8_t *)&image[j*LCD.WIDTH], LCD.WIDTH*2);
-    }
-
-    DigitalWrite(LCD_CS_PIN, 1);
-    DriverSendCommand(0x29); /* Ensure display ON */
-}
-
-void LCDDisplayTextureInArea(UWORD xStart, UWORD yStart, UWORD xEnd, UWORD yEnd, UWORD *image)
-{
-    UDOUBLE addr = 0;
-    UWORD j;
-    LCDSetDisplayArea(xStart, yStart, xEnd , yEnd);
-    DigitalWrite(LCD_DC_PIN, 1);
-    DigitalWrite(LCD_CS_PIN, 0);
-
-    for (j = yStart; j < yEnd - 1; j++) {
-        addr = xStart + j * LCD.WIDTH ;
-        SPIWriteNByte((uint8_t *)&image[addr], (xEnd-xStart)*2);
-    }
-
-    DigitalWrite(LCD_CS_PIN, 1);
-}
-
-void LCDDisplayTexturePoint(UWORD x, UWORD y, UWORD color)
-{
-    LCDSetDisplayArea(x,y,x,y);
-    DriverSendData16Bit(color);
-}
-
-#endif /* __LCD_1IN28_ */
+#endif

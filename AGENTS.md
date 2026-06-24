@@ -50,8 +50,10 @@ gui.ll/
 │   │   │       ├── RTC.c/.h        # RTC via settimeofday; defines time_init() + get_fattime()
 │   │   │       └── DiskIO.c        # FatFS disk I/O (ESP-IDF SPI master) — parity with RP2040: CRC7, manual CS, card detect ISR (IRAM_ATTR)
 │   │   │
-│   │   ├── Driver/GC9A01/          # LCD driver (Driver.c/.h) — uses LCD_* defines from HALConfig.h; DriverInit configures SPI, GPIO and backlight PWM
-│   │   ├── LCD/                     # LCD commands (LCD_1in28.c/.h)
+│   │   ├── Driver/GC9A01/          # LCD driver (Driver.c/.h) — uses LCD_* defines from HALConfig.h; DriverInitialize configures SPI, GPIO and backlight PWM; DriverSetBacklightBrightness sets PWM level
+│   │   ├── LCD/1in28/               # GC9A01 1.28" panel layer, split in two TUs:
+│   │   │   ├── LCDSetup.c/.h       # Panel bring-up: DriverInitialize + reset, scan/attributes, register init, backlight; owns the LCD_ATTRIBUTES LCD global; exposes LCDInitialize()
+│   │   │   └── LCDRenderer.c/.h    # Pixel/area blitting: LCDSetDisplayArea, LCDClear, LCDDisplayTexture(/InArea/Point)
 │   │   ├── GUI/                     # Canvas/drawing utilities (Canvas.c/.h)
 │   │   └── Fonts/                   # Font data
 │   │
@@ -173,7 +175,7 @@ the **public interface** of the module:
   helpers that are private to a `.c` as `static`; only non-`static` functions belong in the `.h`.
 - **Shared globals are owned by one `.c` and exposed via `extern` in the `.h`** (e.g.
   `extern Canvas canvas;` in `Canvas.h`, owned by `Canvas.c`; `extern LCD_ATTRIBUTES LCD;` in
-  `LCD_1in28.h`, owned by `LCD_1in28.c`). Keep shared globals to a minimum, but `extern` in a
+  `LCDSetup.h`, owned by `LCDSetup.c`). Keep shared globals to a minimum, but `extern` in a
   header is the normal, accepted mechanism — not a last resort.
 - **External-contract names stay off-convention**, as before: FatFS `disk_*` / `get_fattime`
   (declared by `ff.h`), Pico SDK / ESP-IDF APIs, and the `HAL.h` Pico-SDK compat constants.
@@ -272,8 +274,12 @@ Python env, Rust, and espflash.
 
 ### Language
 
-All code comments, documentation, and commit messages must be in **English**.
-The AGENTS.md itself is the reference for this rule.
+All code comments, documentation, and commit messages must be in **English** — this includes
+source code, code comments, `AGENTS.md` and `README.md`. The AGENTS.md itself is the reference
+for this rule.
+
+**Chat/conversation with the user is always in Brazilian Portuguese (pt-BR)** — only the chat;
+all artifacts that land in the repo (code, comments, docs, commit messages) stay in English.
 
 ---
 
@@ -312,6 +318,21 @@ This prevents the git plugin from showing false "modified" files in submodules
   hardware-tested**.
 
 Recent work:
+- **Split the LCD layer into `LCD/1in28/LCDSetup` + `LCD/1in28/LCDRenderer`** (replaces the old
+  `LCD/LCD_1in28.c/.h`, now deleted). `LCDSetup.c/.h` owns panel bring-up (`LCDInitialize()`:
+  `DriverInitialize` + hardware reset, `LCDSetAttributes` for scan direction/dimensions, the
+  GC9A01 register init sequence, and backlight) plus the `LCD_ATTRIBUTES LCD` global.
+  `LCDRenderer.c/.h` owns drawing-to-panel (`LCDSetDisplayArea`, `LCDClear`, `LCDDisplayTexture`,
+  `LCDDisplayTextureInArea`, `LCDDisplayTexturePoint`). Build wiring: `GUILL_COMMON_SRCS` lists
+  both `.c`; the new headers live in the `LCD/1in28/` subfolder, so each platform's
+  `PostExecutable.cmake` include path changed from `${PICO_CODE_LIB}/LCD` to
+  `${PICO_CODE_LIB}/LCD/1in28`. RP2040 builds and runs. ESP32 wiring updated to match:
+  `Platform/ESP32/CMakeLists.txt` now lists the two new `.c` in `SRCS` and `LCD/1in28` in
+  `INCLUDE_DIRS` (parity-only, not compile-tested here).
+- **`Driver.c/.h` gained backlight brightness control**: new `DriverSetBacklightBrightness(UINT
+  brightness)` sets the backlight PWM channel level (0–99). `DriverInitialize` configures the PWM
+  via `DriverBacklightPWMInitialize` (slice cached in the file-local `pwmBacklightBrightnessLevel`);
+  `LCDSetup`'s `LCDInitialize()` calls `DriverSetBacklightBrightness(90)` after bring-up.
 - **Migrated from unity build to standard separate compilation** (Decision 5 / §5 rewritten):
   each `.c` is now its own translation unit compiled to a `.o` and linked, instead of `.c` files
   being `#include`d into `Sample.c`. Motivation: under the unity build only `Sample.c` appeared in
@@ -326,7 +347,7 @@ Recent work:
   - `RTC.h` split into `RTC.h` (prototype) + `RTC.c` (definitions of `time_init()` + `get_fattime()`)
     so `get_fattime()` has exactly one definition (was defined in the header → would duplicate
     across TUs).
-  - `Driver.c`: the helpers called from other TUs (`DriverReset`, `DriverSendCommand`,
+  - `Driver.c`: the helpers called from other TUs (`DriverHardwareReset`, `DriverSendCommand`,
     `DriverSendData8Bit`, `DriverSendCommandData8Bit`, `DriverSendData16Bit`) lost `static`;
     `slice_num` is now `static UDOUBLE` (file-local). All `#include "X.c"` were replaced by
     `#include "X.h"` in `Sample.c`, `PNGHelper.c`, `LCD_1in28.c`, `Canvas.c`, `FileHelper.c`.
@@ -365,7 +386,7 @@ Recent work:
   `PixelSize`/`PIXEL_SIZE_*`, `PixelFillStyle`/`PIXEL_FILL_STYLE_*`, `LineStyle`/`LINE_STYLE_*`,
   `DrawFillStyle`/`DRAW_FILL_STYLE_*`); the time struct is now `DateTime`. Also `sd_card_t` → `SdCard`.
   RP2040 builds and runs after the rename.
-- SD pins / shared-shield design, LCD pin defines, `EPD_*`→`LCD_*`, backlight in `DriverInit`,
+- SD pins / shared-shield design, LCD pin defines, `EPD_*`→`LCD_*`, backlight in `DriverInitialize`,
   card detect (see Design Decisions 6-8).
 - **SD driver rewritten as a faithful port of no-OS-FatFS** (Design Decision 9): real CRC7 on
   every command, CMD0/CMD8/CMD58/ACMD41 handshake, CS held low across the whole init, block vs
@@ -414,7 +435,7 @@ Recent work:
 6. **LCD pin ownership**: All LCD GPIO definitions (`LCD_DC_PIN`, `LCD_CS_PIN`, `LCD_CLK_PIN`,
    `LCD_MOSI_PIN`, `LCD_RST_PIN`, `LCD_BL_PIN`) live exclusively in each platform's `HALConfig.h`.
    The `Driver.c` reads them via `#include "HALConfig.h"` — no pin numbers hardcoded in driver code.
-   Prefix is `LCD_*` (not `EPD_*`). Backlight PWM is initialized inside `DriverInit` — never in
+   Prefix is `LCD_*` (not `EPD_*`). Backlight PWM is initialized inside `DriverInitialize` — never in
    helpers or application code. `PNGHelper.c` has no pin knowledge whatsoever.
 
 7. **Shared shield GPIO selection**: Both target boards expose 2×20 pin headers (1.27mm pitch).

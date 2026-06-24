@@ -33,7 +33,7 @@
 #include "HAL.h"
 #include "Driver.h"
 
-static UDOUBLE slice_num;
+static UDOUBLE pwmBacklightBrightnessLevel;
 
 void DriverGPIOMode(UWORD pin, UWORD mode) {
     GPIOInit(pin);
@@ -45,7 +45,7 @@ void DriverGPIOMode(UWORD pin, UWORD mode) {
     }
 }
 
-void DriverGPIOInit(void) {
+void DriverGPIOInitialize(void) {
     DriverGPIOMode(LCD_RST_PIN, GPIO_OUT);
     DriverGPIOMode(LCD_DC_PIN, GPIO_OUT);
     DriverGPIOMode(LCD_CS_PIN, GPIO_OUT);
@@ -59,7 +59,22 @@ void DriverGPIOInit(void) {
     DigitalWrite(LCD_BL_PIN, 1);
 }
 
-UBYTE DriverInit(void) {
+void DriverBacklightPWMInitialize(void) {
+    GPIOSetFunction(LCD_BL_PIN, GPIO_FUNC_PWM);
+    pwmBacklightBrightnessLevel = PWMGPIOToSliceNum(LCD_BL_PIN);
+    PWMSetWrap(pwmBacklightBrightnessLevel, 100);
+    PWMSetChannelLevel(pwmBacklightBrightnessLevel, PWM_CHAN_B, 1);
+    PWMSetClockDivider(pwmBacklightBrightnessLevel, 50);
+    PWMSetEnabled(pwmBacklightBrightnessLevel, true);
+}
+
+void DriverSetBacklightBrightness(UINT brightness) {
+    if (brightness < 100) {
+        PWMSetChannelLevel(pwmBacklightBrightnessLevel, 1, brightness);
+    }
+}
+
+UBYTE DriverInitialize(void) {
     STDIOInitAll();
 
     // SPI Config
@@ -68,29 +83,16 @@ UBYTE DriverInit(void) {
     GPIOSetFunction(LCD_MOSI_PIN, GPIO_FUNC_SPI);
 
     // GPIO Config
-    DriverGPIOInit();
+    DriverGPIOInitialize();
 
     // PWM Config (backlight)
-    GPIOSetFunction(LCD_BL_PIN, GPIO_FUNC_PWM);
-    slice_num = PWMGPIOToSliceNum(LCD_BL_PIN);
-    PWMSetWrap(slice_num, 100);
-    PWMSetChannelLevel(slice_num, PWM_CHAN_B, 1);
-    PWMSetClockDivider(slice_num, 50);
-    PWMSetEnabled(slice_num, true);
+    DriverBacklightPWMInitialize();
 
-    // printf("DriverInit OK\r\n");
+    // printf("DriverInitialize OK\r\n");
     return 0;
 }
 
-void DriverSetPWM(UBYTE value) {
-    if (value > 100) {
-        // printf("DriverSetPWM error\r\n");
-    } else {
-        PWMSetChannelLevel(slice_num, 1, value);
-    }
-}
-
-void DriverReset(void)
+void DriverHardwareReset(void)
 {
     DigitalWrite(LCD_RST_PIN, 1);
     Delay(100);
