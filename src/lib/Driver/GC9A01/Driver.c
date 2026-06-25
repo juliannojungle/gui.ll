@@ -51,9 +51,6 @@ void DriverGPIOInitialize(void) {
     DriverGPIOMode(LCD_CS_PIN, GPIO_OUT);
     DriverGPIOMode(LCD_BL_PIN, GPIO_OUT);
 
-    DriverGPIOMode(LCD_CS_PIN, GPIO_OUT);
-    DriverGPIOMode(LCD_BL_PIN, GPIO_OUT);
-
     DigitalWrite(LCD_CS_PIN, 1);
     DigitalWrite(LCD_DC_PIN, 0);
     DigitalWrite(LCD_BL_PIN, 1);
@@ -82,13 +79,8 @@ UBYTE DriverInitialize(void) {
     GPIOSetFunction(LCD_CLK_PIN, GPIO_FUNC_SPI);
     GPIOSetFunction(LCD_MOSI_PIN, GPIO_FUNC_SPI);
 
-    // GPIO Config
     DriverGPIOInitialize();
-
-    // PWM Config (backlight)
     DriverBacklightPWMInitialize();
-
-    // printf("DriverInitialize OK\r\n");
     return 0;
 }
 
