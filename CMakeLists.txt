@@ -12,7 +12,11 @@ set(GUILL_COMMON_SRCS
     ${CMAKE_SOURCE_DIR}/src/lib/LCD/1in28/LCDSetup.c
     ${CMAKE_SOURCE_DIR}/src/lib/LCD/1in28/LCDRenderer.c
     ${CMAKE_SOURCE_DIR}/src/lib/GUI/Canvas.c
-    ${CMAKE_SOURCE_DIR}/src/lib/Fonts/font20.c
+    ${CMAKE_SOURCE_DIR}/src/lib/GUI/Fonts/font8.c
+    ${CMAKE_SOURCE_DIR}/src/lib/GUI/Fonts/font12.c
+    ${CMAKE_SOURCE_DIR}/src/lib/GUI/Fonts/font16.c
+    ${CMAKE_SOURCE_DIR}/src/lib/GUI/Fonts/font20.c
+    ${CMAKE_SOURCE_DIR}/src/lib/GUI/Fonts/font24.c
     ${CMAKE_SOURCE_DIR}/src/lib/Helper/FileHelper.c
 )
 
