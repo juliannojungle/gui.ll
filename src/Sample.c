@@ -4,9 +4,9 @@
 #include "LCDSetup.h"
 #include "LCDRenderer.h"
 #include "Canvas.h"
-// #include "fonts.h"
-// #include <stdlib.h>
-// #include <stdio.h>
+#include "fonts.h"
+#include <stdlib.h>
+#include <stdio.h>
 
 #include "FileHelper.h"
 
@@ -19,37 +19,22 @@ void app_entry(void) {
     LCDInitialize();
     LCDClear(BLACK);
 
-/*
-    UDOUBLE imageSize = LCD.HEIGHT * LCD.WIDTH * 2;
-    UWORD *texture = (UWORD *) malloc(imageSize); // Allocate framebuffer
-
-    if (texture == NULL) {
-        exit(EXIT_FAILURE);
-    }
-
-    CanvasNewImage((UBYTE *)texture, LCD.WIDTH, LCD.HEIGHT, ROTATE_0, BLACK);
-    CanvasSetScale(65);
-    int count = 0;
-
-    while (true) {
-        CanvasClear(WHITE);
-        CanvasDrawText(count, 130, "Hello, World!", &Font20, WHITE, BLACK);
-        LCDDisplayTexture(texture);
-
-        count = (count < 256) ? count + 1 : 0;
-        printf("%d\n", count);
-        Delay(100);
-    }
-*/
-
     FIL file;
-
     if (MountSdCard() && SelectActiveDrive() && OpenFile(&file, "01.png")) {
         LCDRenderPng(&file);
         CloseFile(&file);
     }
-
     UnMountSdCard();
+
+    UDOUBLE imageSize = LCD.HEIGHT * LCD.WIDTH * 2;
+    UWORD *texture = (UWORD *) malloc(imageSize);
+    if (texture == NULL)
+        exit(EXIT_FAILURE);
+    CanvasNewImage((UBYTE *)texture, LCD.WIDTH, LCD.HEIGHT, ROTATE_0, BLACK);
+    CanvasSetScale(65);
+    // CanvasClear(BLACK);
+    CanvasDrawText(30, 110, "Hello, World!", &Font20, WHITE, BLACK);
+    LCDRenderTexture(texture);
 
     while(true) {
     }
