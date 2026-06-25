@@ -219,6 +219,24 @@
             "problemMatcher": []
         },
         {
+            "label": "Setup: WSL interop",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "-c", "bash $HOME/gui.ll/Toolchain/wsl.sh"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared",
+                "clear": true,
+                "focus": true
+            },
+            "problemMatcher": []
+        },
+        {
             "label": "Setup usbipd-win",
             "type": "shell",
             "command": "winget.exe",

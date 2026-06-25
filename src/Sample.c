@@ -9,7 +9,6 @@
 // #include <stdio.h>
 
 #include "FileHelper.h"
-#include "PNGHelper.h"
 
 void app_entry(void) {
     STDIOInitAll();
@@ -45,10 +44,8 @@ void app_entry(void) {
 
     FIL file;
 
-    if (MountSdCard()
-        && SelectActiveDrive()
-        && OpenFile(&file, "01.png")) {
-        DisplayPng(&file);
+    if (MountSdCard() && SelectActiveDrive() && OpenFile(&file, "01.png")) {
+        LCDRenderPng(&file);
         CloseFile(&file);
     }
 

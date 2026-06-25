@@ -52,7 +52,8 @@ gui.ll/
 │
 ├── Toolchain/
 │   ├── RP2040/Setup.sh             # Installs arm-none-eabi-gcc, pico-sdk
-│   └── ESP32/Setup.sh              # Installs ESP-IDF, xtensa toolchain, Rust, espflash
+│   ├── ESP32/Setup.sh              # Installs ESP-IDF, xtensa toolchain, Rust, espflash
+│   └── wsl.sh                      # Restores WSL Windows interop (.exe) under systemd
 │
 ├── src/
 │   ├── Sample.c                    # Entry point (app_entry → main or app_main)
@@ -286,6 +287,7 @@ All dependencies are git submodules with `ignore = all`:
 Run the setup tasks (idempotent — safe to re-run):
 - **"Setup: RP2040 toolchain in WSL"** → `Toolchain/RP2040/Setup.sh`
 - **"Setup: ESP32 toolchain in WSL"** → `Toolchain/ESP32/Setup.sh`
+- **"Setup: WSL interop"** → `Toolchain/wsl.sh` (restores running Windows `.exe` from WSL)
 
 Setup scripts check for existing installations before downloading.
 ESP32 setup installs: apt deps, ESP-IDF, idf_tools (xtensa, gdb, openocd),
@@ -300,6 +302,18 @@ Python env, Rust, and espflash.
   and call them via `wsl -e bash -c "~/path/to/Script.sh"`.
 - **Pico SDK `picotool`**: Auto-downloaded by Pico SDK 2.x if not installed globally.
   Takes time on first full build. Can be pre-installed for faster builds.
+- **WSL interop broken under systemd (`Exec format error` on `.exe`)**: With `systemd=true`
+  in `/etc/wsl.conf`, the `binfmt_misc` handler that lets Linux run Windows `.exe` files is
+  registered by `systemd-binfmt.service` from `/etc/binfmt.d/WSLInterop.conf`. If that service
+  is **masked** (a common leftover: `/etc/systemd/system/systemd-binfmt.service -> /dev/null`),
+  the handler is never registered on boot and any `.exe` (e.g. `usbipd.exe`) fails with
+  "cannot execute binary file: Exec format error". This is **not** a `wsl.conf` problem — interop
+  does not need a `[interop]` entry, and `wsl.conf` is not being wiped. Fix: run the
+  **"Setup: WSL interop"** task (`Toolchain/wsl.sh`), which ensures `WSLInterop.conf` exists and
+  unmasks/restarts `systemd-binfmt.service` so the handler survives every reboot and
+  `wsl --shutdown`. (`systemd-binfmt.service` is a static unit — it cannot be `systemctl enable`d
+  and does not need to be; unmasking is what matters.) Verify with
+  `cat /proc/sys/fs/binfmt_misc/WSLInterop`.
 
 ### Language
 
@@ -336,6 +350,7 @@ This prevents the git plugin from showing false "modified" files in submodules
 | Copy UF2 to Windows | Copies .uf2 to C:\temp for flashing |
 | Setup: RP2040 toolchain | Installs arm toolchain + pico-sdk |
 | Setup: ESP32 toolchain | Installs ESP-IDF + tools + Rust + espflash |
+| Setup: WSL interop | Restores running Windows `.exe` from WSL (unmasks systemd-binfmt) |
 
 ---
 
