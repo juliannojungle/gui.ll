@@ -1,7 +1,5 @@
 #include "RTC.h"
-#include "pico/stdlib.h"
 #include "hardware/rtc.h"
-#include "pico/util/datetime.h"
 #include "ff.h"
 
 /**
@@ -10,7 +8,7 @@
  * get_fattime() returns something reasonable even without
  * an external time source.
  */
-void time_init(void) {
+void RTCInitialize(void) {
     datetime_t t = {
         .year  = 2025,
         .month = 1,

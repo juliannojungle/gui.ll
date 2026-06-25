@@ -68,7 +68,7 @@ gui.ll/
 │   │   │   ├── RP2040/
 │   │   │   │   ├── HAL.c/.h        # HAL: GPIO, SPI, PWM, I2C (Pico SDK) — LCD SPI uses LCD_SPI from HALConfig.h
 │   │   │   │   ├── HALConfig.h     # SD pins + SD_SPI(spi0) + SD_SPI_BAUDRATE; LCD pins + LCD_SPI(spi1); SD_DETECT_PIN
-│   │   │   │   ├── RTC.c/.h        # RTC via hardware/rtc.h; defines time_init() + get_fattime()
+│   │   │   │   ├── RTC.c/.h        # RTC via hardware/rtc.h; defines RTCInitialize() + get_fattime()
 │   │   │   │   ├── DiskIO.c        # FatFS disk I/O (SPI SD) — real CRC7 on all cmds; faithful no-OS-FatFS handshake; card detect ISR
 │   │   │   │   ├── PreExecutable.cmake   # fatfs lib, patch inclusion
 │   │   │   │   └── PostExecutable.cmake  # zlib, libpng, link libraries
@@ -77,14 +77,14 @@ gui.ll/
 │   │   │       ├── CMakeLists.txt   # idf_component_register (ESP-IDF component)
 │   │   │       ├── HAL.c/.h        # HAL: GPIO, SPI (ESP-IDF), LEDC PWM compat — LCD SPI uses LCD_SPI from HALConfig.h
 │   │   │       ├── HALConfig.h     # SD pins + SD_SPI(SPI2_HOST) + SD_SPI_BAUDRATE; LCD pins + LCD_SPI(SPI3_HOST); SD_DETECT_PIN
-│   │   │       ├── RTC.c/.h        # RTC via settimeofday; defines time_init() + get_fattime()
+│   │   │       ├── RTC.c/.h        # RTC via settimeofday; defines RTCInitialize() + get_fattime()
 │   │   │       └── DiskIO.c        # FatFS disk I/O (ESP-IDF SPI master) — parity with RP2040: CRC7, manual CS, card detect ISR (IRAM_ATTR)
 │   │   │
 │   │   ├── Driver/GC9A01/          # LCD driver (Driver.c/.h) — uses LCD_* defines from HALConfig.h; DriverInitialize configures SPI, GPIO and backlight PWM; DriverSetBacklightBrightness sets PWM level
 │   │   ├── LCD/1in28/               # GC9A01 1.28" panel layer, split in two TUs:
 │   │   │   ├── LCDSetup.c/.h       # Panel bring-up: DriverInitialize + reset, scan/attributes, register init, backlight; owns the LCD_ATTRIBUTES LCD global; exposes LCDInitialize()
 │   │   │   └── LCDRenderer.c/.h    # Pixel/area blitting: LCDSetDisplayArea, LCDClear, LCDDisplayTexture(/InArea/Point)
-│   │   ├── GUI/                     # Canvas/drawing utilities (Canvas.c/.h)
+│   │   ├── GUI/                     # Canvas/drawing utilities (Canvas.c/.h) — includes CanvasDrawPng (PNG → RAM texture)
 │   │   └── Fonts/                   # Font data
 │   │
 │   └── Dependency/
@@ -185,7 +185,7 @@ int main(void) { app_entry(); return 0; }  // RP2040 entry
 ### 4. RTC / Timestamps
 
 Each platform provides an `RTC.h` (prototype) + `RTC.c` (definitions) pair with:
-- `time_init()` — initializes timekeeping (hardware RTC on RP2040, settimeofday on ESP32)
+- `RTCInitialize()` — initializes timekeeping (hardware RTC on RP2040, settimeofday on ESP32)
 - `get_fattime()` — provides FAT timestamps to FatFS (required when `FF_FS_NORTC == 0`)
 
 `get_fattime()` must NOT be `static` — FatFS declares it as extern in `ff.h`. It is defined in
@@ -362,6 +362,39 @@ This prevents the git plugin from showing false "modified" files in submodules
   hardware-tested**.
 
 Recent work:
+- **Added `CanvasDrawPng(FIL *file)` to the Canvas module** (`src/lib/GUI/Canvas.c`, prototype in
+  `Canvas.h`) for **flicker-free PNG rendering**. It is a faithful, step-by-step copy of
+  `LCDRenderPng` (`LCD/1in28/LCDRenderer.c`) — same libpng decode pipeline, error handling
+  (`setjmp`/`longjmp`, `volatile png_bytep rowPointers`), palette/non-palette handling, and RGB565
+  bit math — with exactly two differences: (1) each decoded pixel is written into the in-RAM canvas
+  buffer via `CanvasSetPixel(col, row, color)` instead of two `SPIWriteByte` calls, and (2) all
+  LCD-panel-only operations are omitted (`LCDSetDisplayArea`, DC/CS `DigitalWrite`, the
+  `lcdSelected` chip-select tracking, the CS restore in the error path, and the final
+  `DriverSendCommand(0x29)`). Clipping is computed against the **canvas** dimensions
+  (`canvas.Width`/`canvas.Height`), not the panel (`LCD.WIDTH`/`LCD.HEIGHT`). RGB565 is packed into
+  a single `UWORD` with the identical high/low byte layout `CanvasSetPixel` (scale 65) stores
+  big-endian, so the buffer bytes are bit-for-bit what `LCDRenderPng` would have streamed — and what
+  `LCDRenderTexture` later blits.
+  - **Why**: decoding straight to the panel updates the screen row-by-row with inflate latency
+    between rows, producing a visible top-to-bottom scan/flicker. Decoding into a full-screen
+    texture, drawing text over the same buffer, then doing a single `LCDRenderTexture` blit makes
+    the update smooth.
+  - **Caller flow** (`Sample.c`): allocate texture → `CanvasNewImage(...)` → `CanvasSetScale(65)` →
+    mount/open SD → `CanvasDrawPng(&file)` → close/unmount → `CanvasDrawText(...)` →
+    `LCDRenderTexture(texture)`. The canvas must be configured (scale 65, dims = `LCD.WIDTH`/
+    `LCD.HEIGHT`) **before** `CanvasDrawPng` so clipping and the RGB565 byte layout are correct.
+  - **libpng helpers**: `Canvas.c` defines its own **`static`** `PngCustomReadData` and
+    `PngShowError` (copied verbatim from `LCDRenderer.c`). They are file-local so there is no link
+    conflict with the non-static `PngCustomReadData` in `LCDRenderer.c` (different TUs, different
+    linkage — well-defined in C). `Canvas.c` gained `<png.h>`, `"ff.h"`, `"Debug.h"` includes;
+    `Canvas.h` gained `#include "ff.h"` (for the `FIL *` parameter type, mirroring `LCDRenderer.h`).
+  - **`LCDRenderPng` is left byte-for-byte unchanged** — the direct-to-panel path still works exactly
+    as before. Only `Canvas.c`, `Canvas.h`, and `Sample.c` were edited; no build-system changes
+    (Canvas.c is already in `GUILL_COMMON_SRCS` and the ESP32 `idf_component_register SRCS`, and
+    libpng/FatFS are already linked). RP2040 **builds, links, and is hardware-verified** (PNG renders
+    flicker-free with the text overlay). ESP32 is parity-only (platform-agnostic, no `#ifdef`), not
+    compile-tested here.
+  - **Out of scope**: sub-area drawing (`CanvasDrawPngArea`) is deferred to a future spec.
 - **Split the LCD layer into `LCD/1in28/LCDSetup` + `LCD/1in28/LCDRenderer`** (replaces the old
   `LCD/LCD_1in28.c/.h`, now deleted). `LCDSetup.c/.h` owns panel bring-up (`LCDInitialize()`:
   `DriverInitialize` + hardware reset, `LCDSetAttributes` for scan direction/dimensions, the
@@ -388,7 +421,7 @@ Recent work:
   - New public headers with prototypes: `HAL.h` (RP2040 + ESP32), `Driver.h`, `FileHelper.h`,
     `PNGHelper.h`. `Canvas.h`/`LCD_1in28.h` gained their prototypes + `extern` for the `canvas` /
     `LCD` globals.
-  - `RTC.h` split into `RTC.h` (prototype) + `RTC.c` (definitions of `time_init()` + `get_fattime()`)
+  - `RTC.h` split into `RTC.h` (prototype) + `RTC.c` (definitions of `RTCInitialize()` + `get_fattime()`)
     so `get_fattime()` has exactly one definition (was defined in the header → would duplicate
     across TUs).
   - `Driver.c`: the helpers called from other TUs (`DriverHardwareReset`, `DriverSendCommand`,
@@ -587,3 +620,34 @@ Recent work:
     directly. The hardware (single round-LCD board, one SD slot) never justified multi-card
     support. If multiple cards are ever needed, reintroduce a small parametrization then — don't
     keep unused abstraction "just in case".
+
+13. **PNG compositing into RAM via `CanvasDrawPng` (flicker-free render)**: Rendering a PNG
+    straight to the panel with `LCDRenderPng` updates the screen row-by-row with inflate latency
+    between rows, producing a visible top-to-bottom scan/flicker. `CanvasDrawPng` (in
+    `GUI/Canvas.c`) decodes the PNG into the in-RAM canvas texture buffer via `CanvasSetPixel`
+    instead, so a single `LCDRenderTexture` blit shows the finished image smoothly (and text/other
+    drawing can be composited over the same buffer first). Design rules that MUST be preserved:
+    - **Faithful copy of `LCDRenderPng`**: the libpng decode pipeline, error handling
+      (`setjmp`/`longjmp`, `volatile png_bytep rowPointers`), palette/non-palette extraction, and
+      RGB565 bit math are reproduced verbatim (including `SHOWDEBUG` traces/comments for retained
+      steps). The *only* intended differences are the two below.
+    - **Pixel destination**: the two `SPIWriteByte` calls are replaced by one
+      `CanvasSetPixel(col, row, color)`. The `UWORD` is packed with the identical high/low byte
+      layout `CanvasSetPixel` (scale 65) stores big-endian — so buffer bytes are bit-for-bit what
+      the panel path would have streamed. The packing is host-endianness-independent integer math,
+      giving identical buffer contents on RP2040 and ESP32.
+    - **No panel ops**: omit `LCDSetDisplayArea`, DC/CS `DigitalWrite`, the `lcdSelected` tracking
+      (and its CS restore in the error path), and the final `DriverSendCommand(0x29)`. The function
+      never touches the panel and has no platform `#ifdef`.
+    - **Clip to the canvas, not the panel**: `maxCol`/`maxRow` clamp to `canvas.Width`/
+      `canvas.Height` (not `LCD.WIDTH`/`LCD.HEIGHT`). Caller must configure the canvas
+      (`CanvasSetScale(65)`, dims = `LCD.WIDTH`/`LCD.HEIGHT`) **before** calling.
+    - **Private helpers stay `static`**: `Canvas.c` has its own file-local `PngCustomReadData` /
+      `PngShowError` (copies of the `LCDRenderer.c` versions). Keeping them `static` avoids a link
+      clash with the non-static `PngCustomReadData` in `LCDRenderer.c` (different TUs/linkage —
+      well-defined in C); do NOT promote either to a shared public symbol.
+    - **`LCDRenderPng` stays byte-for-byte unchanged** — the direct-to-panel path must keep working.
+      No build-system changes were needed (Canvas.c already builds on both targets; libpng/FatFS
+      already linked). `Canvas.h` includes `"ff.h"` for the `FIL *` parameter type, mirroring
+      `LCDRenderer.h`.
+    - Sub-area drawing (`CanvasDrawPngArea`) is intentionally **deferred** to a future spec.

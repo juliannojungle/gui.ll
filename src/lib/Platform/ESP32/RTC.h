@@ -3,6 +3,6 @@
 
 /* Initializes timekeeping. Definition in RTC.c.
  * get_fattime() is declared by FatFS (ff.h) and defined in RTC.c. */
-void time_init(void);
+void RTCInitialize(void);
 
 #endif /* _RTC_H_ */

@@ -1,7 +1,10 @@
 #include "Canvas.h"
+#include <png.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h> //memset()
+#include "ff.h"
+#include "Debug.h"
 
 Canvas canvas;
 
@@ -635,4 +638,102 @@ void CanvasDrawBitmapBlock(const unsigned char* imageBuffer, UBYTE region) {
             }
         }
     }
+}
+
+static void PngCustomReadData(png_structrp pngPointer, png_bytep data, size_t length) {
+    SHOWDEBUG(".");
+    UINT bytesRead;
+    f_read((FIL*)png_get_io_ptr(pngPointer), data, length, &bytesRead);
+}
+
+static void PngShowError(png_structp pngPointer, const char *message) {
+    SHOWDEBUG("Error from libpng: %s\n", message);
+}
+
+void CanvasDrawPng(FIL *file) {
+    SHOWDEBUG("Creating read structure\n");
+    png_structp pngPointer = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, PngShowError, NULL);
+
+    if (pngPointer == NULL) {
+        SHOWDEBUG("png_create_read_struct error\n");
+        return;
+    }
+
+    SHOWDEBUG("Allocating memory for image information\n");
+    png_infop infoPointer = png_create_info_struct(pngPointer);
+
+    if (infoPointer == NULL) {
+        SHOWDEBUG("png_create_info_struct error\n");
+        png_destroy_read_struct(&pngPointer, NULL, NULL);
+        return;
+    }
+
+    SHOWDEBUG("Setting up the custom read function\n");
+    png_set_read_fn(pngPointer, file, PngCustomReadData);
+
+    /* Declared volatile before setjmp so their values survive a longjmp (C99 7.13.2.1) and can be cleaned up. */
+    volatile png_bytep rowPointers = NULL;
+    SHOWDEBUG("Setting up LongJump\n");
+
+    if (setjmp(png_jmpbuf(pngPointer)) != 0) {
+        /* Any libpng error from here on jumps back to this point. */
+        SHOWDEBUG("LongJump from a libpng error. Cleaning up.\n");
+
+        if (rowPointers != NULL)
+            png_free(pngPointer, rowPointers);
+
+        png_destroy_read_struct(&pngPointer, &infoPointer, NULL);
+        return;
+    }
+
+    SHOWDEBUG("Reading info\n");
+    /* png_read_info gets information about PNG file before the first IDAT (image data chunk). REQUIRED. */
+    png_read_info(pngPointer, infoPointer);
+
+    SHOWDEBUG("\nParsing image info\n");
+    png_uint_32 width, height;
+    int bitDepth, colorType, interlaceType;
+    png_get_IHDR(pngPointer, infoPointer, &width, &height, &bitDepth, &colorType, &interlaceType, NULL, NULL);
+    SHOWDEBUG("PNG info: width: %d, height: %d, bit_depth: %d\n", width, height, bitDepth);
+
+    int col, row;
+    int maxCol = width > canvas.Width ? canvas.Width : width; /* won't write outside canvas. */
+    int maxRow = height > canvas.Height ? canvas.Height : height;
+
+    int num_palette = 0;
+    png_colorp palette = NULL;
+
+    if (colorType == PNG_COLOR_TYPE_PALETTE)
+        png_get_PLTE(pngPointer, infoPointer, &palette, &num_palette);
+
+    for (row = 0; row < maxRow; row++) {
+        png_bytep rowBuffer = (png_bytep)png_malloc(pngPointer, png_get_rowbytes(pngPointer, infoPointer));
+        rowPointers = rowBuffer; // track for cleanup before any call that may longjmp
+        png_read_rows(pngPointer, &rowBuffer, NULL, 1);
+
+        for (col = 0; col < maxCol; col++) {
+            png_byte red, green, blue;
+
+            if ((colorType == PNG_COLOR_TYPE_PALETTE) && (palette != NULL)) {
+                red = palette[rowPointers[col]].red;
+                green = palette[rowPointers[col]].green;
+                blue = palette[rowPointers[col]].blue;
+            } else {
+                /* if the image is paletted but we don't have a palette, display as grayscale using palette index. */
+                png_bytep pixel = &rowPointers[col];
+                red = *(pixel++);
+                green = *(pixel++);
+                blue = *(pixel++);
+            }
+
+            /* The LCD uses RGB565 16-bits format: RRRRRGGG GGGBBBBB */
+            UWORD color = (UWORD)(((red & 0b11111000) | ((green & 0b11100000) >> 5)) << 8) | (UWORD)(((green & 0b00011100) << 3) | ((blue & 0b11111000) >> 3));
+            CanvasSetPixel(col, row, color);
+        }
+
+        png_free(pngPointer, rowBuffer);
+        rowPointers = NULL;
+    }
+
+    png_destroy_read_struct(&pngPointer, &infoPointer, NULL);
 }

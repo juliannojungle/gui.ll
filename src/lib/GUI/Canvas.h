@@ -3,6 +3,7 @@
 
 #include "Types.h"
 #include "fonts.h"
+#include "ff.h"
 
 typedef struct {
     UBYTE *Image;
@@ -116,6 +117,7 @@ void CanvasDrawNum(UWORD xPoint, UWORD yPoint, double number,
     sFONT* font, UWORD digit, UWORD foregroundColor, UWORD backgroundColor);
 void CanvasDrawTime(UWORD xStart, UWORD yStart, DateTime *pTime, sFONT* font,
     UWORD foregroundColor, UWORD backgroundColor);
+void CanvasDrawPng(FIL *file);
 void CanvasDrawImage(const unsigned char *image, UWORD xStart, UWORD yStart, UWORD imageWidth, UWORD imageHeight);
 void CanvasDrawImage1(const unsigned char *image, UWORD xStart, UWORD yStart, UWORD imageWidth, UWORD imageHeight);
 void CanvasDrawBitmap(const unsigned char* imageBuffer);

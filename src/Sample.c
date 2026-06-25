@@ -1,30 +1,19 @@
 #include "HAL.h"
-#include "RTC.h" // rtc for file's timestamp.
-
+#include "RTC.h"
 #include "LCDSetup.h"
 #include "LCDRenderer.h"
+#include "FileHelper.h"
 #include "Canvas.h"
 #include "fonts.h"
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "FileHelper.h"
-
 void app_entry(void) {
     STDIOInitAll();
-    time_init();
-    // Delay(3000); // give us time to start serial monitor
-
-    /* LCD Init */
+    RTCInitialize();
     LCDInitialize();
     LCDClear(BLACK);
-
-    FIL file;
-    if (MountSdCard() && SelectActiveDrive() && OpenFile(&file, "01.png")) {
-        LCDRenderPng(&file);
-        CloseFile(&file);
-    }
-    UnMountSdCard();
+    // Delay(3000); // give us time to start serial monitor
 
     UDOUBLE imageSize = LCD.HEIGHT * LCD.WIDTH * 2;
     UWORD *texture = (UWORD *) malloc(imageSize);
@@ -32,7 +21,14 @@ void app_entry(void) {
         exit(EXIT_FAILURE);
     CanvasNewImage((UBYTE *)texture, LCD.WIDTH, LCD.HEIGHT, ROTATE_0, BLACK);
     CanvasSetScale(65);
-    // CanvasClear(BLACK);
+
+    FIL file;
+    if (MountSdCard() && SelectActiveDrive() && OpenFile(&file, "01.png")) {
+        CanvasDrawPng(&file);
+        CloseFile(&file);
+    }
+    UnMountSdCard();
+
     CanvasDrawText(30, 110, "Hello, World!", &Font20, WHITE, BLACK);
     LCDRenderTexture(texture);
 

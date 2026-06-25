@@ -9,7 +9,7 @@
  * get_fattime() returns something reasonable even without
  * NTP or an external RTC.
  */
-void time_init(void) {
+void RTCInitialize(void) {
     struct timeval tv = {
         .tv_sec = 1735689600, // 2025-01-01 00:00:00 UTC
         .tv_usec = 0
