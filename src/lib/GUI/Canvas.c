@@ -16,8 +16,6 @@ void CanvasNewImage(UBYTE *image, UWORD width, UWORD height, UWORD rotate, UWORD
 
     canvas.WidthByte = (width % 8 == 0)? (width / 8 ): (width / 8 + 1);
     canvas.HeightByte = height;
-//    printf("WidthByte = %d, HeightByte = %d\r\n", canvas.WidthByte, canvas.HeightByte);
-//    printf(" LCD_WIDTH / 8 = %d\r\n",  122 / 8);
 
     canvas.Rotate = rotate;
     canvas.Flip = FLIP_NONE;
@@ -361,8 +359,8 @@ void CanvasDrawChar(UWORD xPoint, UWORD yPoint, const char ASCIIChar,
         return;
     }
 
-    uint32_t Char_Offset = (ASCIIChar - ' ') * font->Height * (font->Width / 8 + (font->Width % 8 ? 1 : 0));
-    const unsigned char *ptr = &font->table[Char_Offset];
+    uint32_t charOffset = (ASCIIChar - ' ') * font->Height * (font->Width / 8 + (font->Width % 8 ? 1 : 0));
+    const unsigned char *ptr = &font->table[charOffset];
 
     for (Page = 0; Page < font->Height; Page ++ ) {
         for (Column = 0; Column < font->Width; Column ++ ) {
