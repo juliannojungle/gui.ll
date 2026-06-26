@@ -33,26 +33,37 @@ typedef enum {
     FLIP_ORIGIN = 0x03,
 } Flip;
 
-#define WHITE   0xFFFF
-#define BLACK   0x0000
-#define BLUE    0x001F
-#define AQUA    0X07FF
-#define RED     0xF800
-#define MAGENTA 0xF81F
-#define GREEN   0x07E0
-#define CYAN    0x7FFF
-#define YELLOW  0xFFE0
-#define BROWN   0XBC40
-#define MUSTARD 0XFC07
-#define GRAY    0X8430
-/* TRANSPARENT=MAGENTA: classic chroma-key color (not sent to the panel by the renderer) */
-#define TRANSPARENT 0xF81F
 /* converts RGB to RGB565 */
 #define RGB_COLOR(r, g, b) \
-    (short)(((r << 8) & 0xF800) | ((g << 3) & 0x07E0) | ((b >> 3) & 0x001F))
+    (UWORD)(((r << 8) & 0xF800) | ((g << 3) & 0x07E0) | ((b >> 3) & 0x001F))
 
-#define IMAGE_BACKGROUND WHITE
-#define FONT_FOREGROUND  BLACK
+#define LIGHT_GRAY  RGB_COLOR(200, 200, 200)
+#define GRAY        RGB_COLOR(130, 130, 130)
+#define DARK_GRAY   RGB_COLOR(80, 80, 80)
+#define GOLD        RGB_COLOR(255, 203, 0)
+#define ORANGE      RGB_COLOR(255, 161, 0)
+#define PINK        RGB_COLOR(255, 109, 194)
+#define RED         RGB_COLOR(230, 41, 55)
+#define MAROON      RGB_COLOR(190, 33, 55)
+#define GREEN       RGB_COLOR(0, 228, 48)
+#define LIME        RGB_COLOR(0, 158, 47)
+#define DARK_GREEN  RGB_COLOR(0, 117, 44)
+#define SKY_BLUE    RGB_COLOR(102, 191, 255)
+#define BLUE        RGB_COLOR(0, 121, 241)
+#define DARK_BLUE   RGB_COLOR(0, 82, 172)
+#define PURPLE      RGB_COLOR(200, 122, 255)
+#define VIOLET      RGB_COLOR(135, 60, 190)
+#define DARK_PURPLE RGB_COLOR(112, 31, 126)
+#define BEIGE       RGB_COLOR(211, 176, 131)
+#define BROWN       RGB_COLOR(127, 106, 79)
+#define DARK_BROWN  RGB_COLOR(76, 63, 47)
+#define WHITE       RGB_COLOR(255, 255, 255)
+#define BLACK       RGB_COLOR(0, 0, 0)
+#define CYAN        RGB_COLOR(0, 255, 255)
+#define MAGENTA     RGB_COLOR(255, 0, 255)
+#define YELLOW      RGB_COLOR(255, 255, 0)
+/* TRANSPARENT=MAGENTA: classic chroma-key color */
+#define TRANSPARENT RGB_COLOR(255, 0, 255)
 
 typedef enum {
     PIXEL_SIZE_1X1  = 1, // 1 x 1

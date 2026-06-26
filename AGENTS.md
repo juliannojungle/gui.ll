@@ -651,3 +651,32 @@ Recent work:
       already linked). `Canvas.h` includes `"ff.h"` for the `FIL *` parameter type, mirroring
       `LCDRenderer.h`.
     - Sub-area drawing (`CanvasDrawPngArea`) is intentionally **deferred** to a future spec.
+
+14. **Transparency via color-key (`TRANSPARENT`) — text/overlays over an image**: Once a PNG (or
+    any content) is composited into the canvas buffer (Decision 13), we can draw text/shapes on
+    top so that only the drawn pixels overwrite the image and the rest "shows through". RGB565 has
+    no alpha channel, so this is done with a **color key** (chroma key), not real alpha:
+    - **`TRANSPARENT` is a sentinel color**, defined in `Canvas.h` as `RGB_COLOR(255, 0, 255)` —
+      magenta, `0xF81F`. It is the classic chroma-key color and equals `MAGENTA`; the trade-off is
+      that **magenta cannot be used as a real drawable color** when relying on transparency.
+    - **How it works**: `CanvasDrawChar` / `CanvasDrawTextCN` check `if (TRANSPARENT ==
+      backgroundColor)`. When the caller passes `TRANSPARENT` as the background, only the glyph
+      (foreground) pixels are written via `CanvasSetPixel`; the non-glyph pixels are skipped, so
+      whatever is already in the buffer (e.g. the PNG) stays visible behind the text. Passing any
+      other `backgroundColor` paints the glyph box opaquely as before. This replaced the old
+      `FONT_BACKGROUND`-equals check.
+    - **`RGB_COLOR(r, g, b)` MUST cast to `UWORD` (unsigned), not `short`**. RGB565 values above
+      `0x7FFF` (red/magenta/white, etc.) are negative as a signed `short`; comparing a signed
+      `short` constant against a `UWORD` (e.g. `TRANSPARENT == backgroundColor`) is *always false*
+      after integer promotion (clang warns: "comparison … always false"), silently breaking the
+      transparency check. The unsigned cast is what makes the color key actually match. All color
+      macros (`WHITE`, `RED`, `TRANSPARENT`, …) go through `RGB_COLOR`, so they are all `UWORD`.
+    - **At render time there is still no panel-level transparency**: `LCDRenderTexture` blits the
+      whole buffer. The "transparency" is purely a *compositing-in-RAM* effect — only meaningful
+      because the buffer already holds the background. If you ever want to overlay onto an image
+      that is already on the panel *without* keeping it in RAM, that needs a different mechanism
+      (per-pixel/run color-key skipping at blit time, or reading back the panel). That is the path
+      we will need for **partial screen updates** (drawing a small changed region over an image
+      already shown) — keep `TRANSPARENT` and `RGB_COLOR`'s unsigned semantics in mind when we
+      build it, and a future `LCDRenderTexture`/`...InArea` color-key variant would skip
+      `TRANSPARENT` pixels instead of streaming the full buffer.

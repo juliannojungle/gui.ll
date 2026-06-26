@@ -31,7 +31,7 @@ void app_entry(void) {
     }
     UnMountSdCard();
 
-    CanvasDrawText(30, 110, "Hello, World!", &Font20, RGB_COLOR(0, 0, 0), TRANSPARENT);
+    CanvasDrawText(30, 110, "Hello, World!", &Font20, RGB_COLOR(252, 82, 0), TRANSPARENT);
     LCDRenderTexture(texture);
 
     while(true) {
