@@ -53,7 +53,6 @@ typedef enum {
 
 #define IMAGE_BACKGROUND WHITE
 #define FONT_FOREGROUND  BLACK
-#define FONT_BACKGROUND  WHITE
 
 typedef enum {
     PIXEL_SIZE_1X1  = 1, // 1 x 1

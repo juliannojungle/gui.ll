@@ -346,7 +346,7 @@ void CanvasDrawChar(UWORD xPoint, UWORD yPoint, const char ASCIIChar,
 
     for (Page = 0; Page < font->Height; Page ++ ) {
         for (Column = 0; Column < font->Width; Column ++ ) {
-            if (FONT_BACKGROUND == backgroundColor) {
+            if (TRANSPARENT == backgroundColor) {
                 if (*ptr & (0x80 >> (Column % 8)))
                     CanvasSetPixel(xPoint + Column, yPoint + Page, foregroundColor);
             } else {
@@ -411,7 +411,7 @@ void CanvasDrawTextCN(UWORD xStart, UWORD yStart, const char * text, cFONT* font
 
                     for (j = 0; j < font->Height; j++) {
                         for (i = 0; i < font->Width; i++) {
-                            if (FONT_BACKGROUND == backgroundColor) {
+                            if (TRANSPARENT == backgroundColor) {
                                 if (*ptr & (0x80 >> (i % 8))) {
                                     CanvasSetPixel(x + i, y + j, foregroundColor);
                                 }
@@ -448,7 +448,7 @@ void CanvasDrawTextCN(UWORD xStart, UWORD yStart, const char * text, cFONT* font
 
                     for (j = 0; j < font->Height; j++) {
                         for (i = 0; i < font->Width; i++) {
-                            if (FONT_BACKGROUND == backgroundColor) {
+                            if (TRANSPARENT == backgroundColor) {
                                 if (*ptr & (0x80 >> (i % 8))) {
                                     CanvasSetPixel(x + i, y + j, foregroundColor);
                                 }
