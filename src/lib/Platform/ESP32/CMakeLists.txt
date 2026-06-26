@@ -27,6 +27,7 @@ idf_component_register(
         "${PROJ_ROOT}/src/lib/GUI/Fonts/font20.c"
         "${PROJ_ROOT}/src/lib/GUI/Fonts/font24.c"
         "${PROJ_ROOT}/src/lib/Helper/FileHelper.c"
+        "${PROJ_ROOT}/src/lib/Helper/Trigonometry.c"
         "${FATFS_SRC}/ff.c"
         "${FATFS_SRC}/ffsystem.c"
         "${FATFS_SRC}/ffunicode.c"

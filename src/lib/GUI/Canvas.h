@@ -124,6 +124,9 @@ void CanvasDrawChar(UWORD xPoint, UWORD yPoint, const char ASCIIChar,
 void CanvasDrawCurvedChar(const char ASCIIChar, UWORD xCenter, UWORD yCenter,
     UWORD radius, UWORD startAngle, sFONT* font,
     UWORD foregroundColor, UWORD backgroundColor);
+void CanvasDrawCurvedText(const char *text, UWORD xCenter, UWORD yCenter,
+    UWORD radius, UWORD startAngle, sFONT* font,
+    UWORD foregroundColor, UWORD backgroundColor);
 void CanvasDrawText(UWORD xStart, UWORD yStart, const char * text,
     sFONT* font, UWORD foregroundColor, UWORD backgroundColor);
 void CanvasDrawTextCN(UWORD xStart, UWORD yStart, const char * text, cFONT* font,

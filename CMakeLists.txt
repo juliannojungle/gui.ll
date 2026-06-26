@@ -18,6 +18,7 @@ set(GUILL_COMMON_SRCS
     ${CMAKE_SOURCE_DIR}/src/lib/GUI/Fonts/font20.c
     ${CMAKE_SOURCE_DIR}/src/lib/GUI/Fonts/font24.c
     ${CMAKE_SOURCE_DIR}/src/lib/Helper/FileHelper.c
+    ${CMAKE_SOURCE_DIR}/src/lib/Helper/Trigonometry.c
 )
 
 # Platform selection

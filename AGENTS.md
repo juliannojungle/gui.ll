@@ -62,7 +62,8 @@ gui.ll/
 │   │   ├── Types.h                 # Shared scalar aliases (UBYTE/UWORD/UDOUBLE)
 │   │   ├── Helper/
 │   │   │   ├── FileHelper.c/.h     # SD card mount/open/close (single FatFS volume SD_DRIVE)
-│   │   │   └── PNGHelper.c/.h      # PNG decode + LCD display via libpng
+│   │   │   ├── PNGHelper.c/.h      # PNG decode + LCD display via libpng
+│   │   │   └── Trigonometry.c/.h   # Q16.16 integer cos/sin LUT (TrigCosQ16/TrigSinQ16) — float-free, deterministic
 │   │   │
 │   │   ├── Platform/
 │   │   │   ├── RP2040/
@@ -236,7 +237,25 @@ structure** — the maintainer does not want that extra scaffolding in the repos
 
 ---
 
-## Build System
+## Code Comments Policy — KEEP COMMENTS MINIMAL
+
+**Rule: write self-explanatory code, not comments.** Prefer clear names and structure over prose.
+Only add a comment when it carries information the code cannot:
+
+- **Allowed**: a non-obvious *why* (rationale, a subtle invariant, a bug that a naive change would
+  reintroduce), a disambiguation, a necessary technical note (units, fixed-point format, overflow
+  reasoning, a hardware/spec quirk), or a short header explaining a module's purpose.
+- **Not allowed**: comments that restate what the code already says (`// increment i`, `// return`,
+  `// NULL check`), step-by-step narration above/inside a function, or per-line annotations.
+- **No requirement/spec tags in code** (e.g. `// Req 3.1`, `// Decision 14`). Traceability lives in
+  the spec/`AGENTS.md`, not as inline tags scattered through the implementation.
+- Keep necessary comments **short** — a line or two. If a block needs a paragraph to be understood,
+  prefer refactoring (extract a well-named helper) over explaining it.
+
+This applies to new code and to edits of existing code. (Pre-existing third-party/port code under
+`src/Dependency/` and inherited Waveshare comments are left as-is unless touched.)
+
+
 
 ### RP2040
 - Uses **cmake + make** directly
@@ -382,6 +401,30 @@ This prevents the git plugin from showing false "modified" files in submodules
   rewritten for parity but **not yet hardware-tested**.
 
 Recent work:
+- **Added `CanvasDrawCurvedText` to the Canvas module** (`src/lib/GUI/Canvas.c`, prototype in
+  `Canvas.h`) — a thin loop over `CanvasDrawCurvedChar` that renders a whole string along the circle.
+  Signature mirrors the curved-char primitive, leading with the text then the geometric placement:
+  `void CanvasDrawCurvedText(const char *text, UWORD xCenter, UWORD yCenter, UWORD radius,
+  UWORD startAngle, sFONT* font, UWORD foregroundColor, UWORD backgroundColor)`. It holds center,
+  radius, font and colors constant and **advances the angle per glyph**:
+  - **Per-glyph angular step from arc length, in integers.** Each glyph occupies `font->Width` pixels
+    of arc; the angular step for a pixel arc `s` at radius `r` is `s/r` radians = `s/r * 180/PI`
+    degrees. The conversion is done with integer math (no runtime float, matching Decision 15):
+    `180/PI` is approximated as `57296/1000` and divided via the existing `CanvasRoundDivAway`
+    helper. Error < 0.0014° over a full turn — negligible at whole-degree resolution.
+  - **Cumulative arc, no drift.** The consumed arc length is accumulated (`arcPixels += width`) and
+    each character's angle is computed from the running total, so per-character rounding does not
+    drift across the string. The first glyph is centered at `startAngle`; subsequent glyphs advance
+    clockwise (increasing angle = the tangent reading direction).
+  - **Guards / edge cases**: `text == NULL` or `font == NULL` is a no-op; each character angle is
+    normalized to 0..359 before being passed on (so a long string cannot overflow the `UWORD` angle);
+    `radius == 0` keeps the offset at 0 (every glyph anchors at the center — degenerate but safe, no
+    divide-by-zero); spaces advance the angle without drawing (handled by `CanvasDrawCurvedChar`).
+  - **Resolution note**: `CanvasDrawCurvedChar` only accepts whole-degree angles (360-entry LUT), so
+    spacing is quantized to 1° (≈ `radius·0.0175` px of jitter — imperceptible at typical radii). Sub-
+    degree spacing would need a fractional-angle curved-char variant.
+  - Builds and links clean on RP2040; **validated on hardware** — text follows the rim correctly.
+    No build-system changes (lives in the shared `Canvas.c`).
 - **Added `CanvasDrawCurvedChar` to the Canvas module** (`src/lib/GUI/Canvas.c`, prototype in
   `Canvas.h`) — a new drawing primitive that places a single ASCII character on a circle of a given
   `radius` around `(xCenter, yCenter)` at a whole-degree `startAngle`, with the glyph rotated so its
@@ -746,10 +789,13 @@ Recent work:
     float) and ESP32-S3 (hardware FPU). Rules that MUST be preserved:
     - **No runtime floating point.** Calling `sinf`/`cosf` at runtime risks last-ULP differences
       between the two libm implementations that occasionally round to a different integer pixel.
-      Instead, trigonometry is read from two file-local `static const int32_t` **Q16.16** lookup
-      tables (`canvasCurvedCosTable[360]` / `canvasCurvedSinTable[360]`, `SCALE = 1 << 16`), generated
-      offline by a throwaway host script and embedded as constant literals (~2.8 KB rodata). Both
-      targets link the identical integers; do NOT regenerate the table with `libm` at runtime.
+      Instead, trigonometry is read from **Q16.16** integer lookup tables exposed by the
+      `Helper/Trigonometry` module (`TrigCosQ16(UWORD deg)` / `TrigSinQ16(UWORD deg)`, normalized
+      mod 360; `TRIG_Q16_SCALE = 1 << 16`). The tables are `static const` literals generated offline
+      and embedded in `Trigonometry.c` (~2.8 KB rodata, one copy), so both targets link identical
+      integers; do NOT regenerate them with `libm` at runtime. (The tables originally lived inside
+      `Canvas.c`; they were extracted to `Helper/Trigonometry` since integer trig is generic and not
+      Canvas-specific.)
     - **Tangent orientation (placement angle + 90).** The anchor is placed using the placement
       angle's `cosV`/`sinV`, but the glyph is rotated using a **separate** orientation angle
       `orientAngle = (angle + 90) % 360` (its own `cosR`/`sinR` from the same LUT). This aligns the
@@ -760,8 +806,9 @@ Recent work:
       round-half-away-from-zero division (64-bit numerator to avoid overflow on `radius * scaledTrig`
       and the doubled products). `CanvasRotateGlyphOffset` rotates a **doubled-delta** pair
       (`dx2 = 2*Column-(Width-1)`, `dy2 = 2*Page-(Height-1)`) by the supplied (tangent) trig and folds
-      the `/2` (for the doubling) and `/SCALE` (Q16.16) into one `CanvasRoundDivAway(.., 2*SCALE)`
-      call. Doubling makes the half-pixel box center exact in integers (Req 3.3).
+      the `/2` (for the doubling) and `/TRIG_Q16_SCALE` (Q16.16) into one
+      `CanvasRoundDivAway(.., 2*TRIG_Q16_SCALE)` call. Doubling makes the half-pixel box center exact
+      in integers (Req 3.3).
     - **Signed-before-cast bounds check.** `CanvasSetPixel` takes `UWORD`; a negative rotated
       coordinate would wrap to a huge value and bypass the upper-bound clip. So `targetX`/`targetY`
       are `int32_t` and any negative component is skipped **before** the `UWORD` cast (Req 6.3). All
@@ -778,8 +825,10 @@ Recent work:
       relaxed to allow this ±1 tolerance rather than special-casing it (which would diverge from the
       pure-rotation model). All bundled fonts have even Height.
     - **Reuse / extension point**: the signature leads with `ASCIIChar` then the geometric placement
-      values so `CanvasDrawCurvedText` / `CanvasDrawCurvedNumber` (out of scope) can be a thin loop
-      advancing `startAngle` per glyph (step ≈ glyphAdvance / radius, converted to whole degrees).
+      values so a text helper can hold center/radius/font/colors constant and advance only
+      `startAngle` per glyph. `CanvasDrawCurvedText` is **implemented** on exactly this pattern (see
+      Recent work): step ≈ glyphAdvance / radius converted to whole degrees with integer math.
+      `CanvasDrawCurvedNumber` is still out of scope.
     - **Two pre-existing Canvas quirks to keep in mind** (relevant when reasoning about scale-65
       pixel writes): production `CanvasClear` at scale 65 iterates `x` over `WidthByte` (the byte
       pitch) while addressing `x*2`, so it overruns the image region by ~one row; and `CanvasSetPixel`

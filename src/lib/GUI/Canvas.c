@@ -1,6 +1,7 @@
 #include "Canvas.h"
 #include <png.h>
 #include "Debug.h"
+#include "Trigonometry.h"
 
 Canvas canvas;
 
@@ -367,115 +368,8 @@ void CanvasDrawChar(UWORD xPoint, UWORD yPoint, const char ASCIIChar,
     }// Write all
 }
 
-/* Q16.16 fixed-point trigonometry tables for CanvasDrawCurvedChar (Req 7.3).
- * Indexed by whole degree 0..359; a value v represents the real number v / SCALE.
- * Generated offline by a throwaway host script as round-half-away-from-zero of
- * cos/sin(deg * PI/180) * SCALE, then embedded as compile-time constant literals so
- * both targets (RP2040 software float, ESP32-S3 hardware FPU) link the identical
- * integers and there is no runtime <math.h> call or per-platform float divergence. */
-#define SCALE (1 << 16)
-
-static const int32_t canvasCurvedCosTable[360] = {
-      65536,   65526,   65496,   65446,   65376,   65287,   65177,   65048,
-      64898,   64729,   64540,   64332,   64104,   63856,   63589,   63303,
-      62997,   62672,   62328,   61966,   61584,   61183,   60764,   60326,
-      59870,   59396,   58903,   58393,   57865,   57319,   56756,   56175,
-      55578,   54963,   54332,   53684,   53020,   52339,   51643,   50931,
-      50203,   49461,   48703,   47930,   47143,   46341,   45525,   44695,
-      43852,   42995,   42126,   41243,   40348,   39441,   38521,   37590,
-      36647,   35693,   34729,   33754,   32768,   31772,   30767,   29753,
-      28729,   27697,   26656,   25607,   24550,   23486,   22415,   21336,
-      20252,   19161,   18064,   16962,   15855,   14742,   13626,   12505,
-      11380,   10252,    9121,    7987,    6850,    5712,    4572,    3430,
-       2287,    1144,       0,   -1144,   -2287,   -3430,   -4572,   -5712,
-      -6850,   -7987,   -9121,  -10252,  -11380,  -12505,  -13626,  -14742,
-     -15855,  -16962,  -18064,  -19161,  -20252,  -21336,  -22415,  -23486,
-     -24550,  -25607,  -26656,  -27697,  -28729,  -29753,  -30767,  -31772,
-     -32768,  -33754,  -34729,  -35693,  -36647,  -37590,  -38521,  -39441,
-     -40348,  -41243,  -42126,  -42995,  -43852,  -44695,  -45525,  -46341,
-     -47143,  -47930,  -48703,  -49461,  -50203,  -50931,  -51643,  -52339,
-     -53020,  -53684,  -54332,  -54963,  -55578,  -56175,  -56756,  -57319,
-     -57865,  -58393,  -58903,  -59396,  -59870,  -60326,  -60764,  -61183,
-     -61584,  -61966,  -62328,  -62672,  -62997,  -63303,  -63589,  -63856,
-     -64104,  -64332,  -64540,  -64729,  -64898,  -65048,  -65177,  -65287,
-     -65376,  -65446,  -65496,  -65526,  -65536,  -65526,  -65496,  -65446,
-     -65376,  -65287,  -65177,  -65048,  -64898,  -64729,  -64540,  -64332,
-     -64104,  -63856,  -63589,  -63303,  -62997,  -62672,  -62328,  -61966,
-     -61584,  -61183,  -60764,  -60326,  -59870,  -59396,  -58903,  -58393,
-     -57865,  -57319,  -56756,  -56175,  -55578,  -54963,  -54332,  -53684,
-     -53020,  -52339,  -51643,  -50931,  -50203,  -49461,  -48703,  -47930,
-     -47143,  -46341,  -45525,  -44695,  -43852,  -42995,  -42126,  -41243,
-     -40348,  -39441,  -38521,  -37590,  -36647,  -35693,  -34729,  -33754,
-     -32768,  -31772,  -30767,  -29753,  -28729,  -27697,  -26656,  -25607,
-     -24550,  -23486,  -22415,  -21336,  -20252,  -19161,  -18064,  -16962,
-     -15855,  -14742,  -13626,  -12505,  -11380,  -10252,   -9121,   -7987,
-      -6850,   -5712,   -4572,   -3430,   -2287,   -1144,       0,    1144,
-       2287,    3430,    4572,    5712,    6850,    7987,    9121,   10252,
-      11380,   12505,   13626,   14742,   15855,   16962,   18064,   19161,
-      20252,   21336,   22415,   23486,   24550,   25607,   26656,   27697,
-      28729,   29753,   30767,   31772,   32768,   33754,   34729,   35693,
-      36647,   37590,   38521,   39441,   40348,   41243,   42126,   42995,
-      43852,   44695,   45525,   46341,   47143,   47930,   48703,   49461,
-      50203,   50931,   51643,   52339,   53020,   53684,   54332,   54963,
-      55578,   56175,   56756,   57319,   57865,   58393,   58903,   59396,
-      59870,   60326,   60764,   61183,   61584,   61966,   62328,   62672,
-      62997,   63303,   63589,   63856,   64104,   64332,   64540,   64729,
-      64898,   65048,   65177,   65287,   65376,   65446,   65496,   65526,
-};
-
-static const int32_t canvasCurvedSinTable[360] = {
-          0,    1144,    2287,    3430,    4572,    5712,    6850,    7987,
-       9121,   10252,   11380,   12505,   13626,   14742,   15855,   16962,
-      18064,   19161,   20252,   21336,   22415,   23486,   24550,   25607,
-      26656,   27697,   28729,   29753,   30767,   31772,   32768,   33754,
-      34729,   35693,   36647,   37590,   38521,   39441,   40348,   41243,
-      42126,   42995,   43852,   44695,   45525,   46341,   47143,   47930,
-      48703,   49461,   50203,   50931,   51643,   52339,   53020,   53684,
-      54332,   54963,   55578,   56175,   56756,   57319,   57865,   58393,
-      58903,   59396,   59870,   60326,   60764,   61183,   61584,   61966,
-      62328,   62672,   62997,   63303,   63589,   63856,   64104,   64332,
-      64540,   64729,   64898,   65048,   65177,   65287,   65376,   65446,
-      65496,   65526,   65536,   65526,   65496,   65446,   65376,   65287,
-      65177,   65048,   64898,   64729,   64540,   64332,   64104,   63856,
-      63589,   63303,   62997,   62672,   62328,   61966,   61584,   61183,
-      60764,   60326,   59870,   59396,   58903,   58393,   57865,   57319,
-      56756,   56175,   55578,   54963,   54332,   53684,   53020,   52339,
-      51643,   50931,   50203,   49461,   48703,   47930,   47143,   46341,
-      45525,   44695,   43852,   42995,   42126,   41243,   40348,   39441,
-      38521,   37590,   36647,   35693,   34729,   33754,   32768,   31772,
-      30767,   29753,   28729,   27697,   26656,   25607,   24550,   23486,
-      22415,   21336,   20252,   19161,   18064,   16962,   15855,   14742,
-      13626,   12505,   11380,   10252,    9121,    7987,    6850,    5712,
-       4572,    3430,    2287,    1144,       0,   -1144,   -2287,   -3430,
-      -4572,   -5712,   -6850,   -7987,   -9121,  -10252,  -11380,  -12505,
-     -13626,  -14742,  -15855,  -16962,  -18064,  -19161,  -20252,  -21336,
-     -22415,  -23486,  -24550,  -25607,  -26656,  -27697,  -28729,  -29753,
-     -30767,  -31772,  -32768,  -33754,  -34729,  -35693,  -36647,  -37590,
-     -38521,  -39441,  -40348,  -41243,  -42126,  -42995,  -43852,  -44695,
-     -45525,  -46341,  -47143,  -47930,  -48703,  -49461,  -50203,  -50931,
-     -51643,  -52339,  -53020,  -53684,  -54332,  -54963,  -55578,  -56175,
-     -56756,  -57319,  -57865,  -58393,  -58903,  -59396,  -59870,  -60326,
-     -60764,  -61183,  -61584,  -61966,  -62328,  -62672,  -62997,  -63303,
-     -63589,  -63856,  -64104,  -64332,  -64540,  -64729,  -64898,  -65048,
-     -65177,  -65287,  -65376,  -65446,  -65496,  -65526,  -65536,  -65526,
-     -65496,  -65446,  -65376,  -65287,  -65177,  -65048,  -64898,  -64729,
-     -64540,  -64332,  -64104,  -63856,  -63589,  -63303,  -62997,  -62672,
-     -62328,  -61966,  -61584,  -61183,  -60764,  -60326,  -59870,  -59396,
-     -58903,  -58393,  -57865,  -57319,  -56756,  -56175,  -55578,  -54963,
-     -54332,  -53684,  -53020,  -52339,  -51643,  -50931,  -50203,  -49461,
-     -48703,  -47930,  -47143,  -46341,  -45525,  -44695,  -43852,  -42995,
-     -42126,  -41243,  -40348,  -39441,  -38521,  -37590,  -36647,  -35693,
-     -34729,  -33754,  -32768,  -31772,  -30767,  -29753,  -28729,  -27697,
-     -26656,  -25607,  -24550,  -23486,  -22415,  -21336,  -20252,  -19161,
-     -18064,  -16962,  -15855,  -14742,  -13626,  -12505,  -11380,  -10252,
-      -9121,   -7987,   -6850,   -5712,   -4572,   -3430,   -2287,   -1144,
-};
-
-/* Round-half-away-from-zero integer division (Req 3.3, 2.1).
- * The denominator is always positive in use (SCALE or 2*SCALE). The numerator is
- * int64_t so the radius * scaledTrig product and the doubled rotation products
- * cannot overflow. Positive numerator rounds up at the half, negative rounds down,
- * so e.g. 0.5 -> 1 and -0.5 -> -1. */
+/* Round-half-away-from-zero division; int64 numerator avoids overflow on the
+ * radius*trig and doubled-rotation products. */
 static int32_t CanvasRoundDivAway(int64_t numerator, int32_t denominator) {
     int64_t half = denominator / 2;
     if (numerator >= 0)
@@ -483,105 +377,102 @@ static int32_t CanvasRoundDivAway(int64_t numerator, int32_t denominator) {
     return (int32_t)((numerator - half) / denominator);
 }
 
-/* Rotate a glyph-local doubled-delta pair clockwise by the table-indexed angle
- * (Req 3.1, 3.3, 2.4). The deltas are doubled (dx2 = 2*Column - (Width-1),
- * dy2 = 2*Page - (Height-1)) so the half-pixel box center is exact integer math.
- * cosV/sinV are the Q16.16 trig values for the placement angle. The clockwise
- * rotation in screen coordinates (y grows downward) is:
- *     rx = dx2*cosV - dy2*sinV
- *     ry = dx2*sinV + dy2*cosV
- * Each product is computed in int64_t to avoid overflow, then divided by
- * 2 * SCALE (the /2 folds in the doubled-delta scaling, the /SCALE removes the
- * Q16.16 factor) with round-half-away-from-zero, yielding the signed integer
- * offset components in *outX / *outY. */
+/* Rotate a doubled-delta glyph cell (dx2 = 2*Column-(W-1), dy2 = 2*Page-(H-1)) by
+ * the Q16.16 trig cosV/sinV. Dividing by 2*TRIG_Q16_SCALE folds out both the
+ * doubling (/2) and the Q16.16 scale. */
 static void CanvasRotateGlyphOffset(int32_t dx2, int32_t dy2, int32_t cosV,
     int32_t sinV, int32_t *outX, int32_t *outY) {
     int64_t rx = (int64_t)dx2 * cosV - (int64_t)dy2 * sinV;
     int64_t ry = (int64_t)dx2 * sinV + (int64_t)dy2 * cosV;
-    *outX = CanvasRoundDivAway(rx, 2 * SCALE);
-    *outY = CanvasRoundDivAway(ry, 2 * SCALE);
+    *outX = CanvasRoundDivAway(rx, 2 * TRIG_Q16_SCALE);
+    *outY = CanvasRoundDivAway(ry, 2 * TRIG_Q16_SCALE);
 }
 
 void CanvasDrawCurvedChar(const char ASCIIChar, UWORD xCenter, UWORD yCenter,
     UWORD radius, UWORD startAngle, sFONT* font,
     UWORD foregroundColor, UWORD backgroundColor) {
-    // Req 4.4: NULL font is a no-op, checked before any glyph access.
     if (font == NULL)
         return;
 
-    // Req 4.5: skip characters outside the printable range 0x20..0x7E.
     if (ASCIIChar < 0x20 || ASCIIChar > 0x7E)
         return;
 
-    // Req 2.3: normalize the whole-degree angle into 0..359.
     UWORD angle = startAngle % 360;
+    int32_t cosV = TrigCosQ16(angle);
+    int32_t sinV = TrigSinQ16(angle);
 
-    // Req 7.3: trigonometry comes from the integer LUT, never runtime float.
-    // The PLACEMENT angle positions the anchor on the circle.
-    int32_t cosV = canvasCurvedCosTable[angle];
-    int32_t sinV = canvasCurvedSinTable[angle];
-
-    // Req 3.1: the glyph baseline must be TANGENT to the circle, not radial.
-    // Rotating the glyph by the placement angle alone would align its horizontal
-    // (advance) axis with the radial direction (cos, sin) -- i.e. pointing out of
-    // the center -- so consecutive characters would not read along the arc. The
-    // tangent at the placement angle is (-sin, cos), which is the placement angle
-    // plus 90 degrees, so the glyph ORIENTATION uses (angle + 90) % 360. At the top
-    // of the circle (270 deg) this yields an upright glyph; advancing the angle then
-    // sweeps a readable line of text along the border (basis for CanvasDrawCurvedText).
+    /* Glyph orientation is tangent to the circle, not radial: rotating by the
+     * placement angle alone would point each letter out of the center. The tangent
+     * is the placement angle + 90 (so the glyph is upright at the top, angle 270). */
     UWORD orientAngle = (angle + 90) % 360;
-    int32_t cosR = canvasCurvedCosTable[orientAngle];
-    int32_t sinR = canvasCurvedSinTable[orientAngle];
+    int32_t cosR = TrigCosQ16(orientAngle);
+    int32_t sinR = TrigSinQ16(orientAngle);
 
-    // Req 2.1, 2.5: glyph anchor on the circle; radius 0 yields the exact center.
-    int32_t anchorX = (int32_t)xCenter + CanvasRoundDivAway((int64_t)radius * cosV, SCALE);
-    int32_t anchorY = (int32_t)yCenter + CanvasRoundDivAway((int64_t)radius * sinV, SCALE);
+    int32_t anchorX = (int32_t)xCenter + CanvasRoundDivAway((int64_t)radius * cosV, TRIG_Q16_SCALE);
+    int32_t anchorY = (int32_t)yCenter + CanvasRoundDivAway((int64_t)radius * sinV, TRIG_Q16_SCALE);
 
-    // Req 4.3: glyph dimensions come from the font, nothing is hardcoded.
     UWORD width = font->Width;
     UWORD height = font->Height;
 
-    // Req 4.1: index from the printable-ASCII origin (space) exactly as CanvasDrawChar.
+    /* Glyph addressing mirrors CanvasDrawChar: 1bpp, MSB-first, byte-padded rows. */
     uint32_t charOffset = (ASCIIChar - ' ') * height * (width / 8 + (width % 8 ? 1 : 0));
     const unsigned char *ptr = &font->table[charOffset];
 
     UWORD Page, Column;
     for (Page = 0; Page < height; Page++) {
         for (Column = 0; Column < width; Column++) {
-            // Mirror CanvasDrawChar's bit test (1bpp, MSB-first within each byte).
             int bitSet = (*ptr & (0x80 >> (Column % 8))) != 0;
 
-            // Req 2.4: doubled deltas about the geometric box center, kept exact in integers.
             int32_t dx2 = 2 * (int32_t)Column - ((int32_t)width - 1);
             int32_t dy2 = 2 * (int32_t)Page - ((int32_t)height - 1);
 
-            // Req 3.1, 3.3: rotate the glyph to the circle tangent (orientation
-            // angle = placement angle + 90) about the anchor, round-half-away.
             int32_t offX, offY;
             CanvasRotateGlyphOffset(dx2, dy2, cosR, sinR, &offX, &offY);
 
-            // Req 6.3: signed target; skip negatives before any UWORD cast.
+            /* Skip negatives before the UWORD cast so they don't wrap past the clip. */
             int32_t targetX = anchorX + offX;
             int32_t targetY = anchorY + offY;
 
             if (targetX >= 0 && targetY >= 0) {
-                if (bitSet) {
-                    // Req 5.1: glyph (set) pixel uses the foreground color.
+                if (bitSet)
                     CanvasSetPixel((UWORD)targetX, (UWORD)targetY, foregroundColor);
-                } else if (backgroundColor != TRANSPARENT) {
-                    // Req 5.3: opaque background fills the rotated bounding box.
+                else if (backgroundColor != TRANSPARENT)
                     CanvasSetPixel((UWORD)targetX, (UWORD)targetY, backgroundColor);
-                }
-                // Req 5.2: TRANSPARENT background skips non-glyph pixels.
             }
 
-            // Advance the glyph bit pointer exactly as CanvasDrawChar does.
             if (Column % 8 == 7)
                 ptr++;
         }
 
         if (width % 8 != 0)
             ptr++;
+    }
+}
+
+void CanvasDrawCurvedText(const char *text, UWORD xCenter, UWORD yCenter,
+    UWORD radius, UWORD startAngle, sFONT* font,
+    UWORD foregroundColor, UWORD backgroundColor) {
+    if (text == NULL || font == NULL)
+        return;
+
+    UWORD width = font->Width;
+    int32_t arcPixels = 0;
+
+    for (const char *p = text; *p != '\0'; p++) {
+        /* Angular step from arc length: deg = arcPixels/radius * 180/PI, in integers
+         * (180/PI ~= 57296/1000) to stay float-free. Accumulating arcPixels avoids
+         * per-character rounding drift; radius 0 stacks every glyph at the center. */
+        int32_t offsetDeg = 0;
+        if (radius != 0)
+            offsetDeg = CanvasRoundDivAway((int64_t)arcPixels * 57296, (int32_t)radius * 1000);
+
+        int32_t totalAngle = (int32_t)startAngle + offsetDeg;
+        UWORD charAngle = (UWORD)(((totalAngle % 360) + 360) % 360);
+
+        CanvasDrawCurvedChar(*p, xCenter, yCenter, radius, charAngle, font,
+            foregroundColor, backgroundColor);
+
+        arcPixels += (int32_t)width;
     }
 }
 
