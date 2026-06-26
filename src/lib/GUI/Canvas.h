@@ -146,7 +146,7 @@ void CanvasDrawPng(FIL *file);
 void CanvasDrawTexture(const unsigned char *texture, UWORD xStart, UWORD yStart, UWORD imageWidth, UWORD imageHeight);
 void CanvasDrawBitmap(const unsigned char* imageBuffer);
 void CanvasDrawBitmapBlock(const unsigned char* imageBuffer, UBYTE region);
-void CanvasDrawBitmapToArea(unsigned char x, unsigned char y, const unsigned char *pBitmap,
-    unsigned char areaWidth, unsigned char areaHeight);
+void CanvasDrawBitmapToArea(UWORD x, UWORD y, const unsigned char *pBitmap,
+    UWORD areaWidth, UWORD areaHeight);
 
 #endif /* __CANVAS_H */

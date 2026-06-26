@@ -673,19 +673,19 @@ void CanvasDrawTexture(const unsigned char *texture, UWORD xStart, UWORD yStart,
     }
 }
 
-void CanvasDrawBitmap(const unsigned char* imageBuffer) {
+void CanvasDrawBitmap(const unsigned char* bitmap) {
     UWORD x, y;
     UDOUBLE addr = 0;
 
     for (y = 0; y < canvas.HeightByte; y++) {
         for (x = 0; x < canvas.WidthByte; x++) {//8 pixel =  1 byte
             addr = x + y * canvas.WidthByte;
-            canvas.Texture[addr] = (unsigned char)imageBuffer[addr];
+            canvas.Texture[addr] = (unsigned char)bitmap[addr];
         }
     }
 }
 
-void CanvasDrawBitmapBlock(const unsigned char* imageBuffer, UBYTE region) {
+void CanvasDrawBitmapBlock(const unsigned char* bitmap, UBYTE region) {
     UWORD x, y;
     UDOUBLE addr = 0;
 
@@ -693,18 +693,18 @@ void CanvasDrawBitmapBlock(const unsigned char* imageBuffer, UBYTE region) {
         for (x = 0; x < canvas.WidthByte; x++) {//8 pixel =  1 byte
             addr = x + y * canvas.WidthByte ;
             canvas.Texture[addr] = \
-            (unsigned char)imageBuffer[addr+ (canvas.HeightByte)*canvas.WidthByte*(region - 1)];
+            (unsigned char)bitmap[addr+ (canvas.HeightByte)*canvas.WidthByte*(region - 1)];
         }
     }
 }
 
- void CanvasDrawBitmapToArea(unsigned char x,unsigned char y,const unsigned char *pBitmap,
-    unsigned char areaWidth,unsigned char areaHeight) {
-    uint16_t i, j, byteWidth = (areaWidth + 7) / 8;
+void CanvasDrawBitmapToArea(UWORD x, UWORD y, const unsigned char* bitmap,
+    UWORD width, UWORD height) {
+    uint16_t i, j, byteWidth = (width + 7) / 8;
 
-    for (j = 0; j < areaHeight; j ++) {
-        for (i = 0; i < areaWidth; i ++ ) {
-            if (*(pBitmap + j * byteWidth + i / 8) & (128 >> (i & 7))) {
+    for (j = 0; j < height; j ++) {
+        for (i = 0; i < width; i ++ ) {
+            if (*(bitmap + j * byteWidth + i / 8) & (128 >> (i & 7))) {
                 CanvasSetPixel(x + i, y + j, 0xffff);
             }
         }
