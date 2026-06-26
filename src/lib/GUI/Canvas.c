@@ -5,9 +5,9 @@
 
 Canvas canvas;
 
-void CanvasNewImage(UBYTE *image, UWORD width, UWORD height, UWORD rotate) {
-    canvas.Image = NULL;
-    canvas.Image = image;
+void CanvasNewTexture(UBYTE *texture, UWORD width, UWORD height, UWORD rotate) {
+    canvas.Texture = NULL;
+    canvas.Texture = texture;
 
     canvas.WidthMemory = width;
     canvas.HeightMemory = height;
@@ -28,13 +28,13 @@ void CanvasNewImage(UBYTE *image, UWORD width, UWORD height, UWORD rotate) {
     }
 }
 
-void CanvasSelectImage(UBYTE *image) {
-    canvas.Image = image;
+void CanvasSelectTexture(UBYTE *texture) {
+    canvas.Texture = texture;
 }
 
 void CanvasSetRotate(UWORD rotate) {
     if (rotate == ROTATE_0 || rotate == ROTATE_90 || rotate == ROTATE_180 || rotate == ROTATE_270) {
-        SHOWDEBUG("Set image Rotate %d\r\n", rotate);
+        SHOWDEBUG("Set texture Rotate %d\r\n", rotate);
         canvas.Rotate = rotate;
     }
 }
@@ -118,27 +118,27 @@ void CanvasSetPixel(UWORD xPoint, UWORD yPoint, UWORD color) {
 
     if (canvas.Scale == 2) {
         UDOUBLE addr = x / 8 + y * canvas.WidthByte;
-        UBYTE rData = canvas.Image[addr];
+        UBYTE rData = canvas.Texture[addr];
         if ((color & 0xff) == BLACK)
-            canvas.Image[addr] = rData & ~(0x80 >> (x % 8));
+            canvas.Texture[addr] = rData & ~(0x80 >> (x % 8));
         else
-            canvas.Image[addr] = rData | (0x80 >> (x % 8));
+            canvas.Texture[addr] = rData | (0x80 >> (x % 8));
     } else if (canvas.Scale == 4) {
         UDOUBLE addr = x / 4 + y * canvas.WidthByte;
         color = color % 4; //Guaranteed color scale is 4  --- 0~3
-        UBYTE rData = canvas.Image[addr];
+        UBYTE rData = canvas.Texture[addr];
         rData = rData & (~(0xC0 >> ((x % 4) * 2)));
-        canvas.Image[addr] = rData | ((color << 6) >> ((x % 4) * 2));
+        canvas.Texture[addr] = rData | ((color << 6) >> ((x % 4) * 2));
     } else if (canvas.Scale == 16) {
         UDOUBLE addr = x / 2 + y * canvas.WidthByte;
-        UBYTE rData = canvas.Image[addr];
+        UBYTE rData = canvas.Texture[addr];
         color = color % 16;
         rData = rData & (~(0xf0 >> ((x % 2) * 4)));
-        canvas.Image[addr] = rData | ((color << 4) >> ((x % 2) * 4));
+        canvas.Texture[addr] = rData | ((color << 4) >> ((x % 2) * 4));
     } else if (canvas.Scale == 65) {
         UDOUBLE addr = x * 2 + y * canvas.WidthByte;
-        canvas.Image[addr] = 0xff & (color >> 8);
-        canvas.Image[addr + 1] = 0xff & color;
+        canvas.Texture[addr] = 0xff & (color >> 8);
+        canvas.Texture[addr + 1] = 0xff & color;
     }
 }
 
@@ -147,7 +147,7 @@ void CanvasClear(UWORD color) {
         for (UWORD y = 0; y < canvas.HeightByte; y++) {
             for (UWORD x = 0; x < canvas.WidthByte; x++) {//8 pixel =  1 byte
                 UDOUBLE Addr = x + y * canvas.WidthByte;
-                canvas.Image[Addr] = color;
+                canvas.Texture[Addr] = color;
             }
         }
     } else if (canvas.Scale == 16) {
@@ -155,15 +155,15 @@ void CanvasClear(UWORD color) {
             for (UWORD x = 0; x < canvas.WidthByte; x++ ) {//8 pixel =  1 byte
                 UDOUBLE Addr = x + y * canvas.WidthByte;
                 color = color & 0x0f;
-                canvas.Image[Addr] = (color << 4) | color;
+                canvas.Texture[Addr] = (color << 4) | color;
             }
         }
     } else if (canvas.Scale == 65) {
         for (UWORD y = 0; y < canvas.HeightByte; y++) {
             for (UWORD x = 0; x < canvas.WidthByte; x++) {//8 pixel =  1 byte
                 UDOUBLE Addr = x * 2 + y * canvas.WidthByte;
-                canvas.Image[Addr] = 0xff & (color >> 8);
-                canvas.Image[Addr+1] = 0xff & color;
+                canvas.Texture[Addr] = 0xff & (color >> 8);
+                canvas.Texture[Addr+1] = 0xff & color;
             }
         }
     }
@@ -661,12 +661,12 @@ void CanvasDrawTime(UWORD xStart, UWORD yStart, DateTime *pTime, sFONT* font,
     CanvasDrawChar(xStart + dX * 6, yStart, value[pTime->Sec % 10], font, foregroundColor, backgroundColor);
 }
 
-void CanvasDrawImage(const unsigned char *image, UWORD xStart, UWORD yStart, UWORD imageWidth, UWORD imageHeight) {
+void CanvasDrawTexture(const unsigned char *texture, UWORD xStart, UWORD yStart, UWORD imageWidth, UWORD imageHeight) {
     int i, j;
     for (j = 0; j < imageHeight; j++) {
         for (i = 0; i < imageWidth; i++) {
             if (xStart + i < canvas.HeightMemory && yStart + j < canvas.WidthMemory) //Exceeded part does not display
-                CanvasSetPixel(xStart + i, yStart + j, (*(image + j * imageWidth * 2 + i * 2 + 1)) << 8 | (*(image + j * imageWidth * 2 + i * 2)));
+                CanvasSetPixel(xStart + i, yStart + j, (*(texture + j * imageWidth * 2 + i * 2 + 1)) << 8 | (*(texture + j * imageWidth * 2 + i * 2)));
                 // j*imageWidth*2 = Y offset
                 // i*2 = X offset
         }
@@ -680,7 +680,7 @@ void CanvasDrawBitmap(const unsigned char* imageBuffer) {
     for (y = 0; y < canvas.HeightByte; y++) {
         for (x = 0; x < canvas.WidthByte; x++) {//8 pixel =  1 byte
             addr = x + y * canvas.WidthByte;
-            canvas.Image[addr] = (unsigned char)imageBuffer[addr];
+            canvas.Texture[addr] = (unsigned char)imageBuffer[addr];
         }
     }
 }
@@ -692,7 +692,7 @@ void CanvasDrawBitmapBlock(const unsigned char* imageBuffer, UBYTE region) {
     for (y = 0; y < canvas.HeightByte; y++) {
         for (x = 0; x < canvas.WidthByte; x++) {//8 pixel =  1 byte
             addr = x + y * canvas.WidthByte ;
-            canvas.Image[addr] = \
+            canvas.Texture[addr] = \
             (unsigned char)imageBuffer[addr+ (canvas.HeightByte)*canvas.WidthByte*(region - 1)];
         }
     }
@@ -730,7 +730,7 @@ void CanvasDrawPng(FIL *file) {
         return;
     }
 
-    SHOWDEBUG("Allocating memory for image information\n");
+    SHOWDEBUG("Allocating memory for texture information\n");
     png_infop infoPointer = png_create_info_struct(pngPointer);
 
     if (infoPointer == NULL) {
@@ -758,10 +758,10 @@ void CanvasDrawPng(FIL *file) {
     }
 
     SHOWDEBUG("Reading info\n");
-    /* png_read_info gets information about PNG file before the first IDAT (image data chunk). REQUIRED. */
+    /* png_read_info gets information about PNG file before the first IDAT (texture data chunk). REQUIRED. */
     png_read_info(pngPointer, infoPointer);
 
-    SHOWDEBUG("\nParsing image info\n");
+    SHOWDEBUG("\nParsing texture info\n");
     png_uint_32 width, height;
     int bitDepth, colorType, interlaceType;
     png_get_IHDR(pngPointer, infoPointer, &width, &height, &bitDepth, &colorType, &interlaceType, NULL, NULL);
@@ -790,7 +790,7 @@ void CanvasDrawPng(FIL *file) {
                 green = palette[rowPointers[col]].green;
                 blue = palette[rowPointers[col]].blue;
             } else {
-                /* if the image is paletted but we don't have a palette, display as grayscale using palette index. */
+                /* if the texture is paletted but we don't have a palette, display as grayscale using palette index. */
                 png_bytep pixel = &rowPointers[col];
                 red = *(pixel++);
                 green = *(pixel++);

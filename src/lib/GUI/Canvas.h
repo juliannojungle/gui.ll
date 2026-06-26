@@ -6,7 +6,7 @@
 #include "ff.h"
 
 typedef struct {
-    UBYTE *Image;
+    UBYTE *Texture;
     UWORD Width;
     UWORD Height;
     UWORD WidthMemory;
@@ -110,8 +110,8 @@ typedef struct {
 } DateTime;
 
 /* Drawing API — definitions in Canvas.c */
-void CanvasNewImage(UBYTE *image, UWORD width, UWORD height, UWORD rotate);
-void CanvasSelectImage(UBYTE *image);
+void CanvasNewTexture(UBYTE *texture, UWORD width, UWORD height, UWORD rotate);
+void CanvasSelectTexture(UBYTE *texture);
 void CanvasSetRotate(UWORD rotate);
 void CanvasSetScale(UBYTE scale);
 void CanvasFlipTexture(UBYTE mirror);
@@ -143,7 +143,7 @@ void CanvasDrawNum(UWORD xPoint, UWORD yPoint, double number,
 void CanvasDrawTime(UWORD xStart, UWORD yStart, DateTime *pTime, sFONT* font,
     UWORD foregroundColor, UWORD backgroundColor);
 void CanvasDrawPng(FIL *file);
-void CanvasDrawImage(const unsigned char *image, UWORD xStart, UWORD yStart, UWORD imageWidth, UWORD imageHeight);
+void CanvasDrawTexture(const unsigned char *texture, UWORD xStart, UWORD yStart, UWORD imageWidth, UWORD imageHeight);
 void CanvasDrawBitmap(const unsigned char* imageBuffer);
 void CanvasDrawBitmapBlock(const unsigned char* imageBuffer, UBYTE region);
 void CanvasDrawBitmapToArea(unsigned char x, unsigned char y, const unsigned char *pBitmap,

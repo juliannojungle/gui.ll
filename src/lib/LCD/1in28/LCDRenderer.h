@@ -6,8 +6,8 @@
 
 void LCDSetDisplayArea(UWORD Xstart, UWORD Ystart, UWORD Xend, UWORD Yend);
 void LCDClear(UWORD FillColor);
-void LCDRenderTexture(UWORD *Image);
-void LCDRenderTextureInArea(UWORD xStart, UWORD yStart, UWORD xEnd, UWORD yEnd, UWORD *image);
+void LCDRenderTexture(UWORD *texture);
+void LCDRenderTextureInArea(UWORD xStart, UWORD yStart, UWORD xEnd, UWORD yEnd, UWORD *texture);
 void LCDRenderPoint(UWORD x, UWORD y, UWORD color);
 void LCDRenderPng(FIL *file);
 

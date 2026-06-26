@@ -19,11 +19,11 @@ void LCDSetDisplayArea(UWORD xStart, UWORD yStart, UWORD xEnd, UWORD yEnd)
 void LCDClear(UWORD fillColor)
 {
     UWORD j;
-    UWORD image[LCD.WIDTH*LCD.HEIGHT];
+    UWORD texture[LCD.WIDTH*LCD.HEIGHT];
     fillColor = ((fillColor<<8)&0xff00)|(fillColor>>8);
 
     for (j = 0; j < LCD.HEIGHT*LCD.WIDTH; j++) {
-        image[j] = fillColor;
+        texture[j] = fillColor;
     }
 
     LCDSetDisplayArea(0, 0, LCD.WIDTH, LCD.HEIGHT);
@@ -31,13 +31,13 @@ void LCDClear(UWORD fillColor)
     DigitalWrite(LCD_CS_PIN, 0);
 
     for (j = 0; j < LCD.HEIGHT; j++) {
-        SPIWriteNByte((uint8_t *)&image[j*LCD.WIDTH], LCD.WIDTH*2);
+        SPIWriteNByte((uint8_t *)&texture[j*LCD.WIDTH], LCD.WIDTH*2);
     }
 
     DigitalWrite(LCD_CS_PIN, 1);
 }
 
-void LCDRenderTexture(UWORD *image)
+void LCDRenderTexture(UWORD *texture)
 {
     UWORD j;
     LCDSetDisplayArea(0, 0, LCD.WIDTH, LCD.HEIGHT); /* full screen */
@@ -45,14 +45,14 @@ void LCDRenderTexture(UWORD *image)
     DigitalWrite(LCD_CS_PIN, 0);
 
     for (j = 0; j < LCD.HEIGHT; j++) {
-        SPIWriteNByte((uint8_t *)&image[j*LCD.WIDTH], LCD.WIDTH*2);
+        SPIWriteNByte((uint8_t *)&texture[j*LCD.WIDTH], LCD.WIDTH*2);
     }
 
     DigitalWrite(LCD_CS_PIN, 1);
     DriverSendCommand(0x29); /* recover from DISPLAY OFF mode */
 }
 
-void LCDRenderTextureInArea(UWORD xStart, UWORD yStart, UWORD xEnd, UWORD yEnd, UWORD *image)
+void LCDRenderTextureInArea(UWORD xStart, UWORD yStart, UWORD xEnd, UWORD yEnd, UWORD *texture)
 {
     UDOUBLE addr = 0;
     UWORD j;
@@ -62,7 +62,7 @@ void LCDRenderTextureInArea(UWORD xStart, UWORD yStart, UWORD xEnd, UWORD yEnd, 
 
     for (j = yStart; j < yEnd - 1; j++) {
         addr = xStart + j * LCD.WIDTH ;
-        SPIWriteNByte((uint8_t *)&image[addr], (xEnd-xStart)*2);
+        SPIWriteNByte((uint8_t *)&texture[addr], (xEnd-xStart)*2);
     }
 
     DigitalWrite(LCD_CS_PIN, 1);
@@ -94,7 +94,7 @@ void LCDRenderPng(FIL *file) {
         return;
     }
 
-    SHOWDEBUG("Allocating memory for image information\n");
+    SHOWDEBUG("Allocating memory for texture information\n");
     png_infop infoPointer = png_create_info_struct(pngPointer);
 
     if (infoPointer == NULL) {
@@ -126,10 +126,10 @@ void LCDRenderPng(FIL *file) {
     }
 
     SHOWDEBUG("Reading info\n");
-    /* png_read_info gets information about PNG file before the first IDAT (image data chunk). REQUIRED. */
+    /* png_read_info gets information about PNG file before the first IDAT (texture data chunk). REQUIRED. */
     png_read_info(pngPointer, infoPointer);
 
-    SHOWDEBUG("\nParsing image info\n");
+    SHOWDEBUG("\nParsing texture info\n");
     png_uint_32 width, height;
     int bitDepth, colorType, interlaceType;
     png_get_IHDR(pngPointer, infoPointer, &width, &height, &bitDepth, &colorType, &interlaceType, NULL, NULL);
@@ -163,7 +163,7 @@ void LCDRenderPng(FIL *file) {
                 green = palette[rowPointers[col]].green;
                 blue = palette[rowPointers[col]].blue;
             } else {
-                /* if the image is paletted but we don't have a palette, display as grayscale using palette index. */
+                /* if the texture is paletted but we don't have a palette, display as grayscale using palette index. */
                 png_bytep pixel = &rowPointers[col];
                 red = *(pixel++);
                 green = *(pixel++);
