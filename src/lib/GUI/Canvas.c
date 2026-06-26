@@ -517,8 +517,21 @@ void CanvasDrawCurvedChar(const char ASCIIChar, UWORD xCenter, UWORD yCenter,
     UWORD angle = startAngle % 360;
 
     // Req 7.3: trigonometry comes from the integer LUT, never runtime float.
+    // The PLACEMENT angle positions the anchor on the circle.
     int32_t cosV = canvasCurvedCosTable[angle];
     int32_t sinV = canvasCurvedSinTable[angle];
+
+    // Req 3.1: the glyph baseline must be TANGENT to the circle, not radial.
+    // Rotating the glyph by the placement angle alone would align its horizontal
+    // (advance) axis with the radial direction (cos, sin) -- i.e. pointing out of
+    // the center -- so consecutive characters would not read along the arc. The
+    // tangent at the placement angle is (-sin, cos), which is the placement angle
+    // plus 90 degrees, so the glyph ORIENTATION uses (angle + 90) % 360. At the top
+    // of the circle (270 deg) this yields an upright glyph; advancing the angle then
+    // sweeps a readable line of text along the border (basis for CanvasDrawCurvedText).
+    UWORD orientAngle = (angle + 90) % 360;
+    int32_t cosR = canvasCurvedCosTable[orientAngle];
+    int32_t sinR = canvasCurvedSinTable[orientAngle];
 
     // Req 2.1, 2.5: glyph anchor on the circle; radius 0 yields the exact center.
     int32_t anchorX = (int32_t)xCenter + CanvasRoundDivAway((int64_t)radius * cosV, SCALE);
@@ -542,9 +555,10 @@ void CanvasDrawCurvedChar(const char ASCIIChar, UWORD xCenter, UWORD yCenter,
             int32_t dx2 = 2 * (int32_t)Column - ((int32_t)width - 1);
             int32_t dy2 = 2 * (int32_t)Page - ((int32_t)height - 1);
 
-            // Req 3.1, 3.3: rotate clockwise about the anchor with round-half-away.
+            // Req 3.1, 3.3: rotate the glyph to the circle tangent (orientation
+            // angle = placement angle + 90) about the anchor, round-half-away.
             int32_t offX, offY;
-            CanvasRotateGlyphOffset(dx2, dy2, cosV, sinV, &offX, &offY);
+            CanvasRotateGlyphOffset(dx2, dy2, cosR, sinR, &offX, &offY);
 
             // Req 6.3: signed target; skip negatives before any UWORD cast.
             int32_t targetX = anchorX + offX;

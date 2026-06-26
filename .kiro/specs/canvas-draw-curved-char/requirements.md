@@ -98,21 +98,24 @@ circle border, so that the text follows the curve and reads naturally along the 
 #### Acceptance Criteria
 
 1. WHEN `CanvasDrawCurvedChar` renders a glyph, THE Canvas SHALL rotate each glyph pixel about the
-   glyph anchor computed per Requirement 2 by a rotation angle equal to the start angle, expressed
-   in whole degrees and measured clockwise using the same angle convention as Requirement 2, so
-   that the glyph baseline is tangent to the circle at the start angle.
+   glyph anchor computed per Requirement 2 by a rotation angle equal to the start angle plus 90
+   degrees, expressed in whole degrees and measured clockwise using the same angle convention as
+   Requirement 2, so that the glyph baseline is tangent to the circle at the start angle (the glyph
+   advance axis follows the circle tangent and the glyph top points radially outward), and so that
+   advancing the start angle sweeps a readable line of text along the circle border.
 2. THE Canvas SHALL use, as the glyph-local point that coincides with the glyph anchor before
    rotation, the same glyph-box reference origin that `CanvasDrawChar` uses for the same character
    and font, so that placement is consistent between the two functions.
 3. WHEN `CanvasDrawCurvedChar` maps a rotated glyph pixel to a canvas coordinate, THE Canvas SHALL
    round each rotated coordinate component to the nearest integer, rounding halves away from zero,
    before writing the pixel.
-4. WHEN the start angle is 0 degrees, THE Canvas SHALL apply a rotation of 0 degrees and produce a
-   glyph whose orientation is identical, ignoring translation, to the upright `CanvasDrawChar`
-   output for the same character and font. WHERE the font has an even `Width` or `Height`, THE
-   Canvas MAY produce angle-0 output that differs from `CanvasDrawChar` by at most 1 pixel along
-   the center seam, as an inherent consequence of round-half-away rotation about the glyph
-   geometric center (Requirement 3.3).
+4. WHEN the start angle is 270 degrees (the top of the circle, where the tangent is horizontal),
+   THE Canvas SHALL apply an effective glyph rotation of 0 degrees and produce a glyph whose
+   orientation is identical, ignoring translation, to the upright `CanvasDrawChar` output for the
+   same character and font. WHERE the font has an even `Width` or `Height`, THE Canvas MAY produce
+   output that differs from `CanvasDrawChar` by at most 1 pixel along the center seam, as an
+   inherent consequence of round-half-away rotation about the glyph geometric center
+   (Requirement 3.3).
 
 ### Requirement 4: Font support
 

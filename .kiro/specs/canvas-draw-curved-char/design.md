@@ -53,12 +53,12 @@ flowchart TD
     B -- no --> C{ASCIIChar in 0x20..0x7E?}
     C -- no --> Z
     C -- yes --> D["angle = startAngle mod 360 (0..359)"]
-    D --> E["cosV = CosTable[angle]\nsinV = SinTable[angle]  (Q16.16)"]
+    D --> E["cosV = CosTable[angle], sinV = SinTable[angle] (placement)\norientAngle = (angle+90) mod 360\ncosR = CosTable[orientAngle], sinR = SinTable[orientAngle] (tangent)"]
     E --> F["anchorX = xCenter + RoundDiv(radius*cosV, SCALE)\nanchorY = yCenter + RoundDiv(radius*sinV, SCALE)"]
     F --> G["compute glyph table offset from (ASCIIChar - ' ')\ncenter the W x H box at (cx, cy)"]
     G --> H["for each source pixel (Column, Page) in W x H box"]
     H --> I["bitSet = glyph bit at (Column, Page)?"]
-    I --> J["rotate (Column,Page) about box center by angle\n(integer fixed-point), round half away from zero\n-> (targetX, targetY) signed"]
+    I --> J["rotate (Column,Page) about box center by orientAngle\n(tangent = angle+90, integer fixed-point), round half away from zero\n-> (targetX, targetY) signed"]
     J --> K{targetX < 0 or targetY < 0?}
     K -- yes --> H
     K -- no --> L{bitSet?}
@@ -191,16 +191,27 @@ trigonometry is stored as a **precomputed integer lookup table**, not computed a
   `dx2 = 2*Column - (Width - 1)`, `dy2 = 2*Page - (Height - 1)`. These are even/odd integers with
   no fractional loss; the single `/2` is folded into the final rounding division.
 
-- **Rotation (Requirement 3.1, 3.3):** clockwise rotation by the placement angle in screen
-  coordinates uses
+- **Rotation (Requirement 3.1, 3.3):** the glyph baseline must be **tangent** to the circle, not
+  radial. Rotating the glyph by the placement `angle` alone would align its advance axis with the
+  radial direction `(cos, sin)` (pointing out of the center), so the text would not read along the
+  arc. The tangent at the placement angle is `(-sin, cos)`, i.e. the placement angle **plus 90
+  degrees**, so the glyph orientation uses a separate `orientAngle = (angle + 90) % 360` with its
+  own trig:
 
   ```
-  rx = dx2 * cosV - dy2 * sinV      (scaled by SCALE, doubled)
-  ry = dx2 * sinV + dy2 * cosV
+  cosR = canvasCurvedCosTable[(angle + 90) % 360]
+  sinR = canvasCurvedSinTable[(angle + 90) % 360]
+  rx = dx2 * cosR - dy2 * sinR      (scaled by SCALE, doubled)
+  ry = dx2 * sinR + dy2 * cosR
   targetX = anchorX + CanvasRoundDivAway(rx, 2 * SCALE)   // /2 for the doubling, /SCALE for Q16.16
   targetY = anchorY + CanvasRoundDivAway(ry, 2 * SCALE)
   ```
 
+  This makes the glyph advance axis follow the circle tangent (in the direction of increasing
+  angle) and the glyph top point radially outward, so advancing `startAngle` sweeps a readable line
+  of text along the border. At the top of the circle (`angle == 270`, where the tangent is
+  horizontal) the effective glyph rotation is 0, i.e. an upright glyph. The anchor placement still
+  uses the placement angle's `cosV`/`sinV`; only the glyph orientation uses `cosR`/`sinR`.
   `CanvasRoundDivAway` rounds halves away from zero (Requirement 3.3). `targetX`/`targetY` are
   computed as signed `int32_t` so a negative intermediate can be detected and skipped before any
   cast to the unsigned `UWORD` parameters of `CanvasSetPixel` (Requirement 6.3).
@@ -213,8 +224,11 @@ CanvasDrawCurvedChar(ASCIIChar, xCenter, yCenter, radius, startAngle, font, fg, 
     if ASCIIChar < 0x20 or ASCIIChar > 0x7E: return      # Req 4.5
 
     angle = startAngle % 360                             # Req 2.3
-    cosV  = canvasCurvedCosTable[angle]                  # Req 7.3 (integer LUT)
+    cosV  = canvasCurvedCosTable[angle]                  # Req 7.3 (integer LUT) - placement
     sinV  = canvasCurvedSinTable[angle]
+    orientAngle = (angle + 90) % 360                     # Req 3.1 (tangent orientation)
+    cosR  = canvasCurvedCosTable[orientAngle]
+    sinR  = canvasCurvedSinTable[orientAngle]
 
     anchorX = xCenter + RoundDivAway(radius * cosV, SCALE)   # Req 2.1, 2.5
     anchorY = yCenter + RoundDivAway(radius * sinV, SCALE)
@@ -228,7 +242,7 @@ CanvasDrawCurvedChar(ASCIIChar, xCenter, yCenter, radius, startAngle, font, fg, 
             bitSet = (*ptr & (0x80 >> (Column % 8))) != 0
             dx2 = 2*Column - (width - 1)
             dy2 = 2*Page   - (height - 1)
-            (offX, offY) = RotateGlyphOffset(dx2, dy2, cosV, sinV)   # Req 3.1, 3.3
+            (offX, offY) = RotateGlyphOffset(dx2, dy2, cosR, sinR)   # Req 3.1, 3.3 (tangent)
             targetX = anchorX + offX
             targetY = anchorY + offY
             if targetX >= 0 and targetY >= 0:            # Req 6.3 (skip negative)
@@ -281,16 +295,17 @@ it modulo 360 (e.g. an accumulated angle `>= 360` folds to the same `0..359` res
 
 **Validates: Requirements 2.3**
 
-### Property 3: Angle-0 equivalence with CanvasDrawChar (model-based)
+### Property 3: Upright equivalence with CanvasDrawChar at angle 270 (model-based)
 
-*For any* printable character and supported font, rendering with `startAngle == 0` produces a
+*For any* printable character and supported font, rendering with `startAngle == 270` (the top of
+the circle, where the tangent is horizontal and the effective glyph rotation is 0) produces a
 foreground pixel pattern that, after removing the fixed glyph-box-center translation, is identical
 to the upright `CanvasDrawChar` output for the same character and font — same glyph indexing, same
-reference origin, same orientation (rotation of 0 degrees). For fonts with an even `Width` or
-`Height`, the angle-0 output may differ from `CanvasDrawChar` by at most 1 pixel along the center
-seam — an inherent consequence of round-half-away rotation about the glyph geometric center (D3);
-the test folds this seam into its exact integer model rather than treating it as a blanket
-tolerance.
+reference origin, same orientation. For fonts with an even `Width` or `Height`, the output may
+differ from `CanvasDrawChar` by at most 1 pixel along the center seam — an inherent consequence of
+round-half-away rotation about the glyph geometric center (D3). (Tangent orientation means the
+upright case is at `startAngle == 270`, not 0; at `startAngle == 0` the glyph is rotated 90 degrees
+so its baseline runs vertically down the right side of the circle.)
 
 **Validates: Requirements 3.4, 3.2, 4.1**
 
@@ -448,14 +463,15 @@ but rejected: the full 360-entry table is branch-free and simpler, and the size 
 ### D2: Forward mapping (source-driven) rotation
 
 The function iterates the source glyph rectangle and forward-maps each cell through the rotation,
-mirroring `CanvasDrawChar`'s iteration. This makes the angle-0 case provably equivalent to
-`CanvasDrawChar` (Property 3) and defines the opaque "rotated bounding box" exactly as Requirement
-5.3 states (the forward-mapped `Width x Height` set). The known tradeoff is nearest-neighbor
+mirroring `CanvasDrawChar`'s iteration. This makes the `startAngle == 270` case (tangent horizontal,
+effective rotation 0) provably equivalent to `CanvasDrawChar` (Property 3) and defines the opaque
+"rotated bounding box" exactly as Requirement 5.3 states (the forward-mapped `Width x Height` set).
+The known tradeoff is nearest-neighbor
 **aliasing**: at some angles forward mapping can leave 1-pixel gaps or map two source cells to one
 destination, so the opaque fill is not guaranteed gap-free. Requirement 5.3 defines the bounding box
 as precisely this forward-mapped set, so the behavior is correct by definition; Property 4 bounds
 the foreground collision with a small tolerance. A destination-driven inverse mapping would
-eliminate gaps but diverge from the `CanvasDrawChar` mirror and complicate the angle-0 equivalence;
+eliminate gaps but diverge from the `CanvasDrawChar` mirror and complicate the angle-270 equivalence;
 it is deferred unless visual quality requires it.
 
 ### D3: Doubled-delta integer rotation about the box center

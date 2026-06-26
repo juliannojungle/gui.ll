@@ -402,9 +402,16 @@ Recent work:
   - **Guards / safety**: NULL `font` and out-of-range `ASCIIChar` (outside 0x20..0x7E) are no-ops;
     `startAngle` is normalized `% 360`; rotated targets are computed as signed `int32_t` and skipped
     when negative *before* the `UWORD` cast, so no negative wraps into `CanvasSetPixel`.
-  - **Angle convention**: 0° at three-o'clock, increasing clockwise in screen coords; `radius == 0`
-    anchors exactly at the center.
-  - **Known nuance (Req 3.4)**: at `startAngle == 0` the glyph matches upright `CanvasDrawChar`
+  - **Angle convention & tangent orientation**: 0° at three-o'clock, increasing clockwise in screen
+    coords; `radius == 0` anchors exactly at the center. The glyph is oriented **tangent** to the
+    circle, not radial: the placement angle positions the anchor, but the glyph rotation uses
+    `orientAngle = (angle + 90) % 360` (the tangent direction `(-sin, cos)`). This is the key so that
+    advancing `startAngle` sweeps a *readable* line of text along the border — a plain rotation by the
+    placement angle would point each letter radially out of the center and not read along the arc
+    (this was a real bug, fixed). Upright text therefore occurs at `startAngle == 270` (top of the
+    circle, horizontal tangent); at `startAngle == 0` the glyph is rotated 90° (baseline runs vertically
+    down the right side).
+  - **Known nuance (Req 3.4)**: at `startAngle == 270` the glyph matches upright `CanvasDrawChar`
     *except* for a ±1-pixel center seam on fonts with an even Width or Height — an inherent
     consequence of round-half-away rotation about a half-integer geometric center (Req 3.3). All five
     bundled fonts have even Height; Font20 also has even Width. This was an accepted spec relaxation,
@@ -743,26 +750,32 @@ Recent work:
       tables (`canvasCurvedCosTable[360]` / `canvasCurvedSinTable[360]`, `SCALE = 1 << 16`), generated
       offline by a throwaway host script and embedded as constant literals (~2.8 KB rodata). Both
       targets link the identical integers; do NOT regenerate the table with `libm` at runtime.
+    - **Tangent orientation (placement angle + 90).** The anchor is placed using the placement
+      angle's `cosV`/`sinV`, but the glyph is rotated using a **separate** orientation angle
+      `orientAngle = (angle + 90) % 360` (its own `cosR`/`sinR` from the same LUT). This aligns the
+      glyph advance axis with the circle tangent `(-sin, cos)` so text reads along the rim; rotating
+      by the placement angle alone would point letters radially out of the center (a real bug, fixed).
+      Consequence: upright text is at `startAngle == 270` (top, horizontal tangent), not 0.
     - **Integer rotation with a single rounding step.** `CanvasRoundDivAway(int64_t, int32_t)` does
       round-half-away-from-zero division (64-bit numerator to avoid overflow on `radius * scaledTrig`
       and the doubled products). `CanvasRotateGlyphOffset` rotates a **doubled-delta** pair
-      (`dx2 = 2*Column-(Width-1)`, `dy2 = 2*Page-(Height-1)`) clockwise and folds the `/2` (for the
-      doubling) and `/SCALE` (Q16.16) into one `CanvasRoundDivAway(.., 2*SCALE)` call. Doubling makes
-      the half-pixel box center exact in integers (Req 3.3).
+      (`dx2 = 2*Column-(Width-1)`, `dy2 = 2*Page-(Height-1)`) by the supplied (tangent) trig and folds
+      the `/2` (for the doubling) and `/SCALE` (Q16.16) into one `CanvasRoundDivAway(.., 2*SCALE)`
+      call. Doubling makes the half-pixel box center exact in integers (Req 3.3).
     - **Signed-before-cast bounds check.** `CanvasSetPixel` takes `UWORD`; a negative rotated
       coordinate would wrap to a huge value and bypass the upper-bound clip. So `targetX`/`targetY`
       are `int32_t` and any negative component is skipped **before** the `UWORD` cast (Req 6.3). All
       writes still go through `CanvasSetPixel`, so its clip/rotate/flip and `WidthMemory`/`HeightMemory`
       guards apply.
     - **Forward (source-driven) mapping**, mirroring `CanvasDrawChar`'s glyph iteration, so the
-      angle-0 case is (almost) equivalent to `CanvasDrawChar` and the opaque "rotated bounding box" is
-      exactly the forward-mapped `Width x Height` set (Req 5.3). Known tradeoff: nearest-neighbor
-      aliasing can leave 1-px gaps / double-maps at some angles — acceptable by definition here; a
-      destination-driven inverse map is deferred unless visual quality requires it.
-    - **Even-dimension angle-0 seam (accepted relaxation).** At `startAngle == 0`, round-half-away
-      rotation about a half-integer center (even Width/Height) skips the center axis, so the glyph
-      differs from upright `CanvasDrawChar` by at most 1 px along that seam. Req 3.4 was relaxed to
-      allow this ±1 tolerance rather than special-casing angle 0 (which would diverge from the
+      `startAngle == 270` case is (almost) equivalent to `CanvasDrawChar` and the opaque "rotated
+      bounding box" is exactly the forward-mapped `Width x Height` set (Req 5.3). Known tradeoff:
+      nearest-neighbor aliasing can leave 1-px gaps / double-maps at some angles — acceptable by
+      definition here; a destination-driven inverse map is deferred unless visual quality requires it.
+    - **Even-dimension seam (accepted relaxation).** At the upright angle (`startAngle == 270`),
+      round-half-away rotation about a half-integer center (even Width/Height) skips the center axis,
+      so the glyph differs from upright `CanvasDrawChar` by at most 1 px along that seam. Req 3.4 was
+      relaxed to allow this ±1 tolerance rather than special-casing it (which would diverge from the
       pure-rotation model). All bundled fonts have even Height.
     - **Reuse / extension point**: the signature leads with `ASCIIChar` then the geometric placement
       values so `CanvasDrawCurvedText` / `CanvasDrawCurvedNumber` (out of scope) can be a thin loop
