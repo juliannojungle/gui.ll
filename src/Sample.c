@@ -1,5 +1,6 @@
 #include "HAL.h"
 #include "RTC.h"
+#include "Driver.h"
 #include "LCDSetup.h"
 #include "LCDRenderer.h"
 #include "FileHelper.h"
@@ -13,6 +14,7 @@ void app_entry(void) {
     RTCInitialize();
     LCDInitialize();
     LCDClear(BLACK);
+    DriverSetBacklightBrightness(90);
     // Delay(3000); // give us time to start serial monitor
 
     UDOUBLE imageSize = LCD.HEIGHT * LCD.WIDTH * 2;
@@ -29,7 +31,7 @@ void app_entry(void) {
     }
     UnMountSdCard();
 
-    CanvasDrawText(30, 110, "Hello, World!", &Font20, WHITE, BLACK);
+    CanvasDrawText(30, 110, "Hello, World!", &Font20, RGB_COLOR(0, 0, 0), TRANSPARENT);
     LCDRenderTexture(texture);
 
     while(true) {

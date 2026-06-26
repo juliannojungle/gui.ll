@@ -36,17 +36,20 @@ typedef enum {
 #define WHITE   0xFFFF
 #define BLACK   0x0000
 #define BLUE    0x001F
-#define BRED    0XF81F
-#define GRED    0XFFE0
-#define GBLUE   0X07FF
+#define AQUA    0X07FF
 #define RED     0xF800
 #define MAGENTA 0xF81F
 #define GREEN   0x07E0
 #define CYAN    0x7FFF
 #define YELLOW  0xFFE0
 #define BROWN   0XBC40
-#define BRRED   0XFC07
+#define MUSTARD 0XFC07
 #define GRAY    0X8430
+/* TRANSPARENT=MAGENTA: classic chroma-key color (not sent to the panel by the renderer) */
+#define TRANSPARENT 0xF81F
+/* converts RGB to RGB565 */
+#define RGB_COLOR(r, g, b) \
+    (short)(((r << 8) & 0xF800) | ((g << 3) & 0x07E0) | ((b >> 3) & 0x001F))
 
 #define IMAGE_BACKGROUND WHITE
 #define FONT_FOREGROUND  BLACK
