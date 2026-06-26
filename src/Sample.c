@@ -31,8 +31,9 @@ void app_entry(void) {
     }
     UnMountSdCard();
 
-    CanvasDrawText(40, 110, "0123456789", &Font20, RGB_COLOR(252, 82, 0), TRANSPARENT);
-    CanvasDrawCurvedText("Hello, World!", 120, 120, 100, 315, &Font20, RGB_COLOR(252, 82, 0), TRANSPARENT);
+    CanvasDrawText(52, 112, "0123456789", &Font20, RGB_COLOR(252, 82, 0), TRANSPARENT);
+    CanvasDrawCurvedText("ABCDEFGHIJKLMNOPQRSTUVW", 120, 120, 102, 181, TEXT_ORIENTATION_INWARDS, &Font20, RGB_COLOR(252, 82, 0), TRANSPARENT);
+    CanvasDrawCurvedText("abcdefghijklmnopqrstuvw", 120, 120, 105, 172, TEXT_ORIENTATION_OUTWARDS, &Font20, RGB_COLOR(252, 82, 0), TRANSPARENT);
     LCDRenderTexture(texture);
 
     while(true) {

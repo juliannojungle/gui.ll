@@ -389,7 +389,7 @@ static void CanvasRotateGlyphOffset(int32_t dx2, int32_t dy2, int32_t cosV,
 }
 
 void CanvasDrawCurvedChar(const char ASCIIChar, UWORD xCenter, UWORD yCenter,
-    UWORD radius, UWORD startAngle, sFONT* font,
+    UWORD radius, UWORD startAngle, TextOrientation orientation, sFONT* font,
     UWORD foregroundColor, UWORD backgroundColor) {
     if (font == NULL)
         return;
@@ -402,9 +402,10 @@ void CanvasDrawCurvedChar(const char ASCIIChar, UWORD xCenter, UWORD yCenter,
     int32_t sinV = TrigSinQ16(angle);
 
     /* Glyph orientation is tangent to the circle, not radial: rotating by the
-     * placement angle alone would point each letter out of the center. The tangent
-     * is the placement angle + 90 (so the glyph is upright at the top, angle 270). */
-    UWORD orientAngle = (angle + 90) % 360;
+     * placement angle alone would point each letter out of the center. INWARDS uses
+     * the tangent (angle + 90, upright at the top of the circle); OUTWARDS flips it
+     * 180 degrees so the text faces the other way. */
+    UWORD orientAngle = (angle + (orientation == TEXT_ORIENTATION_OUTWARDS ? 270 : 90)) % 360;
     int32_t cosR = TrigCosQ16(orientAngle);
     int32_t sinR = TrigSinQ16(orientAngle);
 
@@ -450,7 +451,7 @@ void CanvasDrawCurvedChar(const char ASCIIChar, UWORD xCenter, UWORD yCenter,
 }
 
 void CanvasDrawCurvedText(const char *text, UWORD xCenter, UWORD yCenter,
-    UWORD radius, UWORD startAngle, sFONT* font,
+    UWORD radius, UWORD startAngle, TextOrientation orientation, sFONT* font,
     UWORD foregroundColor, UWORD backgroundColor) {
     if (text == NULL || font == NULL)
         return;
@@ -461,15 +462,18 @@ void CanvasDrawCurvedText(const char *text, UWORD xCenter, UWORD yCenter,
     for (const char *p = text; *p != '\0'; p++) {
         /* Angular step from arc length: deg = arcPixels/radius * 180/PI, in integers
          * (180/PI ~= 57296/1000) to stay float-free. Accumulating arcPixels avoids
-         * per-character rounding drift; radius 0 stacks every glyph at the center. */
+         * per-character rounding drift; radius 0 stacks every glyph at the center.
+         * INWARDS advances clockwise (+), OUTWARDS counter-clockwise (-). */
         int32_t offsetDeg = 0;
         if (radius != 0)
             offsetDeg = CanvasRoundDivAway((int64_t)arcPixels * 57296, (int32_t)radius * 1000);
+        if (orientation == TEXT_ORIENTATION_OUTWARDS)
+            offsetDeg = -offsetDeg;
 
         int32_t totalAngle = (int32_t)startAngle + offsetDeg;
         UWORD charAngle = (UWORD)(((totalAngle % 360) + 360) % 360);
 
-        CanvasDrawCurvedChar(*p, xCenter, yCenter, radius, charAngle, font,
+        CanvasDrawCurvedChar(*p, xCenter, yCenter, radius, charAngle, orientation, font,
             foregroundColor, backgroundColor);
 
         arcPixels += (int32_t)width;

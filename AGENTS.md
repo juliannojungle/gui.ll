@@ -405,8 +405,9 @@ Recent work:
   `Canvas.h`) — a thin loop over `CanvasDrawCurvedChar` that renders a whole string along the circle.
   Signature mirrors the curved-char primitive, leading with the text then the geometric placement:
   `void CanvasDrawCurvedText(const char *text, UWORD xCenter, UWORD yCenter, UWORD radius,
-  UWORD startAngle, sFONT* font, UWORD foregroundColor, UWORD backgroundColor)`. It holds center,
-  radius, font and colors constant and **advances the angle per glyph**:
+  UWORD startAngle, TextOrientation orientation, sFONT* font, UWORD foregroundColor,
+  UWORD backgroundColor)`. It holds center, radius, orientation, font and colors constant and
+  **advances the angle per glyph**:
   - **Per-glyph angular step from arc length, in integers.** Each glyph occupies `font->Width` pixels
     of arc; the angular step for a pixel arc `s` at radius `r` is `s/r` radians = `s/r * 180/PI`
     degrees. The conversion is done with integer math (no runtime float, matching Decision 15):
@@ -423,6 +424,11 @@ Recent work:
   - **Resolution note**: `CanvasDrawCurvedChar` only accepts whole-degree angles (360-entry LUT), so
     spacing is quantized to 1° (≈ `radius·0.0175` px of jitter — imperceptible at typical radii). Sub-
     degree spacing would need a fractional-angle curved-char variant.
+  - **Orientation parameter** (`TextOrientation` enum, `Canvas.h`): `TEXT_ORIENTATION_INWARDS` (the
+    original behavior — glyph tangent at `angle + 90`, text advances clockwise) or
+    `TEXT_ORIENTATION_OUTWARDS` (glyph flipped 180° at `angle + 270`, text advances counter-clockwise).
+    Both `CanvasDrawCurvedChar` and `CanvasDrawCurvedText` take it (after `startAngle`, before `font`,
+    so the trailing `foregroundColor`/`backgroundColor` pair stays consistent with the other draw APIs).
   - Builds and links clean on RP2040; **validated on hardware** — text follows the rim correctly.
     No build-system changes (lives in the shared `Canvas.c`).
 - **Added `CanvasDrawCurvedChar` to the Canvas module** (`src/lib/GUI/Canvas.c`, prototype in
@@ -430,7 +436,8 @@ Recent work:
   `radius` around `(xCenter, yCenter)` at a whole-degree `startAngle`, with the glyph rotated so its
   baseline stays tangent to the circle border (text that follows the round panel's rim). Signature:
   `void CanvasDrawCurvedChar(const char ASCIIChar, UWORD xCenter, UWORD yCenter, UWORD radius,
-  UWORD startAngle, sFONT* font, UWORD foregroundColor, UWORD backgroundColor)` — parameter order
+  UWORD startAngle, TextOrientation orientation, sFONT* font, UWORD foregroundColor,
+  UWORD backgroundColor)` — parameter order
   leads with the char then the geometric placement values so a future `CanvasDrawCurvedText` /
   `CanvasDrawCurvedNumber` can loop over characters by advancing `startAngle` (those helpers are
   out of scope here). It reuses the existing 1bpp `sFONT` glyphs (Font8/12/16/20/24), writes every
@@ -454,6 +461,9 @@ Recent work:
     (this was a real bug, fixed). Upright text therefore occurs at `startAngle == 270` (top of the
     circle, horizontal tangent); at `startAngle == 0` the glyph is rotated 90° (baseline runs vertically
     down the right side).
+  - **Orientation (`TextOrientation`)**: `TEXT_ORIENTATION_INWARDS` (default/original) orients the
+    glyph tangent at `angle + 90`; `TEXT_ORIENTATION_OUTWARDS` flips it 180° (`angle + 270`). In the
+    text helper, OUTWARDS also reverses the per-glyph advance to counter-clockwise.
   - **Known nuance (Req 3.4)**: at `startAngle == 270` the glyph matches upright `CanvasDrawChar`
     *except* for a ±1-pixel center seam on fonts with an even Width or Height — an inherent
     consequence of round-half-away rotation about a half-integer geometric center (Req 3.3). All five

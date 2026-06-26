@@ -104,7 +104,7 @@ gui.ll/
 │   ├── lib/
 │   │   ├── Helper/
 │   │   │   ├── FileHelper.c        # SD card mount / open / close (FatFS)
-│   │   │   └── PNGHelper.c         # PNG decode + LCD streaming (libpng)
+│   │   │   └── Trigonometry.c      # Integer Q16.16 cos/sin LUT (used by curved text)
 │   │   ├── Platform/
 │   │   │   ├── RP2040/             # HAL, SPI, DiskIO, RTC (Pico SDK)
 │   │   │   └── ESP32/              # HAL, SPI, DiskIO, RTC (ESP-IDF)
@@ -127,7 +127,7 @@ gui.ll/
 
 ### Platform abstraction
 
-All hardware-specific code lives under `src/lib/Platform/<PLATFORM>/`. The application layer (`FileHelper`, `PNGHelper`, `Sample.c`) calls abstract functions — `DigitalWrite`, `SPIWriteByte`, `Delay`, etc. — defined in each platform's `HAL.c`. CMake `include_directories` points to the active platform folder at build time, so `#include "HAL.c"` resolves to the correct implementation with no `#ifdef` scattered through application code.
+All hardware-specific code lives under `src/lib/Platform/<PLATFORM>/`. The application layer (`FileHelper`, `Sample.c`) calls abstract functions — `DigitalWrite`, `SPIWriteByte`, `Delay`, etc. — defined in each platform's `HAL.c`. CMake `include_directories` points to the active platform folder at build time, so `#include "HAL.h"` resolves to the correct implementation with no `#ifdef` scattered through application code.
 
 ### Entry point
 
@@ -149,7 +149,7 @@ The `Canvas` module writes directly to the LCD without requiring a full framebuf
 
 ```c
 // Canvas setup
-CanvasNewImage(buffer, 240, 240, ROTATE_0, WHITE);
+CanvasNewImage(buffer, 240, 240, ROTATE_0);
 CanvasClear(BLACK);
 
 // Geometry
@@ -162,30 +162,48 @@ CanvasDrawCircle(120, 120, 60, GREEN, PIXEL_SIZE_1X1, DRAW_FILL_STYLE_FULL);
 CanvasDrawText(20, 20, "Hello!", &Font16, WHITE, BLACK);
 CanvasDrawNum(20, 50, 3.14, &Font12, 2, YELLOW, BLACK);
 CanvasDrawTime(10, 200, &dateTime, &Font12, WHITE, BLACK);
+
+// Curved text — placed on a circle (radius, startAngle in whole degrees, 0° = 3 o'clock,
+// increasing clockwise) with the glyph kept tangent to the border. A single character or a
+// whole string (which advances the angle per glyph automatically):
+CanvasDrawCurvedChar('A', 120, 120, 100, 270, TEXT_ORIENTATION_INWARDS, &Font20, WHITE, TRANSPARENT);
+CanvasDrawCurvedText("Hello, World!", 120, 120, 100, 250, TEXT_ORIENTATION_OUTWARDS, &Font20, WHITE, TRANSPARENT);
 ```
 
 Available colors: `WHITE`, `BLACK`, `RED`, `GREEN`, `BLUE`, `YELLOW`, `CYAN`, `MAGENTA`, `GRAY`, and more.
 Pixel sizes: `PIXEL_SIZE_1X1` through `PIXEL_SIZE_8X8`.
 Line styles: `LINE_STYLE_SOLID`, `LINE_STYLE_DOTTED`.
 Fill modes: `DRAW_FILL_STYLE_EMPTY`, `DRAW_FILL_STYLE_FULL`.
+Curved-text orientation: `TEXT_ORIENTATION_INWARDS` (advances clockwise) or `TEXT_ORIENTATION_OUTWARDS` (glyph flipped, advances counter-clockwise) — ideal for labels following the round display's rim. Pass `TRANSPARENT` as the background to draw only the glyph pixels over an existing image.
 
 ---
 
 ## 🖼️ PNG Rendering from SD Card
 
-PNG files are decoded with libpng and written to the display row by row. Memory usage is bounded to a single decoded row at a time — the full image never needs to fit in RAM.
+PNG files are decoded with libpng into the canvas RAM buffer, then blitted to the display in a single
+transfer — so the image appears instantly without visible row-by-row scanning. Memory usage is bounded
+to a single decoded row at a time; the full image never needs to fit in RAM beyond the canvas texture.
 
 ```c
+UBYTE texture[240 * 240 * 2]; // RGB565 framebuffer
 FIL file;
+
+CanvasNewImage(texture, 240, 240, ROTATE_0);
+CanvasSetScale(65);
 
 if (MountSdCard()
     && SelectActiveDrive()
     && OpenFile(&file, "image.png")) {
-    DisplayPng(&file);
+    CanvasDrawPng(&file);
     CloseFile(&file);
 }
 
 UnMountSdCard();
+
+// Optionally draw text/shapes over the decoded image before blitting:
+CanvasDrawText(20, 20, "Hello!", &Font16, WHITE, TRANSPARENT);
+
+LCDRenderTexture(texture);
 ```
 
 ---

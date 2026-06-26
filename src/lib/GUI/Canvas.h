@@ -33,6 +33,13 @@ typedef enum {
     FLIP_ORIGIN = 0x03,
 } Flip;
 
+/* Facing of curved text: INWARDS reads with the baseline on the inner side of the
+ * arc and advances clockwise; OUTWARDS flips the glyph and advances counter-clockwise. */
+typedef enum {
+    TEXT_ORIENTATION_INWARDS = 0,
+    TEXT_ORIENTATION_OUTWARDS,
+} TextOrientation;
+
 /* converts RGB to RGB565 */
 #define RGB_COLOR(r, g, b) \
     (UWORD)(((r << 8) & 0xF800) | ((g << 3) & 0x07E0) | ((b >> 3) & 0x001F))
@@ -122,10 +129,10 @@ void CanvasDrawCircle(UWORD xCenter, UWORD yCenter, UWORD radius,
 void CanvasDrawChar(UWORD xPoint, UWORD yPoint, const char ASCIIChar,
     sFONT* font, UWORD foregroundColor, UWORD backgroundColor);
 void CanvasDrawCurvedChar(const char ASCIIChar, UWORD xCenter, UWORD yCenter,
-    UWORD radius, UWORD startAngle, sFONT* font,
+    UWORD radius, UWORD startAngle, TextOrientation orientation, sFONT* font,
     UWORD foregroundColor, UWORD backgroundColor);
 void CanvasDrawCurvedText(const char *text, UWORD xCenter, UWORD yCenter,
-    UWORD radius, UWORD startAngle, sFONT* font,
+    UWORD radius, UWORD startAngle, TextOrientation orientation, sFONT* font,
     UWORD foregroundColor, UWORD backgroundColor);
 void CanvasDrawText(UWORD xStart, UWORD yStart, const char * text,
     sFONT* font, UWORD foregroundColor, UWORD backgroundColor);
