@@ -19,7 +19,7 @@ void app_entry(void) {
     UWORD *texture = (UWORD *) malloc(imageSize);
     if (texture == NULL)
         exit(EXIT_FAILURE);
-    CanvasNewImage((UBYTE *)texture, LCD.WIDTH, LCD.HEIGHT, ROTATE_0, BLACK);
+    CanvasNewImage((UBYTE *)texture, LCD.WIDTH, LCD.HEIGHT, ROTATE_0);
     CanvasSetScale(65);
 
     FIL file;

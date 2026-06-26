@@ -1,20 +1,15 @@
 #include "Canvas.h"
 #include <png.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h> //memset()
-#include "ff.h"
 #include "Debug.h"
 
 Canvas canvas;
 
-void CanvasNewImage(UBYTE *image, UWORD width, UWORD height, UWORD rotate, UWORD color) {
+void CanvasNewImage(UBYTE *image, UWORD width, UWORD height, UWORD rotate) {
     canvas.Image = NULL;
     canvas.Image = image;
 
     canvas.WidthMemory = width;
     canvas.HeightMemory = height;
-    canvas.Color = color;
     canvas.Scale = 2;
 
     canvas.WidthByte = (width % 8 == 0)? (width / 8 ): (width / 8 + 1);
@@ -38,11 +33,9 @@ void CanvasSelectImage(UBYTE *image) {
 
 void CanvasSetRotate(UWORD rotate) {
     if (rotate == ROTATE_0 || rotate == ROTATE_90 || rotate == ROTATE_180 || rotate == ROTATE_270) {
-        // Debug("Set image Rotate %d\r\n", rotate);
+        SHOWDEBUG("Set image Rotate %d\r\n", rotate);
         canvas.Rotate = rotate;
-    } //else {
-        // Debug("rotate = 0, 90, 180, 270\r\n");
-    // }
+    }
 }
 
 void CanvasSetScale(UBYTE scale) {
@@ -63,48 +56,40 @@ void CanvasSetScale(UBYTE scale) {
             canvas.Scale = scale;
             canvas.WidthByte = canvas.WidthMemory * 2;
         } break;
-        default: {
-            // Debug("Set Scale Input parameter error\r\n");
-            // Debug("Scale Only support: 2 4 16 65\r\n");
-        }
     }
 }
 
-void CanvasSetMirroring(UBYTE mirror) {
-    if (mirror == FLIP_NONE || mirror == FLIP_HORIZONTAL ||
-        mirror == FLIP_VERTICAL || mirror == FLIP_ORIGIN) {
-        // Debug("mirror image x:%s, y:%s\r\n", (mirror & 0x01) ? "mirror" : "none", ((mirror >> 1) & 0x01) ? "mirror" : "none");
-        canvas.Flip = mirror;
-    }// else {
-        // Debug("mirror should be FLIP_NONE, FLIP_HORIZONTAL, \
-        // FLIP_VERTICAL or FLIP_ORIGIN\r\n");
-    // }
+void CanvasFlipTexture(UBYTE flipDirection) {
+    if (flipDirection == FLIP_NONE || flipDirection == FLIP_HORIZONTAL ||
+        flipDirection == FLIP_VERTICAL || flipDirection == FLIP_ORIGIN) {
+        canvas.Flip = flipDirection;
+    }
 }
 
 void CanvasSetPixel(UWORD xPoint, UWORD yPoint, UWORD color) {
     if (xPoint > canvas.Width || yPoint > canvas.Height) {
-        // Debug("Exceeding display boundaries\r\n");
+        SHOWDEBUG("Exceeding texture boundaries\r\n");
         return;
     }
 
-    UWORD X, Y;
+    UWORD x, y;
 
     switch (canvas.Rotate) {
         case 0:
-            X = xPoint;
-            Y = yPoint;
+            x = xPoint;
+            y = yPoint;
             break;
         case 90:
-            X = canvas.WidthMemory - yPoint - 1;
-            Y = xPoint;
+            x = canvas.WidthMemory - yPoint - 1;
+            y = xPoint;
             break;
         case 180:
-            X = canvas.WidthMemory - xPoint - 1;
-            Y = canvas.HeightMemory - yPoint - 1;
+            x = canvas.WidthMemory - xPoint - 1;
+            y = canvas.HeightMemory - yPoint - 1;
             break;
         case 270:
-            X = yPoint;
-            Y = canvas.HeightMemory - xPoint - 1;
+            x = yPoint;
+            y = canvas.HeightMemory - xPoint - 1;
             break;
         default: return;
     }
@@ -113,70 +98,69 @@ void CanvasSetPixel(UWORD xPoint, UWORD yPoint, UWORD color) {
         case FLIP_NONE:
             break;
         case FLIP_HORIZONTAL:
-            X = canvas.WidthMemory - X - 1;
+            x = canvas.WidthMemory - x - 1;
             break;
         case FLIP_VERTICAL:
-            Y = canvas.HeightMemory - Y - 1;
+            y = canvas.HeightMemory - y - 1;
             break;
         case FLIP_ORIGIN:
-            X = canvas.WidthMemory - X - 1;
-            Y = canvas.HeightMemory - Y - 1;
+            x = canvas.WidthMemory - x - 1;
+            y = canvas.HeightMemory - y - 1;
             break;
         default: return;
     }
 
-    if (X > canvas.WidthMemory || Y > canvas.HeightMemory) {
-        // Debug("Exceeding display boundaries\r\n");
+    if (x > canvas.WidthMemory || y > canvas.HeightMemory) {
+        SHOWDEBUG("Exceeding texture memory boundaries\r\n");
         return;
     }
 
     if (canvas.Scale == 2) {
-        UDOUBLE Addr = X / 8 + Y * canvas.WidthByte;
-        UBYTE Rdata = canvas.Image[Addr];
+        UDOUBLE addr = x / 8 + y * canvas.WidthByte;
+        UBYTE rData = canvas.Image[addr];
         if ((color & 0xff) == BLACK)
-            canvas.Image[Addr] = Rdata & ~(0x80 >> (X % 8));
+            canvas.Image[addr] = rData & ~(0x80 >> (x % 8));
         else
-            canvas.Image[Addr] = Rdata | (0x80 >> (X % 8));
+            canvas.Image[addr] = rData | (0x80 >> (x % 8));
     } else if (canvas.Scale == 4) {
-        UDOUBLE Addr = X / 4 + Y * canvas.WidthByte;
+        UDOUBLE addr = x / 4 + y * canvas.WidthByte;
         color = color % 4; //Guaranteed color scale is 4  --- 0~3
-        UBYTE Rdata = canvas.Image[Addr];
-
-        Rdata = Rdata & (~(0xC0 >> ((X % 4) * 2)));
-        canvas.Image[Addr] = Rdata | ((color << 6) >> ((X % 4) * 2));
+        UBYTE rData = canvas.Image[addr];
+        rData = rData & (~(0xC0 >> ((x % 4) * 2)));
+        canvas.Image[addr] = rData | ((color << 6) >> ((x % 4) * 2));
     } else if (canvas.Scale == 16) {
-        UDOUBLE Addr = X / 2 + Y * canvas.WidthByte;
-        UBYTE Rdata = canvas.Image[Addr];
+        UDOUBLE addr = x / 2 + y * canvas.WidthByte;
+        UBYTE rData = canvas.Image[addr];
         color = color % 16;
-        Rdata = Rdata & (~(0xf0 >> ((X % 2) * 4)));
-        canvas.Image[Addr] = Rdata | ((color << 4) >> ((X % 2) * 4));
+        rData = rData & (~(0xf0 >> ((x % 2) * 4)));
+        canvas.Image[addr] = rData | ((color << 4) >> ((x % 2) * 4));
     } else if (canvas.Scale == 65) {
-        UDOUBLE Addr = X * 2 + Y * canvas.WidthByte;
-        canvas.Image[Addr] = 0xff & (color >> 8);
-        canvas.Image[Addr + 1] = 0xff & color;
+        UDOUBLE addr = x * 2 + y * canvas.WidthByte;
+        canvas.Image[addr] = 0xff & (color >> 8);
+        canvas.Image[addr + 1] = 0xff & color;
     }
 }
 
 void CanvasClear(UWORD color) {
     if (canvas.Scale == 2 || canvas.Scale == 4) {
-        for (UWORD Y = 0; Y < canvas.HeightByte; Y++) {
-            for (UWORD X = 0; X < canvas.WidthByte; X++) {//8 pixel =  1 byte
-                UDOUBLE Addr = X + Y * canvas.WidthByte;
+        for (UWORD y = 0; y < canvas.HeightByte; y++) {
+            for (UWORD x = 0; x < canvas.WidthByte; x++) {//8 pixel =  1 byte
+                UDOUBLE Addr = x + y * canvas.WidthByte;
                 canvas.Image[Addr] = color;
             }
         }
     } else if (canvas.Scale == 16) {
-        for (UWORD Y = 0; Y < canvas.HeightByte; Y++) {
-            for (UWORD X = 0; X < canvas.WidthByte; X++ ) {//8 pixel =  1 byte
-                UDOUBLE Addr = X + Y * canvas.WidthByte;
+        for (UWORD y = 0; y < canvas.HeightByte; y++) {
+            for (UWORD x = 0; x < canvas.WidthByte; x++ ) {//8 pixel =  1 byte
+                UDOUBLE Addr = x + y * canvas.WidthByte;
                 color = color & 0x0f;
                 canvas.Image[Addr] = (color << 4) | color;
             }
         }
     } else if (canvas.Scale == 65) {
-        for (UWORD Y = 0; Y < canvas.HeightByte; Y++) {
-            for (UWORD X = 0; X < canvas.WidthByte; X++) {//8 pixel =  1 byte
-                UDOUBLE Addr = X * 2 + Y * canvas.WidthByte;
+        for (UWORD y = 0; y < canvas.HeightByte; y++) {
+            for (UWORD x = 0; x < canvas.WidthByte; x++) {//8 pixel =  1 byte
+                UDOUBLE Addr = x * 2 + y * canvas.WidthByte;
                 canvas.Image[Addr] = 0xff & (color >> 8);
                 canvas.Image[Addr+1] = 0xff & color;
             }
@@ -185,10 +169,10 @@ void CanvasClear(UWORD color) {
 }
 
 void CanvasClearArea(UWORD xStart, UWORD yStart, UWORD xEnd, UWORD yEnd, UWORD color) {
-    UWORD X, Y;
-    for (Y = yStart; Y < yEnd; Y++) {
-        for (X = xStart; X < xEnd; X++) {//8 pixel =  1 byte
-            CanvasSetPixel(X, Y, color);
+    UWORD x, y;
+    for (y = yStart; y < yEnd; y++) {
+        for (x = xStart; x < xEnd; x++) {//8 pixel =  1 byte
+            CanvasSetPixel(x, y, color);
         }
     }
 }
@@ -196,9 +180,7 @@ void CanvasClearArea(UWORD xStart, UWORD yStart, UWORD xEnd, UWORD yEnd, UWORD c
 void CanvasDrawPoint(UWORD xPoint, UWORD yPoint, UWORD color,
     PixelSize pixelSize, PixelFillStyle pixelFillStyle) {
     if (xPoint > canvas.Width || yPoint > canvas.Height) {
-        // Debug("CanvasDrawPoint Input exceeds the normal display range\r\n");
-        // printf("xPoint = %d , canvas.Width = %d  \r\n ",xPoint,canvas.Width);
-        // printf("yPoint = %d , canvas.Height = %d  \r\n ",yPoint,canvas.Height);
+        SHOWDEBUG("Exceeding boundaries: x:%d, y:%d, width:%d, height:%d\r\n ", xPoint, yPoint, canvas.Width, canvas.Height);
         return;
     }
 
@@ -208,7 +190,6 @@ void CanvasDrawPoint(UWORD xPoint, UWORD yPoint, UWORD color,
             for (YDir_Num = 0; YDir_Num < 2 * pixelSize - 1; YDir_Num++) {
                 if (xPoint + XDir_Num - pixelSize < 0 || yPoint + YDir_Num - pixelSize < 0)
                     break;
-                // // printf("x = %d, y = %d\r\n", xPoint + XDir_Num - pixelSize, yPoint + YDir_Num - pixelSize);
                 CanvasSetPixel(xPoint + XDir_Num - pixelSize, yPoint + YDir_Num - pixelSize, color);
             }
         }
@@ -225,7 +206,7 @@ void CanvasDrawLine(UWORD xStart, UWORD yStart, UWORD xEnd, UWORD yEnd,
     UWORD color, PixelSize pixelSize, LineStyle lineStyle) {
     if (xStart > canvas.Width || yStart > canvas.Height ||
         xEnd > canvas.Width || yEnd > canvas.Height) {
-        // Debug("CanvasDrawLine Input exceeds the normal display range\r\n");
+        SHOWDEBUG("Line exceeds boundaries\r\n");
         return;
     }
 
@@ -235,39 +216,37 @@ void CanvasDrawLine(UWORD xStart, UWORD yStart, UWORD xEnd, UWORD yEnd,
     int dy = (int)yEnd - (int)yStart <= 0 ? yEnd - yStart : yStart - yEnd;
 
     // Increment direction, 1 is positive, -1 is counter;
-    int XAddway = xStart < xEnd ? 1 : -1;
-    int YAddway = yStart < yEnd ? 1 : -1;
+    int xIncDirection = xStart < xEnd ? 1 : -1;
+    int yIncDirection = yStart < yEnd ? 1 : -1;
 
     //Cumulative error
-    int Esp = dx + dy;
-    char Dotted_Len = 0;
+    int esp = dx + dy;
+    char dottedLen = 0;
 
     for (;;) {
-        Dotted_Len++;
-        //Painted dotted line, 2 point is really virtual
-        if (lineStyle == LINE_STYLE_DOTTED && Dotted_Len % 3 == 0) {
-            //Debug("LINE_DOTTED\r\n");
+        dottedLen++;
+        if (lineStyle == LINE_STYLE_DOTTED && dottedLen % 3 == 0) {
             if(color)
                 CanvasDrawPoint(xPoint, yPoint, BLACK, pixelSize, DEFAULT_PIXEL_FILL_STYLE);
             else
                 CanvasDrawPoint(xPoint, yPoint, WHITE, pixelSize, DEFAULT_PIXEL_FILL_STYLE);
-            Dotted_Len = 0;
+            dottedLen = 0;
         } else {
             CanvasDrawPoint(xPoint, yPoint, color, pixelSize, DEFAULT_PIXEL_FILL_STYLE);
         }
 
-        if (2 * Esp >= dy) {
+        if (2 * esp >= dy) {
             if (xPoint == xEnd)
                 break;
-            Esp += dy;
-            xPoint += XAddway;
+            esp += dy;
+            xPoint += xIncDirection;
         }
 
-        if (2 * Esp <= dx) {
+        if (2 * esp <= dx) {
             if (yPoint == yEnd)
                 break;
-            Esp += dx;
-            yPoint += YAddway;
+            esp += dx;
+            yPoint += yIncDirection;
         }
     }
 }
@@ -276,7 +255,7 @@ void CanvasDrawRectangle(UWORD xStart, UWORD yStart, UWORD xEnd, UWORD yEnd,
     UWORD color, PixelSize lineWidth, DrawFillStyle rectangleFillStyle) {
     if (xStart > canvas.Width || yStart > canvas.Height ||
         xEnd > canvas.Width || yEnd > canvas.Height) {
-        // Debug("Input exceeds the normal display range\r\n");
+        SHOWDEBUG("Rectangle exceeds texture boundaries\r\n");
         return;
     }
 
@@ -296,59 +275,59 @@ void CanvasDrawRectangle(UWORD xStart, UWORD yStart, UWORD xEnd, UWORD yEnd,
 void CanvasDrawCircle(UWORD xCenter, UWORD yCenter, UWORD radius,
     UWORD color, PixelSize lineWidth, DrawFillStyle circleFillStyle) {
     if (xCenter > canvas.Width || yCenter >= canvas.Height) {
-        // Debug("CanvasDrawCircle Input exceeds the normal display range\r\n");
+        SHOWDEBUG("Circle exceeds texture boundaries\r\n");
         return;
     }
 
     //Draw a circle from(0, R) as a starting point
-    int16_t XCurrent, YCurrent;
-    XCurrent = 0;
-    YCurrent = radius;
+    int16_t xCurrent, yCurrent;
+    xCurrent = 0;
+    yCurrent = radius;
 
-    //Cumulative error,judge the next point of the logo
-    int16_t Esp = 3 - (radius << 1 );
+    //Cumulative error
+    int16_t esp = 3 - (radius << 1 );
 
     int16_t sCountY;
     if (circleFillStyle == DRAW_FILL_STYLE_FULL) {
-        while (XCurrent <= YCurrent ) { //Realistic circles
-            for (sCountY = XCurrent; sCountY <= YCurrent; sCountY ++ ) {
-                CanvasDrawPoint(xCenter + XCurrent, yCenter + sCountY, color, DEFAULT_PIXEL_SIZE, DEFAULT_PIXEL_FILL_STYLE);//1
-                CanvasDrawPoint(xCenter - XCurrent, yCenter + sCountY, color, DEFAULT_PIXEL_SIZE, DEFAULT_PIXEL_FILL_STYLE);//2
-                CanvasDrawPoint(xCenter - sCountY, yCenter + XCurrent, color, DEFAULT_PIXEL_SIZE, DEFAULT_PIXEL_FILL_STYLE);//3
-                CanvasDrawPoint(xCenter - sCountY, yCenter - XCurrent, color, DEFAULT_PIXEL_SIZE, DEFAULT_PIXEL_FILL_STYLE);//4
-                CanvasDrawPoint(xCenter - XCurrent, yCenter - sCountY, color, DEFAULT_PIXEL_SIZE, DEFAULT_PIXEL_FILL_STYLE);//5
-                CanvasDrawPoint(xCenter + XCurrent, yCenter - sCountY, color, DEFAULT_PIXEL_SIZE, DEFAULT_PIXEL_FILL_STYLE);//6
-                CanvasDrawPoint(xCenter + sCountY, yCenter - XCurrent, color, DEFAULT_PIXEL_SIZE, DEFAULT_PIXEL_FILL_STYLE);//7
-                CanvasDrawPoint(xCenter + sCountY, yCenter + XCurrent, color, DEFAULT_PIXEL_SIZE, DEFAULT_PIXEL_FILL_STYLE);
+        while (xCurrent <= yCurrent ) { //Realistic circles
+            for (sCountY = xCurrent; sCountY <= yCurrent; sCountY ++ ) {
+                CanvasDrawPoint(xCenter + xCurrent, yCenter + sCountY, color, DEFAULT_PIXEL_SIZE, DEFAULT_PIXEL_FILL_STYLE);//1
+                CanvasDrawPoint(xCenter - xCurrent, yCenter + sCountY, color, DEFAULT_PIXEL_SIZE, DEFAULT_PIXEL_FILL_STYLE);//2
+                CanvasDrawPoint(xCenter - sCountY, yCenter + xCurrent, color, DEFAULT_PIXEL_SIZE, DEFAULT_PIXEL_FILL_STYLE);//3
+                CanvasDrawPoint(xCenter - sCountY, yCenter - xCurrent, color, DEFAULT_PIXEL_SIZE, DEFAULT_PIXEL_FILL_STYLE);//4
+                CanvasDrawPoint(xCenter - xCurrent, yCenter - sCountY, color, DEFAULT_PIXEL_SIZE, DEFAULT_PIXEL_FILL_STYLE);//5
+                CanvasDrawPoint(xCenter + xCurrent, yCenter - sCountY, color, DEFAULT_PIXEL_SIZE, DEFAULT_PIXEL_FILL_STYLE);//6
+                CanvasDrawPoint(xCenter + sCountY, yCenter - xCurrent, color, DEFAULT_PIXEL_SIZE, DEFAULT_PIXEL_FILL_STYLE);//7
+                CanvasDrawPoint(xCenter + sCountY, yCenter + xCurrent, color, DEFAULT_PIXEL_SIZE, DEFAULT_PIXEL_FILL_STYLE);
             }
 
-            if (Esp < 0 )
-                Esp += 4 * XCurrent + 6;
+            if (esp < 0 )
+                esp += 4 * xCurrent + 6;
             else {
-                Esp += 10 + 4 * (XCurrent - YCurrent );
-                YCurrent --;
+                esp += 10 + 4 * (xCurrent - yCurrent );
+                yCurrent --;
             }
 
-            XCurrent ++;
+            xCurrent ++;
         }
-    } else { //Draw a hollow circle
-        while (XCurrent <= YCurrent ) {
-            CanvasDrawPoint(xCenter + XCurrent, yCenter + YCurrent, color, lineWidth, DEFAULT_PIXEL_FILL_STYLE);//1
-            CanvasDrawPoint(xCenter - XCurrent, yCenter + YCurrent, color, lineWidth, DEFAULT_PIXEL_FILL_STYLE);//2
-            CanvasDrawPoint(xCenter - YCurrent, yCenter + XCurrent, color, lineWidth, DEFAULT_PIXEL_FILL_STYLE);//3
-            CanvasDrawPoint(xCenter - YCurrent, yCenter - XCurrent, color, lineWidth, DEFAULT_PIXEL_FILL_STYLE);//4
-            CanvasDrawPoint(xCenter - XCurrent, yCenter - YCurrent, color, lineWidth, DEFAULT_PIXEL_FILL_STYLE);//5
-            CanvasDrawPoint(xCenter + XCurrent, yCenter - YCurrent, color, lineWidth, DEFAULT_PIXEL_FILL_STYLE);//6
-            CanvasDrawPoint(xCenter + YCurrent, yCenter - XCurrent, color, lineWidth, DEFAULT_PIXEL_FILL_STYLE);//7
-            CanvasDrawPoint(xCenter + YCurrent, yCenter + XCurrent, color, lineWidth, DEFAULT_PIXEL_FILL_STYLE);//0
+    } else {
+        while (xCurrent <= yCurrent ) {
+            CanvasDrawPoint(xCenter + xCurrent, yCenter + yCurrent, color, lineWidth, DEFAULT_PIXEL_FILL_STYLE);//1
+            CanvasDrawPoint(xCenter - xCurrent, yCenter + yCurrent, color, lineWidth, DEFAULT_PIXEL_FILL_STYLE);//2
+            CanvasDrawPoint(xCenter - yCurrent, yCenter + xCurrent, color, lineWidth, DEFAULT_PIXEL_FILL_STYLE);//3
+            CanvasDrawPoint(xCenter - yCurrent, yCenter - xCurrent, color, lineWidth, DEFAULT_PIXEL_FILL_STYLE);//4
+            CanvasDrawPoint(xCenter - xCurrent, yCenter - yCurrent, color, lineWidth, DEFAULT_PIXEL_FILL_STYLE);//5
+            CanvasDrawPoint(xCenter + xCurrent, yCenter - yCurrent, color, lineWidth, DEFAULT_PIXEL_FILL_STYLE);//6
+            CanvasDrawPoint(xCenter + yCurrent, yCenter - xCurrent, color, lineWidth, DEFAULT_PIXEL_FILL_STYLE);//7
+            CanvasDrawPoint(xCenter + yCurrent, yCenter + xCurrent, color, lineWidth, DEFAULT_PIXEL_FILL_STYLE);//0
 
-            if (Esp < 0 )
-                Esp += 4 * XCurrent + 6;
+            if (esp < 0 )
+                esp += 4 * xCurrent + 6;
             else {
-                Esp += 10 + 4 * (XCurrent - YCurrent );
-                YCurrent --;
+                esp += 10 + 4 * (xCurrent - yCurrent );
+                yCurrent --;
             }
-            XCurrent ++;
+            xCurrent ++;
         }
     }
 }
@@ -358,7 +337,7 @@ void CanvasDrawChar(UWORD xPoint, UWORD yPoint, const char ASCIIChar,
     UWORD Page, Column;
 
     if (xPoint > canvas.Width || yPoint > canvas.Height) {
-        // Debug("CanvasDrawChar Input exceeds the normal display range\r\n");
+        SHOWDEBUG("Char exceeds texture boundaries\r\n");
         return;
     }
 
@@ -367,8 +346,7 @@ void CanvasDrawChar(UWORD xPoint, UWORD yPoint, const char ASCIIChar,
 
     for (Page = 0; Page < font->Height; Page ++ ) {
         for (Column = 0; Column < font->Width; Column ++ ) {
-            //To determine whether the font background color and screen background color is consistent
-            if (FONT_BACKGROUND == backgroundColor) { //this process is to speed up the scan
+            if (FONT_BACKGROUND == backgroundColor) {
                 if (*ptr & (0x80 >> (Column % 8)))
                     CanvasSetPixel(xPoint + Column, yPoint + Page, foregroundColor);
             } else {
@@ -395,7 +373,7 @@ void CanvasDrawText(UWORD xStart, UWORD yStart, const char * text,
     UWORD yPoint = yStart;
 
     if (xStart > canvas.Width || yStart > canvas.Height) {
-        // Debug("CanvasDrawText Input exceeds the normal display range\r\n");
+        SHOWDEBUG("Text exceeds texture boundaries\r\n");
         return;
     }
 
@@ -413,12 +391,8 @@ void CanvasDrawText(UWORD xStart, UWORD yStart, const char * text,
         }
 
         CanvasDrawChar(xPoint, yPoint, * text, font, foregroundColor, backgroundColor);
-
-        //The next character of the address
-        text++;
-
-        //The next word of the abscissa increases the font of the broadband
-        xPoint += font->Width;
+        text++; //The next character of the address
+        xPoint += font->Width; //The next word of the abscissa increases the font of the broadband
     }
 }
 
@@ -426,18 +400,18 @@ void CanvasDrawTextCN(UWORD xStart, UWORD yStart, const char * text, cFONT* font
     UWORD foregroundColor, UWORD backgroundColor) {
     const char* pText = text;
     int x = xStart, y = yStart;
-    int i, j, Num;
+    int i, j, num;
 
     /* Send the string character by character on EPD */
     while (*pText != 0) {
         if (*pText <= 0x7F) {  //ASCII < 126
-            for (Num = 0; Num < font->size; Num++) {
-                if (*pText== font->table[Num].index[0]) {
-                    const char* ptr = &font->table[Num].matrix[0];
+            for (num = 0; num < font->size; num++) {
+                if (*pText== font->table[num].index[0]) {
+                    const char* ptr = &font->table[num].matrix[0];
 
                     for (j = 0; j < font->Height; j++) {
                         for (i = 0; i < font->Width; i++) {
-                            if (FONT_BACKGROUND == backgroundColor) { //this process is to speed up the scan
+                            if (FONT_BACKGROUND == backgroundColor) {
                                 if (*ptr & (0x80 >> (i % 8))) {
                                     CanvasSetPixel(x + i, y + j, foregroundColor);
                                 }
@@ -468,13 +442,13 @@ void CanvasDrawTextCN(UWORD xStart, UWORD yStart, const char * text, cFONT* font
             /* Decrement the column position by 16 */
             x += font->ASCII_Width;
         } else {        //Chinese
-            for (Num = 0; Num < font->size; Num++) {
-                if ((*pText== font->table[Num].index[0]) && (*(pText + 1) == font->table[Num].index[1])) {
-                    const char* ptr = &font->table[Num].matrix[0];
+            for (num = 0; num < font->size; num++) {
+                if ((*pText== font->table[num].index[0]) && (*(pText + 1) == font->table[num].index[1])) {
+                    const char* ptr = &font->table[num].matrix[0];
 
                     for (j = 0; j < font->Height; j++) {
                         for (i = 0; i < font->Width; i++) {
-                            if (FONT_BACKGROUND == backgroundColor) { //this process is to speed up the scan
+                            if (FONT_BACKGROUND == backgroundColor) {
                                 if (*ptr & (0x80 >> (i % 8))) {
                                     CanvasSetPixel(x + i, y + j, foregroundColor);
                                 }
@@ -500,15 +474,13 @@ void CanvasDrawTextCN(UWORD xStart, UWORD yStart, const char * text, cFONT* font
                 }
             }
 
-            /* Point on the next character */
-            pText += 2;
-            /* Decrement the column position by 16 */
-            x += font->Width;
+            pText += 2; /* Point on the next character */
+            x += font->Width; /* Decrement the column position by 16 */
         }
     }
 }
 
-#define  ARRAY_LEN 255
+#define ARRAY_LEN 255
 void CanvasDrawNum(UWORD xPoint, UWORD yPoint, double number,
     sFONT* font, UWORD digit, UWORD foregroundColor, UWORD backgroundColor) {
     int16_t numberBit = 0, textBit = 0;
@@ -519,7 +491,7 @@ void CanvasDrawNum(UWORD xPoint, UWORD yPoint, double number,
     uint8_t i;
 
     if (xPoint > canvas.Width || yPoint > canvas.Height) {
-        // Debug("Paint_DisNum Input exceeds the normal display range\r\n");
+        SHOWDEBUG("Number exceeds texture boundaries\r\n");
         return;
     }
 
@@ -565,64 +537,50 @@ void CanvasDrawNum(UWORD xPoint, UWORD yPoint, double number,
 void CanvasDrawTime(UWORD xStart, UWORD yStart, DateTime *pTime, sFONT* font,
     UWORD foregroundColor, UWORD backgroundColor) {
     uint8_t value[10] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9'};
-    UWORD Dx = font->Width;
+    UWORD dX = font->Width;
     CanvasDrawChar(xStart, yStart, value[pTime->Hour / 10], font, foregroundColor, backgroundColor);
-    CanvasDrawChar(xStart + Dx, yStart, value[pTime->Hour % 10], font, foregroundColor, backgroundColor);
-    CanvasDrawChar(xStart + Dx  + Dx / 4 + Dx / 2, yStart, ':', font, foregroundColor, backgroundColor);
-    CanvasDrawChar(xStart + Dx * 2 + Dx / 2, yStart, value[pTime->Min / 10], font, foregroundColor, backgroundColor);
-    CanvasDrawChar(xStart + Dx * 3 + Dx / 2, yStart, value[pTime->Min % 10], font, foregroundColor, backgroundColor);
-    CanvasDrawChar(xStart + Dx * 4 + Dx / 2 - Dx / 4, yStart, ':', font, foregroundColor, backgroundColor);
-    CanvasDrawChar(xStart + Dx * 5, yStart, value[pTime->Sec / 10], font, foregroundColor, backgroundColor);
-    CanvasDrawChar(xStart + Dx * 6, yStart, value[pTime->Sec % 10], font, foregroundColor, backgroundColor);
+    CanvasDrawChar(xStart + dX, yStart, value[pTime->Hour % 10], font, foregroundColor, backgroundColor);
+    CanvasDrawChar(xStart + dX  + dX / 4 + dX / 2, yStart, ':', font, foregroundColor, backgroundColor);
+    CanvasDrawChar(xStart + dX * 2 + dX / 2, yStart, value[pTime->Min / 10], font, foregroundColor, backgroundColor);
+    CanvasDrawChar(xStart + dX * 3 + dX / 2, yStart, value[pTime->Min % 10], font, foregroundColor, backgroundColor);
+    CanvasDrawChar(xStart + dX * 4 + dX / 2 - dX / 4, yStart, ':', font, foregroundColor, backgroundColor);
+    CanvasDrawChar(xStart + dX * 5, yStart, value[pTime->Sec / 10], font, foregroundColor, backgroundColor);
+    CanvasDrawChar(xStart + dX * 6, yStart, value[pTime->Sec % 10], font, foregroundColor, backgroundColor);
 }
 
 void CanvasDrawImage(const unsigned char *image, UWORD xStart, UWORD yStart, UWORD imageWidth, UWORD imageHeight) {
     int i, j;
-    for (j = 0; j < imageWidth; j++) {
-        for (i = 0; i < imageHeight; i++) {
-            if (xStart + i < canvas.WidthMemory && yStart + j < canvas.HeightMemory) //Exceeded part does not display
-                CanvasSetPixel(xStart + i, yStart + j, (*(image + j * imageHeight * 2 + i * 2 + 1)) << 8 | (*(image + j * imageHeight * 2 + i * 2)));
-            //Using arrays is a property of sequential storage, accessing the original array by algorithm
-            //j*imageHeight*2                Y offset
-            //i*2                     X offset
-        }
-    }
-}
-
-void CanvasDrawImage1(const unsigned char *image, UWORD xStart, UWORD yStart, UWORD imageWidth, UWORD imageHeight) {
-    int i, j;
     for (j = 0; j < imageHeight; j++) {
         for (i = 0; i < imageWidth; i++) {
-            if (xStart + i < canvas.HeightMemory  &&  yStart + j < canvas.WidthMemory) //Exceeded part does not display
+            if (xStart + i < canvas.HeightMemory && yStart + j < canvas.WidthMemory) //Exceeded part does not display
                 CanvasSetPixel(xStart + i, yStart + j, (*(image + j * imageWidth * 2 + i * 2 + 1)) << 8 | (*(image + j * imageWidth * 2 + i * 2)));
-            //Using arrays is a property of sequential storage, accessing the original array by algorithm
-            //j*imageWidth*2                Y offset
-            //i*2                     X offset
+                // j*imageWidth*2 = Y offset
+                // i*2 = X offset
         }
     }
 }
 
 void CanvasDrawBitmap(const unsigned char* imageBuffer) {
     UWORD x, y;
-    UDOUBLE Addr = 0;
+    UDOUBLE addr = 0;
 
     for (y = 0; y < canvas.HeightByte; y++) {
         for (x = 0; x < canvas.WidthByte; x++) {//8 pixel =  1 byte
-            Addr = x + y * canvas.WidthByte;
-            canvas.Image[Addr] = (unsigned char)imageBuffer[Addr];
+            addr = x + y * canvas.WidthByte;
+            canvas.Image[addr] = (unsigned char)imageBuffer[addr];
         }
     }
 }
 
 void CanvasDrawBitmapBlock(const unsigned char* imageBuffer, UBYTE region) {
     UWORD x, y;
-    UDOUBLE Addr = 0;
+    UDOUBLE addr = 0;
 
     for (y = 0; y < canvas.HeightByte; y++) {
         for (x = 0; x < canvas.WidthByte; x++) {//8 pixel =  1 byte
-            Addr = x + y * canvas.WidthByte ;
-            canvas.Image[Addr] = \
-            (unsigned char)imageBuffer[Addr+ (canvas.HeightByte)*canvas.WidthByte*(region - 1)];
+            addr = x + y * canvas.WidthByte ;
+            canvas.Image[addr] = \
+            (unsigned char)imageBuffer[addr+ (canvas.HeightByte)*canvas.WidthByte*(region - 1)];
         }
     }
 }
@@ -727,7 +685,8 @@ void CanvasDrawPng(FIL *file) {
             }
 
             /* The LCD uses RGB565 16-bits format: RRRRRGGG GGGBBBBB */
-            UWORD color = (UWORD)(((red & 0b11111000) | ((green & 0b11100000) >> 5)) << 8) | (UWORD)(((green & 0b00011100) << 3) | ((blue & 0b11111000) >> 3));
+            UWORD color = (UWORD)(((red & 0b11111000) | ((green & 0b11100000) >> 5)) << 8)
+                | (UWORD)(((green & 0b00011100) << 3) | ((blue & 0b11111000) >> 3));
             CanvasSetPixel(col, row, color);
         }
 

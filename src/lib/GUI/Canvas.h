@@ -11,7 +11,6 @@ typedef struct {
     UWORD Height;
     UWORD WidthMemory;
     UWORD HeightMemory;
-    UWORD Color;
     UWORD Rotate;
     UWORD Flip;
     UWORD WidthByte;
@@ -91,11 +90,11 @@ typedef struct {
 } DateTime;
 
 /* Drawing API — definitions in Canvas.c */
-void CanvasNewImage(UBYTE *image, UWORD width, UWORD height, UWORD rotate, UWORD color);
+void CanvasNewImage(UBYTE *image, UWORD width, UWORD height, UWORD rotate);
 void CanvasSelectImage(UBYTE *image);
 void CanvasSetRotate(UWORD rotate);
 void CanvasSetScale(UBYTE scale);
-void CanvasSetMirroring(UBYTE mirror);
+void CanvasFlipTexture(UBYTE mirror);
 void CanvasSetPixel(UWORD xPoint, UWORD yPoint, UWORD color);
 void CanvasClear(UWORD color);
 void CanvasClearArea(UWORD xStart, UWORD yStart, UWORD xEnd, UWORD yEnd, UWORD color);
@@ -119,7 +118,6 @@ void CanvasDrawTime(UWORD xStart, UWORD yStart, DateTime *pTime, sFONT* font,
     UWORD foregroundColor, UWORD backgroundColor);
 void CanvasDrawPng(FIL *file);
 void CanvasDrawImage(const unsigned char *image, UWORD xStart, UWORD yStart, UWORD imageWidth, UWORD imageHeight);
-void CanvasDrawImage1(const unsigned char *image, UWORD xStart, UWORD yStart, UWORD imageWidth, UWORD imageHeight);
 void CanvasDrawBitmap(const unsigned char* imageBuffer);
 void CanvasDrawBitmapBlock(const unsigned char* imageBuffer, UBYTE region);
 void CanvasDrawBitmapToArea(unsigned char x, unsigned char y, const unsigned char *pBitmap,
