@@ -218,6 +218,24 @@ the **public interface** of the module:
 
 ---
 
+## Testing Policy — DO NOT WRITE TESTS
+
+**Rule: do NOT write tests for this project.** Do not add unit tests, property-based tests, test
+harnesses, mocking/stub layers, or any test build system. This project intentionally has **no test
+structure** — the maintainer does not want that extra scaffolding in the repository.
+
+- Do not create or expand a `test/` directory, test sources, test Makefiles/CMake, or vendor any
+  testing library (Theft, Unity, CMocka, etc.).
+- Verification is done by **building the firmware** (RP2040 / ESP32-S3) and **running on the device**.
+  Confirm correctness with a clean compile + link and on-hardware behavior, not automated tests.
+- Any `test/` directory that may exist transiently is **not versioned** (it is git-ignored) and will
+  be deleted after on-device validation. Treat it as disposable scratch — never rely on it and never
+  reference it from project code or docs.
+- When a spec's task plan lists test tasks, treat them as **skipped/out of scope** unless the
+  maintainer explicitly asks otherwise for that session.
+
+---
+
 ## Build System
 
 ### RP2040
@@ -357,11 +375,45 @@ This prevents the git plugin from showing false "modified" files in submodules
 ## Current Status (as of last session)
 
 - **RP2040**: Builds and runs. SD card init + read confirmed working on a solid prototype.
-- **ESP32-S3**: Last confirmed `.bin` build predates the separate-compilation migration; the
-  parity changes for it are **not compile-tested**. SD path rewritten for parity but **not yet
-  hardware-tested**.
+- **ESP32-S3**: An ESP-IDF 5.3.0 environment is available locally and was used this session to do a
+  full `esp32s3` build (isolated build dir, root `sdkconfig` left untouched) — `Canvas.c` compiled and
+  `gui.ll.elf`/`.bin` linked, so the separate-compilation + curved-char changes **are now
+  compile-tested on ESP32-S3** (earlier parity changes elsewhere may still predate this). SD path
+  rewritten for parity but **not yet hardware-tested**.
 
 Recent work:
+- **Added `CanvasDrawCurvedChar` to the Canvas module** (`src/lib/GUI/Canvas.c`, prototype in
+  `Canvas.h`) — a new drawing primitive that places a single ASCII character on a circle of a given
+  `radius` around `(xCenter, yCenter)` at a whole-degree `startAngle`, with the glyph rotated so its
+  baseline stays tangent to the circle border (text that follows the round panel's rim). Signature:
+  `void CanvasDrawCurvedChar(const char ASCIIChar, UWORD xCenter, UWORD yCenter, UWORD radius,
+  UWORD startAngle, sFONT* font, UWORD foregroundColor, UWORD backgroundColor)` — parameter order
+  leads with the char then the geometric placement values so a future `CanvasDrawCurvedText` /
+  `CanvasDrawCurvedNumber` can loop over characters by advancing `startAngle` (those helpers are
+  out of scope here). It reuses the existing 1bpp `sFONT` glyphs (Font8/12/16/20/24), writes every
+  pixel through `CanvasSetPixel`, and honors the `TRANSPARENT` color-key background (Decision 14).
+  Implementation details (see Decision 15):
+  - **No runtime floating point.** Trigonometry comes from two file-local `static const int32_t`
+    Q16.16 lookup tables (`canvasCurvedCosTable[360]` / `canvasCurvedSinTable[360]`, `SCALE = 1<<16`)
+    embedded as compile-time constant literals (generated offline). Two `static` helpers,
+    `CanvasRoundDivAway` (round-half-away-from-zero integer division on an `int64_t` numerator) and
+    `CanvasRotateGlyphOffset` (clockwise doubled-delta rotation about the glyph-box center), keep the
+    whole transform in integers so both targets compute bit-for-bit identical pixels (Req 7.2/7.3).
+  - **Guards / safety**: NULL `font` and out-of-range `ASCIIChar` (outside 0x20..0x7E) are no-ops;
+    `startAngle` is normalized `% 360`; rotated targets are computed as signed `int32_t` and skipped
+    when negative *before* the `UWORD` cast, so no negative wraps into `CanvasSetPixel`.
+  - **Angle convention**: 0° at three-o'clock, increasing clockwise in screen coords; `radius == 0`
+    anchors exactly at the center.
+  - **Known nuance (Req 3.4)**: at `startAngle == 0` the glyph matches upright `CanvasDrawChar`
+    *except* for a ±1-pixel center seam on fonts with an even Width or Height — an inherent
+    consequence of round-half-away rotation about a half-integer geometric center (Req 3.3). All five
+    bundled fonts have even Height; Font20 also has even Width. This was an accepted spec relaxation,
+    not a bug.
+  - **No build-system changes**: `Canvas.c` is already in `GUILL_COMMON_SRCS` (RP2040) and the ESP32
+    `idf_component_register SRCS`. RP2040 **and** ESP32-S3 both compile and link the function from the
+    single shared `Canvas.c` (verified — ESP32-S3 was actually compile-tested this session, not just
+    parity-assumed; the symbol is present as global text in both object files).
+  - **Spec**: the requirements, design and task plan live in `.kiro/specs/canvas-draw-curved-char/`.
 - **Added `CanvasDrawPng(FIL *file)` to the Canvas module** (`src/lib/GUI/Canvas.c`, prototype in
   `Canvas.h`) for **flicker-free PNG rendering**. It is a faithful, step-by-step copy of
   `LCDRenderPng` (`LCD/1in28/LCDRenderer.c`) — same libpng decode pipeline, error handling
@@ -680,3 +732,44 @@ Recent work:
       already shown) — keep `TRANSPARENT` and `RGB_COLOR`'s unsigned semantics in mind when we
       build it, and a future `LCDRenderTexture`/`...InArea` color-key variant would skip
       `TRANSPARENT` pixels instead of streaming the full buffer.
+
+15. **Integer-only curved-character rendering (`CanvasDrawCurvedChar`)**: The primitive that draws a
+    rotated character on a circle (see Recent work) is built to be **cross-platform deterministic** —
+    identical inputs must produce a bit-for-bit identical set of written pixels on RP2040 (software
+    float) and ESP32-S3 (hardware FPU). Rules that MUST be preserved:
+    - **No runtime floating point.** Calling `sinf`/`cosf` at runtime risks last-ULP differences
+      between the two libm implementations that occasionally round to a different integer pixel.
+      Instead, trigonometry is read from two file-local `static const int32_t` **Q16.16** lookup
+      tables (`canvasCurvedCosTable[360]` / `canvasCurvedSinTable[360]`, `SCALE = 1 << 16`), generated
+      offline by a throwaway host script and embedded as constant literals (~2.8 KB rodata). Both
+      targets link the identical integers; do NOT regenerate the table with `libm` at runtime.
+    - **Integer rotation with a single rounding step.** `CanvasRoundDivAway(int64_t, int32_t)` does
+      round-half-away-from-zero division (64-bit numerator to avoid overflow on `radius * scaledTrig`
+      and the doubled products). `CanvasRotateGlyphOffset` rotates a **doubled-delta** pair
+      (`dx2 = 2*Column-(Width-1)`, `dy2 = 2*Page-(Height-1)`) clockwise and folds the `/2` (for the
+      doubling) and `/SCALE` (Q16.16) into one `CanvasRoundDivAway(.., 2*SCALE)` call. Doubling makes
+      the half-pixel box center exact in integers (Req 3.3).
+    - **Signed-before-cast bounds check.** `CanvasSetPixel` takes `UWORD`; a negative rotated
+      coordinate would wrap to a huge value and bypass the upper-bound clip. So `targetX`/`targetY`
+      are `int32_t` and any negative component is skipped **before** the `UWORD` cast (Req 6.3). All
+      writes still go through `CanvasSetPixel`, so its clip/rotate/flip and `WidthMemory`/`HeightMemory`
+      guards apply.
+    - **Forward (source-driven) mapping**, mirroring `CanvasDrawChar`'s glyph iteration, so the
+      angle-0 case is (almost) equivalent to `CanvasDrawChar` and the opaque "rotated bounding box" is
+      exactly the forward-mapped `Width x Height` set (Req 5.3). Known tradeoff: nearest-neighbor
+      aliasing can leave 1-px gaps / double-maps at some angles — acceptable by definition here; a
+      destination-driven inverse map is deferred unless visual quality requires it.
+    - **Even-dimension angle-0 seam (accepted relaxation).** At `startAngle == 0`, round-half-away
+      rotation about a half-integer center (even Width/Height) skips the center axis, so the glyph
+      differs from upright `CanvasDrawChar` by at most 1 px along that seam. Req 3.4 was relaxed to
+      allow this ±1 tolerance rather than special-casing angle 0 (which would diverge from the
+      pure-rotation model). All bundled fonts have even Height.
+    - **Reuse / extension point**: the signature leads with `ASCIIChar` then the geometric placement
+      values so `CanvasDrawCurvedText` / `CanvasDrawCurvedNumber` (out of scope) can be a thin loop
+      advancing `startAngle` per glyph (step ≈ glyphAdvance / radius, converted to whole degrees).
+    - **Two pre-existing Canvas quirks to keep in mind** (relevant when reasoning about scale-65
+      pixel writes): production `CanvasClear` at scale 65 iterates `x` over `WidthByte` (the byte
+      pitch) while addressing `x*2`, so it overruns the image region by ~one row; and `CanvasSetPixel`
+      clips with `>` (not `>=`), so a coordinate equal to `canvas.Width`/`Height` is still written.
+      `CanvasDrawCurvedChar` itself relies only on `CanvasSetPixel`'s clipping and is unaffected, but
+      these are worth knowing before changing the buffer layout.

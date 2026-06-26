@@ -121,6 +121,9 @@ void CanvasDrawCircle(UWORD xCenter, UWORD yCenter, UWORD radius,
     UWORD color, PixelSize lineWidth, DrawFillStyle circleFillStyle);
 void CanvasDrawChar(UWORD xPoint, UWORD yPoint, const char ASCIIChar,
     sFONT* font, UWORD foregroundColor, UWORD backgroundColor);
+void CanvasDrawCurvedChar(const char ASCIIChar, UWORD xCenter, UWORD yCenter,
+    UWORD radius, UWORD startAngle, sFONT* font,
+    UWORD foregroundColor, UWORD backgroundColor);
 void CanvasDrawText(UWORD xStart, UWORD yStart, const char * text,
     sFONT* font, UWORD foregroundColor, UWORD backgroundColor);
 void CanvasDrawTextCN(UWORD xStart, UWORD yStart, const char * text, cFONT* font,
