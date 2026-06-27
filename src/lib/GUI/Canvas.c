@@ -809,3 +809,113 @@ void CanvasDrawPng(FIL *file) {
 
     png_destroy_read_struct(&pngPointer, &infoPointer, NULL);
 }
+
+void CanvasDrawPngToArea(FIL *file, UWORD xSource, UWORD ySource, UWORD width, UWORD height, UWORD xTarget, UWORD yTarget) {
+    if (file == NULL)
+        return;
+
+    SHOWDEBUG("Creating read structure\n");
+    png_structp pngPointer = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, PngShowError, NULL);
+
+    if (pngPointer == NULL) {
+        SHOWDEBUG("png_create_read_struct error\n");
+        return;
+    }
+
+    SHOWDEBUG("Allocating memory for texture information\n");
+    png_infop infoPointer = png_create_info_struct(pngPointer);
+
+    if (infoPointer == NULL) {
+        SHOWDEBUG("png_create_info_struct error\n");
+        png_destroy_read_struct(&pngPointer, NULL, NULL);
+        return;
+    }
+
+    SHOWDEBUG("Setting up the custom read function\n");
+    png_set_read_fn(pngPointer, file, PngCustomReadData);
+
+    /* Declared volatile before setjmp so their values survive a longjmp (C99 7.13.2.1) and can be cleaned up. */
+    volatile png_bytep rowPointers = NULL;
+    SHOWDEBUG("Setting up LongJump\n");
+
+    if (setjmp(png_jmpbuf(pngPointer)) != 0) {
+        /* Any libpng error from here on jumps back to this point. */
+        SHOWDEBUG("LongJump from a libpng error. Cleaning up.\n");
+
+        if (rowPointers != NULL)
+            png_free(pngPointer, rowPointers);
+
+        png_destroy_read_struct(&pngPointer, &infoPointer, NULL);
+        return;
+    }
+
+    SHOWDEBUG("Reading info\n");
+    /* png_read_info gets information about PNG file before the first IDAT (texture data chunk). REQUIRED. */
+    png_read_info(pngPointer, infoPointer);
+
+    SHOWDEBUG("\nParsing texture info\n");
+    png_uint_32 pngWidth, pngHeight;
+    int bitDepth, colorType, interlaceType;
+    png_get_IHDR(pngPointer, infoPointer, &pngWidth, &pngHeight, &bitDepth, &colorType, &interlaceType, NULL, NULL);
+    SHOWDEBUG("PNG info: width: %d, height: %d, bit_depth: %d\n", pngWidth, pngHeight, bitDepth);
+
+    int effectiveWidth = width > pngWidth - xSource ? pngWidth - xSource : width;
+    int effectiveHeight = height > pngHeight - ySource ? pngHeight - ySource : height;
+    if (xSource >= pngWidth || ySource >= pngHeight) {
+        effectiveWidth = 0;
+        effectiveHeight = 0;
+    }
+    int maxCol = effectiveWidth > (int)(canvas.Width - xTarget) ? (int)(canvas.Width - xTarget) : effectiveWidth;
+    int maxRow = effectiveHeight;
+
+    int col, row;
+
+    int num_palette = 0;
+    png_colorp palette = NULL;
+
+    if (colorType == PNG_COLOR_TYPE_PALETTE)
+        png_get_PLTE(pngPointer, infoPointer, &palette, &num_palette);
+
+    for (row = 0; row < (int)pngHeight; row++) {
+        if (row >= (int)ySource + maxRow)
+            break;
+
+        png_bytep rowBuffer = (png_bytep)png_malloc(pngPointer, png_get_rowbytes(pngPointer, infoPointer));
+        rowPointers = rowBuffer; // track for cleanup before any call that may longjmp
+        png_read_rows(pngPointer, &rowBuffer, NULL, 1);
+
+        if (row < (int)ySource) {
+            png_free(pngPointer, rowBuffer);
+            rowPointers = NULL;
+            continue;
+        }
+
+        for (col = xSource; col < (int)xSource + maxCol; col++) {
+            png_byte red, green, blue;
+
+            if ((colorType == PNG_COLOR_TYPE_PALETTE) && (palette != NULL)) {
+                red = palette[rowPointers[col]].red;
+                green = palette[rowPointers[col]].green;
+                blue = palette[rowPointers[col]].blue;
+            } else {
+                /* if the texture is paletted but we don't have a palette, display as grayscale using palette index. */
+                png_bytep pixel = &rowPointers[col];
+                red = *(pixel++);
+                green = *(pixel++);
+                blue = *(pixel++);
+            }
+
+            /* The LCD uses RGB565 16-bits format: RRRRRGGG GGGBBBBB */
+            UWORD color = (UWORD)(((red & 0b11111000) | ((green & 0b11100000) >> 5)) << 8)
+                | (UWORD)(((green & 0b00011100) << 3) | ((blue & 0b11111000) >> 3));
+
+            if (color != TRANSPARENT)
+                CanvasSetPixel(xTarget + col - xSource, yTarget + row - ySource, color);
+        }
+
+        png_free(pngPointer, rowBuffer);
+        rowPointers = NULL;
+    }
+
+    png_destroy_read_struct(&pngPointer, &infoPointer, NULL);
+}

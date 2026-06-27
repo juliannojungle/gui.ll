@@ -474,6 +474,41 @@ Recent work:
     single shared `Canvas.c` (verified — ESP32-S3 was actually compile-tested this session, not just
     parity-assumed; the symbol is present as global text in both object files).
   - **Spec**: the requirements, design and task plan live in `.kiro/specs/canvas-draw-curved-char/`.
+- **Added `CanvasDrawPngToArea` to the Canvas module** (`src/lib/GUI/Canvas.c`, prototype in
+  `Canvas.h`) for **sub-area extraction from PNG atlases with transparency**. Signature:
+  `void CanvasDrawPngToArea(FIL *file, UWORD xSource, UWORD ySource, UWORD width, UWORD height,
+  UWORD xTarget, UWORD yTarget)`. It is a faithful structural copy of `CanvasDrawPng` — same
+  libpng pipeline (`png_create_read_struct`, `png_set_read_fn`, `setjmp`/`longjmp`,
+  `png_read_info`, `png_get_IHDR`, `png_read_rows`, `png_destroy_read_struct`), same variable
+  names, same `volatile png_bytep rowPointers` pattern, same palette/non-palette conditional, same
+  RGB565 bit math with binary `0b` notation, same `SHOWDEBUG` traces — with exactly three
+  localized behavioral additions:
+  1. **Row skip/stop optimization**: rows before `ySource` are decoded (to advance libpng's
+     DEFLATE state) but pixels are not extracted; once `ySource + effectiveHeight` rows are
+     reached, decoding stops immediately (no further `png_read_rows` calls).
+  2. **Sub-area column extraction**: within active rows, only columns
+     `[xSource, xSource + maxCol)` are extracted and written to the canvas at
+     `(xTarget + dx, yTarget + dy)` via `CanvasSetPixel`.
+  3. **Transparency color-key filtering**: pixels whose RGB565 value equals `TRANSPARENT`
+     (`0xF81F` — magenta) are skipped, leaving existing canvas content unchanged (enables
+     sprite-like compositing from PNG spritesheets).
+  - **Design rule**: the faithful-copy principle from `CanvasDrawPng` (Decision 13) is extended —
+    identical variable names, comments, formatting, binary `0b` notation. Only the three behavioral
+    additions above differ; no refactoring, no shared helper extraction between the two functions.
+  - **Effective dimension clamping** before the row loop: `effectiveWidth/Height` are clamped to
+    PNG bounds, `maxCol`/`maxRow` additionally clamped to canvas bounds; if `xSource >= pngWidth`
+    or `ySource >= pngHeight`, zero effective area → no pixel writes, cleanup only.
+  - **No build-system changes**: `Canvas.c` is already in the build on both platforms (RP2040 and
+    ESP32-S3); reuses the existing `static` helpers `PngCustomReadData` and `PngShowError`.
+  - **Caller note**: `CanvasDrawPngToArea` only writes pixels within the requested sub-area. If the
+    canvas texture buffer is not cleared first (`CanvasClear`), previously written content (from a
+    prior `CanvasDrawPng` call or stale malloc data surviving a soft reset without power cycle)
+    remains visible outside the target rectangle — this is by design (enables layered compositing),
+    but can look like "the whole PNG is still there" if not expected.
+  - **Hardware-verified**: builds and runs on RP2040; sub-area extraction and transparency both
+    confirmed working.
+  - **Spec**: the requirements, design and task plan live in
+    `.kiro/specs/canvas-draw-png-to-area/`.
 - **Added `CanvasDrawPng(FIL *file)` to the Canvas module** (`src/lib/GUI/Canvas.c`, prototype in
   `Canvas.h`) for **flicker-free PNG rendering**. It is a faithful, step-by-step copy of
   `LCDRenderPng` (`LCD/1in28/LCDRenderer.c`) — same libpng decode pipeline, error handling

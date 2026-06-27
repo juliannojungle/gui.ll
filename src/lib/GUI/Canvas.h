@@ -143,6 +143,7 @@ void CanvasDrawNum(UWORD xPoint, UWORD yPoint, double number,
 void CanvasDrawTime(UWORD xStart, UWORD yStart, DateTime *pTime, sFONT* font,
     UWORD foregroundColor, UWORD backgroundColor);
 void CanvasDrawPng(FIL *file);
+void CanvasDrawPngToArea(FIL *file, UWORD xSource, UWORD ySource, UWORD width, UWORD height, UWORD xTarget, UWORD yTarget);
 void CanvasDrawTexture(const unsigned char *texture, UWORD xStart, UWORD yStart, UWORD imageWidth, UWORD imageHeight);
 void CanvasDrawBitmap(const unsigned char* imageBuffer);
 void CanvasDrawBitmapBlock(const unsigned char* imageBuffer, UBYTE region);
