@@ -5,7 +5,7 @@ project(zlib C)
 
 set(VERSION "1.2.13")
 
-set(ZLIB_SRC ${CMAKE_SOURCE_DIR}/src/Dependency/zlib)
+set(ZLIB_SRC ${CMAKE_CURRENT_LIST_DIR})
 
 include(CheckTypeSize)
 include(CheckFunctionExists)
@@ -55,7 +55,7 @@ check_include_file(unistd.h Z_HAVE_UNISTD_H)
 set(ZLIB_PC ${ZLIB_SRC}/zlib.pc)
 configure_file(${ZLIB_SRC}/zlib.pc.cmakein ${ZLIB_PC} @ONLY)
 configure_file(${ZLIB_SRC}/zconf.h.cmakein ${ZLIB_SRC}/zconf.h @ONLY)
-include_directories(${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_SOURCE_DIR})
+include_directories(${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_LIST_DIR})
 
 #============================================================================
 # zlib

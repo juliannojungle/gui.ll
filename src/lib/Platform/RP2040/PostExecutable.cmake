@@ -2,22 +2,22 @@
 set(CMAKE_C_COMPILER /usr/bin/arm-none-eabi-gcc)
 set(CMAKE_CXX_COMPILER /usr/bin/arm-none-eabi-g++)
 
-###### Waveshare Pico_code/c/lib/GUI for graphics
-set(PICO_CODE_LIB ${CMAKE_SOURCE_DIR}/src/lib)
-include_directories(${PICO_CODE_LIB})
-include_directories(${PICO_CODE_LIB}/Platform/RP2040)
-include_directories(${PICO_CODE_LIB}/Driver/GC9A01)
-include_directories(${PICO_CODE_LIB}/GUI/Fonts)
-include_directories(${PICO_CODE_LIB}/LCD/1in28)
-include_directories(${PICO_CODE_LIB}/GUI)
-include_directories(${PICO_CODE_LIB}/Helper)
-###### END Waveshare Pico_code/c/lib/GUI for graphics
+###### gui.ll
+set(GUILL_LIB ${CMAKE_CURRENT_LIST_DIR}/../../../lib)
+include_directories(${GUILL_LIB})
+include_directories(${GUILL_LIB}/Platform/RP2040)
+include_directories(${GUILL_LIB}/Driver/GC9A01)
+include_directories(${GUILL_LIB}/GUI/Fonts)
+include_directories(${GUILL_LIB}/LCD/1in28)
+include_directories(${GUILL_LIB}/GUI)
+include_directories(${GUILL_LIB}/Helper)
+###### END gui.ll
 
 ###### zlib dependency to use libpng
-set(LIB_ZLIB ${CMAKE_SOURCE_DIR}/src/Dependency/zlib)
+set(LIB_ZLIB ${CMAKE_CURRENT_LIST_DIR}/../../../Dependency/zlib)
 # set a custom build script for zlibstatic, skipping the rest
 file(REMOVE ${LIB_ZLIB}/CMakeLists.txt)
-file(COPY ${CMAKE_SOURCE_DIR}/src/Dependency/zlibstatic.cmake DESTINATION ${LIB_ZLIB})
+file(COPY ${CMAKE_CURRENT_LIST_DIR}/../../../Dependency/zlibstatic.cmake DESTINATION ${LIB_ZLIB})
 file(RENAME ${LIB_ZLIB}/zlibstatic.cmake ${LIB_ZLIB}/CMakeLists.txt)
 # build zlibstatic
 add_subdirectory(${LIB_ZLIB} zlib_build)
@@ -32,7 +32,7 @@ set(ZLIB_INCLUDE_DIRS ${LIB_ZLIB} ${LIB_ZCONF})
 ###### END zlib dependency to use libpng
 
 ###### libpng dependencies to handle png files
-set(PNG_LIB ${CMAKE_SOURCE_DIR}/src/Dependency/libpng)
+set(PNG_LIB ${CMAKE_CURRENT_LIST_DIR}/../../../Dependency/libpng)
 # setup libpng to only build png_static, skipping the rest
 set(PNG_SHARED OFF CACHE BOOL "")
 set(PNG_STATIC ON CACHE BOOL "")
