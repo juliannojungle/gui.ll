@@ -77,9 +77,9 @@ flowchart TD
 
 ```c
 /* Canvas.h — declared next to CanvasDrawChar */
-void CanvasDrawCurvedChar(const char ASCIIChar, UWORD xCenter, UWORD yCenter,
-    UWORD radius, UWORD startAngle, sFONT* font,
-    UWORD foregroundColor, UWORD backgroundColor);
+void CanvasDrawCurvedChar(const char ASCIIChar, UINT16 xCenter, UINT16 yCenter,
+    UINT16 radius, UINT16 startAngle, sFONT* font,
+    UINT16 foregroundColor, UINT16 backgroundColor);
 ```
 
 Parameter contract (Requirement 1):
@@ -87,13 +87,13 @@ Parameter contract (Requirement 1):
 | Parameter         | Type          | Meaning                                                        |
 |-------------------|---------------|----------------------------------------------------------------|
 | `ASCIIChar`       | `const char`  | Character to draw; valid range space (0x20) .. tilde (0x7E).   |
-| `xCenter`         | `UWORD`       | Circle center X in canvas coordinates.                         |
-| `yCenter`         | `UWORD`       | Circle center Y in canvas coordinates.                         |
-| `radius`          | `UWORD`       | Distance in pixels from center to glyph anchor.                |
-| `startAngle`      | `UWORD`       | Whole-degree placement angle; normalized mod 360 to 0..359.    |
+| `xCenter`         | `UINT16`       | Circle center X in canvas coordinates.                         |
+| `yCenter`         | `UINT16`       | Circle center Y in canvas coordinates.                         |
+| `radius`          | `UINT16`       | Distance in pixels from center to glyph anchor.                |
+| `startAngle`      | `UINT16`       | Whole-degree placement angle; normalized mod 360 to 0..359.    |
 | `font`            | `sFONT*`      | Font table (Font8/Font12/Font16/Font20/Font24); NULL = no-op.  |
-| `foregroundColor` | `UWORD`       | RGB565 color for glyph (set) pixels.                           |
-| `backgroundColor` | `UWORD`       | RGB565 color for non-glyph pixels, or `TRANSPARENT` to skip.   |
+| `foregroundColor` | `UINT16`       | RGB565 color for glyph (set) pixels.                           |
+| `backgroundColor` | `UINT16`       | RGB565 color for non-glyph pixels, or `TRANSPARENT` to skip.   |
 
 - Return type is `void`, consistent with `CanvasDrawChar` (Requirement 1.5).
 - All parameters are camelCase (Requirement 1.4); the function name is PascalCase with the `Canvas`
@@ -120,7 +120,7 @@ These are `static` (no external linkage) exactly like the `static` libpng helper
 
 ### Reused existing interfaces
 
-- `CanvasSetPixel(UWORD xPoint, UWORD yPoint, UWORD color)` — the single write path. It already
+- `CanvasSetPixel(UINT16 xPoint, UINT16 yPoint, UINT16 color)` — the single write path. It already
   clips against `canvas.Width`/`canvas.Height`, applies `canvas.Rotate`/`canvas.Flip`, re-checks
   against `canvas.WidthMemory`/`canvas.HeightMemory`, and packs RGB565 big-endian for scale 65.
   `CanvasDrawCurvedChar` writes **only** through this function (Requirement 6.1).
@@ -166,9 +166,9 @@ trigonometry is stored as a **precomputed integer lookup table**, not computed a
   divergence even when *building* the table. (Generating the table at runtime with `libm` is
   explicitly rejected — see Design Decisions.)
 - **Size:** `360 * 4 * 2 = 2880` bytes of flash/rodata. Negligible on both targets.
-- **Angle index:** `startAngle` is `UWORD` whole degrees; the runtime index is
+- **Angle index:** `startAngle` is `UINT16` whole degrees; the runtime index is
   `angle = startAngle % 360`, which also implements the normalization required by Requirement 2.3
-  (e.g. an angle that would be `-90` cannot occur as a `UWORD`, but any value `>= 360`, such as a
+  (e.g. an angle that would be `-90` cannot occur as a `UINT16`, but any value `>= 360`, such as a
   text helper accumulating past a full turn, folds back into `0..359`).
 
 ### Coordinate model
@@ -184,7 +184,7 @@ trigonometry is stored as a **precomputed integer lookup table**, not computed a
   ```
 
   When `radius == 0` both offsets are 0, so the anchor is exactly `(xCenter, yCenter)`. The
-  `radius * cosV` product uses `int64_t` because `UWORD * SCALE` can exceed `int32_t`.
+  `radius * cosV` product uses `int64_t` because `UINT16 * SCALE` can exceed `int32_t`.
 
 - **Glyph box center (Requirement 2.4):** the geometric center of the `Width x Height` box is
   `((Width - 1) / 2, (Height - 1) / 2)`. To stay in integer math, deltas are doubled:
@@ -214,7 +214,7 @@ trigonometry is stored as a **precomputed integer lookup table**, not computed a
   uses the placement angle's `cosV`/`sinV`; only the glyph orientation uses `cosR`/`sinR`.
   `CanvasRoundDivAway` rounds halves away from zero (Requirement 3.3). `targetX`/`targetY` are
   computed as signed `int32_t` so a negative intermediate can be detected and skipped before any
-  cast to the unsigned `UWORD` parameters of `CanvasSetPixel` (Requirement 6.3).
+  cast to the unsigned `UINT16` parameters of `CanvasSetPixel` (Requirement 6.3).
 
 ### Rendering algorithm (pseudocode)
 
@@ -290,7 +290,7 @@ RoundHalfAway(radius * sin(angle)))` using the same Q16.16 fixed-point table, an
 ### Property 2: Angle normalization invariance
 
 *For any* character, font, center, radius, and start angle, the set of written pixel coordinates
-and their colors for `startAngle` is identical to the set for any other `UWORD` angle congruent to
+and their colors for `startAngle` is identical to the set for any other `UINT16` angle congruent to
 it modulo 360 (e.g. an accumulated angle `>= 360` folds to the same `0..359` result).
 
 **Validates: Requirements 2.3**
@@ -345,7 +345,7 @@ character.
 *For any* character, font, center, radius, and start angle — including placements adjacent to or
 beyond the canvas border — every coordinate `CanvasDrawCurvedChar` writes satisfies
 `0 <= targetX <= canvas.Width` and `0 <= targetY <= canvas.Height`; no negative intermediate
-coordinate is ever converted to a `UWORD` and passed to `CanvasSetPixel`; and no byte outside the
+coordinate is ever converted to a `UINT16` and passed to `CanvasSetPixel`; and no byte outside the
 canvas buffer bounded by `canvas.WidthMemory` and `canvas.HeightMemory` is ever modified.
 
 **Validates: Requirements 6.1, 6.2, 6.3, 6.4**
@@ -378,7 +378,7 @@ defensive skipping rather than error codes — consistent with `CanvasDrawChar`.
 | `font == NULL` | Return immediately before any glyph access; buffer unchanged. | 4.4 |
 | `ASCIIChar` outside 0x20..0x7E | Return immediately before computing the table offset; buffer unchanged. | 4.5 |
 | `startAngle >= 360` (or any out-of-range whole degree) | Normalized via `startAngle % 360` before lookup. | 2.3 |
-| Negative intermediate rotated coordinate | Skip that pixel before any cast to `UWORD`; continue with remaining pixels. | 6.3 |
+| Negative intermediate rotated coordinate | Skip that pixel before any cast to `UINT16`; continue with remaining pixels. | 6.3 |
 | `targetX > canvas.Width` or `targetY > canvas.Height` | `CanvasSetPixel` clips and ignores the write; the loop continues. | 6.2, 6.1 |
 | Placement beyond the canvas border | Per-pixel skipping plus `CanvasSetPixel`'s own `WidthMemory`/`HeightMemory` guard keep all writes inside the buffer. | 6.4 |
 | `radius == 0` | Anchor resolves to the center; rendering proceeds normally. | 2.5 |
@@ -484,10 +484,10 @@ accumulating fractional error.
 
 ### D4: Signed intermediate coordinates, checked before the unsigned cast
 
-`CanvasSetPixel` takes `UWORD` (unsigned) coordinates, so a negative rotated coordinate would wrap
+`CanvasSetPixel` takes `UINT16` (unsigned) coordinates, so a negative rotated coordinate would wrap
 to a huge value and bypass the upper-bound guard. The rotation therefore computes `targetX/targetY`
 as signed `int32_t` and skips any pixel with a negative component **before** casting (Requirement
-6.3). The `radius * cosV` product uses `int64_t` to avoid overflow since `radius` is a `UWORD`.
+6.3). The `radius * cosV` product uses `int64_t` to avoid overflow since `radius` is a `UINT16`.
 
 ### D5: Reuse / extension point for curved text and numbers (out of scope)
 

@@ -25,7 +25,7 @@ and RGB565 bit math are reproduced unchanged. The **only** behavioral difference
 Intended caller flow (in `Sample.c`):
 
 ```c
-CanvasNewImage((UBYTE *)texture, LCD.WIDTH, LCD.HEIGHT, ROTATE_0, BLACK);
+CanvasNewImage((UINT8 *)texture, LCD.WIDTH, LCD.HEIGHT, ROTATE_0, BLACK);
 CanvasSetScale(65);
 if (MountSdCard() && SelectActiveDrive() && OpenFile(&file, "01.png")) {
     CanvasDrawPng(&file);   /* decode into the texture buffer */
@@ -195,11 +195,11 @@ canvas.Image[Addr + 1] = 0xff & color;          /* low  byte */
 ```
 
 So to write the **identical two bytes** into the buffer, `CanvasDrawPng` packs the same high/low
-bytes into a single `UWORD` and passes it to `CanvasSetPixel`:
+bytes into a single `UINT16` and passes it to `CanvasSetPixel`:
 
 ```c
-UWORD color = (UWORD)(((red & 0b11111000) | ((green & 0b11100000) >> 5)) << 8)
-            | (UWORD)(((green & 0b00011100) << 3) | ((blue & 0b11111000) >> 3));
+UINT16 color = (UINT16)(((red & 0b11111000) | ((green & 0b11100000) >> 5)) << 8)
+            | (UINT16)(((green & 0b00011100) << 3) | ((blue & 0b11111000) >> 3));
 CanvasSetPixel(col, row, color);
 ```
 
@@ -293,8 +293,8 @@ void CanvasDrawPng(FIL *file) {
             }
 
             /* The LCD uses RGB565 16-bits format: RRRRRGGG GGGBBBBB */
-            UWORD color = (UWORD)(((red & 0b11111000) | ((green & 0b11100000) >> 5)) << 8)
-                        | (UWORD)(((green & 0b00011100) << 3) | ((blue & 0b11111000) >> 3));
+            UINT16 color = (UINT16)(((red & 0b11111000) | ((green & 0b11100000) >> 5)) << 8)
+                        | (UINT16)(((green & 0b00011100) << 3) | ((blue & 0b11111000) >> 3));
             CanvasSetPixel(col, row, color);
         }
 
@@ -336,18 +336,18 @@ Only a subset of fields is consumed by `CanvasDrawPng` (read-only here; writes g
 
 | Field | Type | Role in CanvasDrawPng |
 |-------|------|------------------------|
-| `canvas.Image` | `UBYTE *` | Destination buffer; written byte-pairs per pixel via `CanvasSetPixel`. |
-| `canvas.Width` | `UWORD` | Column clip bound (`Clip_Width = min(pngWidth, canvas.Width)`). |
-| `canvas.Height` | `UWORD` | Row clip bound (`Clip_Height = min(pngHeight, canvas.Height)`). |
-| `canvas.Scale` | `UWORD` | Must be 65 (RGB565) for the byte layout below; set by the caller via `CanvasSetScale(65)`. |
-| `canvas.Rotate`, `canvas.Flip` | `UWORD` | Applied inside `CanvasSetPixel`; `ROTATE_0`/`FLIP_NONE` for the parity scenario. |
+| `canvas.Image` | `UINT8 *` | Destination buffer; written byte-pairs per pixel via `CanvasSetPixel`. |
+| `canvas.Width` | `UINT16` | Column clip bound (`Clip_Width = min(pngWidth, canvas.Width)`). |
+| `canvas.Height` | `UINT16` | Row clip bound (`Clip_Height = min(pngHeight, canvas.Height)`). |
+| `canvas.Scale` | `UINT16` | Must be 65 (RGB565) for the byte layout below; set by the caller via `CanvasSetScale(65)`. |
+| `canvas.Rotate`, `canvas.Flip` | `UINT16` | Applied inside `CanvasSetPixel`; `ROTATE_0`/`FLIP_NONE` for the parity scenario. |
 
 ### Pixel formats
 
 - **Decoded source pixel** (from libpng row buffer): either a 1-byte palette index resolved to an
   `{red, green, blue}` triple via `png_colorp palette`, or three consecutive bytes
   `{red, green, blue}` read directly from the row.
-- **RGB565 (`UWORD`)** — packed 16-bit value, layout `RRRRR GGGGGG BBBBB`:
+- **RGB565 (`UINT16`)** — packed 16-bit value, layout `RRRRR GGGGGG BBBBB`:
 
   ```
   bit:  15 14 13 12 11 | 10  9  8  7  6  5 |  4  3  2  1  0

@@ -17,10 +17,10 @@
 #define GPIO_FUNC_I2C   0  // No-op on ESP32 (I2C pins configured in I2CInit)
 #define PWM_CHAN_B      1
 
-void DigitalWrite(uint32_t pin, UBYTE value);
-UBYTE DigitalRead(uint32_t pin);
-void SPIWriteByte(UBYTE value);
-void SPIWriteNByte(UBYTE pData[], UDOUBLE len);
+void DigitalWrite(uint32_t pin, UINT8 value);
+UINT8 DigitalRead(uint32_t pin);
+void SPIWriteByte(UINT8 value);
+void SPIWriteNByte(UINT8 pData[], UINT32 len);
 void GPIOInit(uint32_t pin);
 void GPIOSetDir(uint32_t pin, uint32_t mode);
 void GPIOPullUp(uint32_t pin);
@@ -30,7 +30,7 @@ void SPIInit(uint32_t speed);
 void GPIOSetFunction(uint32_t pin, uint32_t function);
 uint32_t PWMGPIOToSliceNum(uint32_t pin);
 void PWMSetWrap(uint32_t slice, uint32_t value);
-void PWMSetChannelLevel(uint32_t slice, uint32_t channel, UWORD level);
+void PWMSetChannelLevel(uint32_t slice, uint32_t channel, UINT16 level);
 void PWMSetClockDivider(uint32_t slice, float divider);
 void PWMSetEnabled(uint32_t slice, bool enable);
 

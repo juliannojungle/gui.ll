@@ -9,17 +9,17 @@
 #include "Driver.h"
 #include "Debug.h"
 
-void LCDSetDisplayArea(UWORD xStart, UWORD yStart, UWORD xEnd, UWORD yEnd)
+void LCDSetDisplayArea(UINT16 xStart, UINT16 yStart, UINT16 xEnd, UINT16 yEnd)
 {
-    DriverSendCommandData8Bit(0x2A, (UBYTE[]){0x00, xStart, 0x00, xEnd-1}, 4); //set the X coordinates
-    DriverSendCommandData8Bit(0x2B, (UBYTE[]){0x00, yStart, 0x00, yEnd-1}, 4); //set the Y coordinates
+    DriverSendCommandData8Bit(0x2A, (UINT8[]){0x00, xStart, 0x00, xEnd-1}, 4); //set the X coordinates
+    DriverSendCommandData8Bit(0x2B, (UINT8[]){0x00, yStart, 0x00, yEnd-1}, 4); //set the Y coordinates
     DriverSendCommand(0X2C);
 }
 
-void LCDClear(UWORD fillColor)
+void LCDClear(UINT16 fillColor)
 {
-    UWORD j;
-    UWORD texture[LCD.WIDTH*LCD.HEIGHT];
+    UINT16 j;
+    UINT16 texture[LCD.WIDTH*LCD.HEIGHT];
     fillColor = ((fillColor<<8)&0xff00)|(fillColor>>8);
 
     for (j = 0; j < LCD.HEIGHT*LCD.WIDTH; j++) {
@@ -37,9 +37,9 @@ void LCDClear(UWORD fillColor)
     DigitalWrite(LCD_CS_PIN, 1);
 }
 
-void LCDRenderTexture(UWORD *texture)
+void LCDRenderTexture(UINT16 *texture)
 {
-    UWORD j;
+    UINT16 j;
     LCDSetDisplayArea(0, 0, LCD.WIDTH, LCD.HEIGHT); /* full screen */
     DigitalWrite(LCD_DC_PIN, 1);
     DigitalWrite(LCD_CS_PIN, 0);
@@ -52,10 +52,10 @@ void LCDRenderTexture(UWORD *texture)
     DriverSendCommand(0x29); /* recover from DISPLAY OFF mode */
 }
 
-void LCDRenderTextureInArea(UWORD xStart, UWORD yStart, UWORD xEnd, UWORD yEnd, UWORD *texture)
+void LCDRenderTextureInArea(UINT16 xStart, UINT16 yStart, UINT16 xEnd, UINT16 yEnd, UINT16 *texture)
 {
-    UDOUBLE addr = 0;
-    UWORD j;
+    UINT32 addr = 0;
+    UINT16 j;
     LCDSetDisplayArea(xStart, yStart, xEnd , yEnd);
     DigitalWrite(LCD_DC_PIN, 1);
     DigitalWrite(LCD_CS_PIN, 0);
@@ -68,7 +68,7 @@ void LCDRenderTextureInArea(UWORD xStart, UWORD yStart, UWORD xEnd, UWORD yEnd, 
     DigitalWrite(LCD_CS_PIN, 1);
 }
 
-void LCDRenderPoint(UWORD x, UWORD y, UWORD color)
+void LCDRenderPoint(UINT16 x, UINT16 y, UINT16 color)
 {
     LCDSetDisplayArea(x,y,x,y);
     DriverSendData16Bit(color);

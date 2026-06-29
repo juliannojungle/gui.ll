@@ -4,11 +4,11 @@
 #include "ff.h"
 #include "Types.h"
 
-void LCDSetDisplayArea(UWORD Xstart, UWORD Ystart, UWORD Xend, UWORD Yend);
-void LCDClear(UWORD FillColor);
-void LCDRenderTexture(UWORD *texture);
-void LCDRenderTextureInArea(UWORD xStart, UWORD yStart, UWORD xEnd, UWORD yEnd, UWORD *texture);
-void LCDRenderPoint(UWORD x, UWORD y, UWORD color);
+void LCDSetDisplayArea(UINT16 Xstart, UINT16 Ystart, UINT16 Xend, UINT16 Yend);
+void LCDClear(UINT16 FillColor);
+void LCDRenderTexture(UINT16 *texture);
+void LCDRenderTextureInArea(UINT16 xStart, UINT16 yStart, UINT16 xEnd, UINT16 yEnd, UINT16 *texture);
+void LCDRenderPoint(UINT16 x, UINT16 y, UINT16 color);
 void LCDRenderPng(FIL *file);
 
 #endif

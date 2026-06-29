@@ -185,7 +185,7 @@ transfer — so the image appears instantly without visible row-by-row scanning.
 to a single decoded row at a time; the full image never needs to fit in RAM beyond the canvas texture.
 
 ```c
-UBYTE texture[240 * 240 * 2]; // RGB565 framebuffer
+UINT8 texture[240 * 240 * 2]; // RGB565 framebuffer
 FIL file;
 
 CanvasNewImage(texture, 240, 240, ROTATE_0);

@@ -9,7 +9,7 @@
  * real number v / TRIG_Q16_SCALE. The angle is in whole degrees, normalized mod 360. */
 #define TRIG_Q16_SCALE (1 << 16)
 
-int32_t TrigCosQ16(UWORD degrees);
-int32_t TrigSinQ16(UWORD degrees);
+int32_t TrigCosQ16(UINT16 degrees);
+int32_t TrigSinQ16(UINT16 degrees);
 
 #endif /* __TRIGONOMETRY_H */

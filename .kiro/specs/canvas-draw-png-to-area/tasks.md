@@ -8,7 +8,7 @@ Add `CanvasDrawPngToArea` to the Canvas module — a faithful structural copy of
 
 - [x] 1. Add prototype and implement CanvasDrawPngToArea
   - [x] 1.1 Add the CanvasDrawPngToArea prototype to Canvas.h
-    - Add `void CanvasDrawPngToArea(FIL *file, UWORD xSource, UWORD ySource, UWORD width, UWORD height, UWORD xTarget, UWORD yTarget);` after the existing `CanvasDrawPng` prototype
+    - Add `void CanvasDrawPngToArea(FIL *file, UINT16 xSource, UINT16 ySource, UINT16 width, UINT16 height, UINT16 xTarget, UINT16 yTarget);` after the existing `CanvasDrawPng` prototype
     - _Requirements: 1.1, 1.2, 6.1_
 
   - [x] 1.2 Implement CanvasDrawPngToArea in Canvas.c

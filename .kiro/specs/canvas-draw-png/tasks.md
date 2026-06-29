@@ -41,7 +41,7 @@ verification on RP2040. `LCDRenderer.c`/`.h` stay untouched.
 - [x] 5. Implement the per-row decode loop writing pixels into the canvas buffer
   - For each row `0..maxRow-1`: `png_malloc` a row buffer sized by `png_get_rowbytes`, track it in `rowPointers`, `png_read_rows(..., 1)`.
   - For each column `0..maxCol-1`: extract `{red, green, blue}` using the palette path (when `colorType == PNG_COLOR_TYPE_PALETTE` and `palette != NULL`) or the sequential 3-byte path otherwise (the null-palette fallback), matching `LCDRenderPng` including the fallback comment.
-  - Pack RGB565 with the identical bit math and write via `CanvasSetPixel(col, row, color)` instead of the two `SPIWriteByte` calls: `UWORD color = (UWORD)(((red & 0b11111000) | ((green & 0b11100000) >> 5)) << 8) | (UWORD)(((green & 0b00011100) << 3) | ((blue & 0b11111000) >> 3));` (keep the RGB565 format comment).
+  - Pack RGB565 with the identical bit math and write via `CanvasSetPixel(col, row, color)` instead of the two `SPIWriteByte` calls: `UINT16 color = (UINT16)(((red & 0b11111000) | ((green & 0b11100000) >> 5)) << 8) | (UINT16)(((green & 0b00011100) << 3) | ((blue & 0b11111000) >> 3));` (keep the RGB565 format comment).
   - After each row, `png_free` the row buffer and reset `rowPointers = NULL`.
   - _Requirements: 2.5, 2.6, 3.1, 3.2, 3.3, 3.4, 5.2, 5.3, 5.4, 11.2_
 

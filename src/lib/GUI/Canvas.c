@@ -5,7 +5,7 @@
 
 Canvas canvas;
 
-void CanvasNewTexture(UBYTE *texture, UWORD width, UWORD height, UWORD rotate) {
+void CanvasNewTexture(UINT8 *texture, UINT16 width, UINT16 height, UINT16 rotate) {
     canvas.Texture = NULL;
     canvas.Texture = texture;
 
@@ -28,18 +28,18 @@ void CanvasNewTexture(UBYTE *texture, UWORD width, UWORD height, UWORD rotate) {
     }
 }
 
-void CanvasSelectTexture(UBYTE *texture) {
+void CanvasSelectTexture(UINT8 *texture) {
     canvas.Texture = texture;
 }
 
-void CanvasSetRotate(UWORD rotate) {
+void CanvasSetRotate(UINT16 rotate) {
     if (rotate == ROTATE_0 || rotate == ROTATE_90 || rotate == ROTATE_180 || rotate == ROTATE_270) {
         SHOWDEBUG("Set texture Rotate %d\r\n", rotate);
         canvas.Rotate = rotate;
     }
 }
 
-void CanvasSetScale(UBYTE scale) {
+void CanvasSetScale(UINT8 scale) {
     switch (scale) {
         case 2: {
             canvas.Scale = scale;
@@ -60,20 +60,20 @@ void CanvasSetScale(UBYTE scale) {
     }
 }
 
-void CanvasFlipTexture(UBYTE flipDirection) {
+void CanvasFlipTexture(UINT8 flipDirection) {
     if (flipDirection == FLIP_NONE || flipDirection == FLIP_HORIZONTAL ||
         flipDirection == FLIP_VERTICAL || flipDirection == FLIP_ORIGIN) {
         canvas.Flip = flipDirection;
     }
 }
 
-void CanvasSetPixel(UWORD xPoint, UWORD yPoint, UWORD color) {
+void CanvasSetPixel(UINT16 xPoint, UINT16 yPoint, UINT16 color) {
     if (xPoint > canvas.Width || yPoint > canvas.Height) {
         SHOWDEBUG("Exceeding texture boundaries\r\n");
         return;
     }
 
-    UWORD x, y;
+    UINT16 x, y;
 
     switch (canvas.Rotate) {
         case 0:
@@ -117,51 +117,51 @@ void CanvasSetPixel(UWORD xPoint, UWORD yPoint, UWORD color) {
     }
 
     if (canvas.Scale == 2) {
-        UDOUBLE addr = x / 8 + y * canvas.WidthByte;
-        UBYTE rData = canvas.Texture[addr];
+        UINT32 addr = x / 8 + y * canvas.WidthByte;
+        UINT8 rData = canvas.Texture[addr];
         if ((color & 0xff) == BLACK)
             canvas.Texture[addr] = rData & ~(0x80 >> (x % 8));
         else
             canvas.Texture[addr] = rData | (0x80 >> (x % 8));
     } else if (canvas.Scale == 4) {
-        UDOUBLE addr = x / 4 + y * canvas.WidthByte;
+        UINT32 addr = x / 4 + y * canvas.WidthByte;
         color = color % 4; //Guaranteed color scale is 4  --- 0~3
-        UBYTE rData = canvas.Texture[addr];
+        UINT8 rData = canvas.Texture[addr];
         rData = rData & (~(0xC0 >> ((x % 4) * 2)));
         canvas.Texture[addr] = rData | ((color << 6) >> ((x % 4) * 2));
     } else if (canvas.Scale == 16) {
-        UDOUBLE addr = x / 2 + y * canvas.WidthByte;
-        UBYTE rData = canvas.Texture[addr];
+        UINT32 addr = x / 2 + y * canvas.WidthByte;
+        UINT8 rData = canvas.Texture[addr];
         color = color % 16;
         rData = rData & (~(0xf0 >> ((x % 2) * 4)));
         canvas.Texture[addr] = rData | ((color << 4) >> ((x % 2) * 4));
     } else if (canvas.Scale == 65) {
-        UDOUBLE addr = x * 2 + y * canvas.WidthByte;
+        UINT32 addr = x * 2 + y * canvas.WidthByte;
         canvas.Texture[addr] = 0xff & (color >> 8);
         canvas.Texture[addr + 1] = 0xff & color;
     }
 }
 
-void CanvasClear(UWORD color) {
+void CanvasClear(UINT16 color) {
     if (canvas.Scale == 2 || canvas.Scale == 4) {
-        for (UWORD y = 0; y < canvas.HeightByte; y++) {
-            for (UWORD x = 0; x < canvas.WidthByte; x++) {//8 pixel =  1 byte
-                UDOUBLE Addr = x + y * canvas.WidthByte;
+        for (UINT16 y = 0; y < canvas.HeightByte; y++) {
+            for (UINT16 x = 0; x < canvas.WidthByte; x++) {//8 pixel =  1 byte
+                UINT32 Addr = x + y * canvas.WidthByte;
                 canvas.Texture[Addr] = color;
             }
         }
     } else if (canvas.Scale == 16) {
-        for (UWORD y = 0; y < canvas.HeightByte; y++) {
-            for (UWORD x = 0; x < canvas.WidthByte; x++ ) {//8 pixel =  1 byte
-                UDOUBLE Addr = x + y * canvas.WidthByte;
+        for (UINT16 y = 0; y < canvas.HeightByte; y++) {
+            for (UINT16 x = 0; x < canvas.WidthByte; x++ ) {//8 pixel =  1 byte
+                UINT32 Addr = x + y * canvas.WidthByte;
                 color = color & 0x0f;
                 canvas.Texture[Addr] = (color << 4) | color;
             }
         }
     } else if (canvas.Scale == 65) {
-        for (UWORD y = 0; y < canvas.HeightByte; y++) {
-            for (UWORD x = 0; x < canvas.WidthByte; x++) {//8 pixel =  1 byte
-                UDOUBLE Addr = x * 2 + y * canvas.WidthByte;
+        for (UINT16 y = 0; y < canvas.HeightByte; y++) {
+            for (UINT16 x = 0; x < canvas.WidthByte; x++) {//8 pixel =  1 byte
+                UINT32 Addr = x * 2 + y * canvas.WidthByte;
                 canvas.Texture[Addr] = 0xff & (color >> 8);
                 canvas.Texture[Addr+1] = 0xff & color;
             }
@@ -169,8 +169,8 @@ void CanvasClear(UWORD color) {
     }
 }
 
-void CanvasClearArea(UWORD xStart, UWORD yStart, UWORD xEnd, UWORD yEnd, UWORD color) {
-    UWORD x, y;
+void CanvasClearArea(UINT16 xStart, UINT16 yStart, UINT16 xEnd, UINT16 yEnd, UINT16 color) {
+    UINT16 x, y;
     for (y = yStart; y < yEnd; y++) {
         for (x = xStart; x < xEnd; x++) {//8 pixel =  1 byte
             CanvasSetPixel(x, y, color);
@@ -178,7 +178,7 @@ void CanvasClearArea(UWORD xStart, UWORD yStart, UWORD xEnd, UWORD yEnd, UWORD c
     }
 }
 
-void CanvasDrawPoint(UWORD xPoint, UWORD yPoint, UWORD color,
+void CanvasDrawPoint(UINT16 xPoint, UINT16 yPoint, UINT16 color,
     PixelSize pixelSize, PixelFillStyle pixelFillStyle) {
     if (xPoint > canvas.Width || yPoint > canvas.Height) {
         SHOWDEBUG("Exceeding boundaries: x:%d, y:%d, width:%d, height:%d\r\n ", xPoint, yPoint, canvas.Width, canvas.Height);
@@ -203,16 +203,16 @@ void CanvasDrawPoint(UWORD xPoint, UWORD yPoint, UWORD color,
     }
 }
 
-void CanvasDrawLine(UWORD xStart, UWORD yStart, UWORD xEnd, UWORD yEnd,
-    UWORD color, PixelSize pixelSize, LineStyle lineStyle) {
+void CanvasDrawLine(UINT16 xStart, UINT16 yStart, UINT16 xEnd, UINT16 yEnd,
+    UINT16 color, PixelSize pixelSize, LineStyle lineStyle) {
     if (xStart > canvas.Width || yStart > canvas.Height ||
         xEnd > canvas.Width || yEnd > canvas.Height) {
         SHOWDEBUG("Line exceeds boundaries\r\n");
         return;
     }
 
-    UWORD xPoint = xStart;
-    UWORD yPoint = yStart;
+    UINT16 xPoint = xStart;
+    UINT16 yPoint = yStart;
     int dx = (int)xEnd - (int)xStart >= 0 ? xEnd - xStart : xStart - xEnd;
     int dy = (int)yEnd - (int)yStart <= 0 ? yEnd - yStart : yStart - yEnd;
 
@@ -252,8 +252,8 @@ void CanvasDrawLine(UWORD xStart, UWORD yStart, UWORD xEnd, UWORD yEnd,
     }
 }
 
-void CanvasDrawRectangle(UWORD xStart, UWORD yStart, UWORD xEnd, UWORD yEnd,
-    UWORD color, PixelSize lineWidth, DrawFillStyle rectangleFillStyle) {
+void CanvasDrawRectangle(UINT16 xStart, UINT16 yStart, UINT16 xEnd, UINT16 yEnd,
+    UINT16 color, PixelSize lineWidth, DrawFillStyle rectangleFillStyle) {
     if (xStart > canvas.Width || yStart > canvas.Height ||
         xEnd > canvas.Width || yEnd > canvas.Height) {
         SHOWDEBUG("Rectangle exceeds texture boundaries\r\n");
@@ -261,7 +261,7 @@ void CanvasDrawRectangle(UWORD xStart, UWORD yStart, UWORD xEnd, UWORD yEnd,
     }
 
     if (rectangleFillStyle) {
-        UWORD yPoint;
+        UINT16 yPoint;
         for(yPoint = yStart; yPoint < yEnd; yPoint++) {
             CanvasDrawLine(xStart, yPoint, xEnd, yPoint, color , lineWidth, LINE_STYLE_SOLID);
         }
@@ -273,8 +273,8 @@ void CanvasDrawRectangle(UWORD xStart, UWORD yStart, UWORD xEnd, UWORD yEnd,
     }
 }
 
-void CanvasDrawCircle(UWORD xCenter, UWORD yCenter, UWORD radius,
-    UWORD color, PixelSize lineWidth, DrawFillStyle circleFillStyle) {
+void CanvasDrawCircle(UINT16 xCenter, UINT16 yCenter, UINT16 radius,
+    UINT16 color, PixelSize lineWidth, DrawFillStyle circleFillStyle) {
     if (xCenter > canvas.Width || yCenter >= canvas.Height) {
         SHOWDEBUG("Circle exceeds texture boundaries\r\n");
         return;
@@ -333,9 +333,9 @@ void CanvasDrawCircle(UWORD xCenter, UWORD yCenter, UWORD radius,
     }
 }
 
-void CanvasDrawChar(UWORD xPoint, UWORD yPoint, const char ASCIIChar,
-    sFONT* font, UWORD foregroundColor, UWORD backgroundColor) {
-    UWORD Page, Column;
+void CanvasDrawChar(UINT16 xPoint, UINT16 yPoint, const char ASCIIChar,
+    sFONT* font, UINT16 foregroundColor, UINT16 backgroundColor) {
+    UINT16 Page, Column;
 
     if (xPoint > canvas.Width || yPoint > canvas.Height) {
         SHOWDEBUG("Char exceeds texture boundaries\r\n");
@@ -388,16 +388,16 @@ static void CanvasRotateGlyphOffset(int32_t dx2, int32_t dy2, int32_t cosV,
     *outY = CanvasRoundDivAway(ry, 2 * TRIG_Q16_SCALE);
 }
 
-void CanvasDrawCurvedChar(const char ASCIIChar, UWORD xCenter, UWORD yCenter,
-    UWORD radius, UWORD startAngle, TextOrientation orientation, sFONT* font,
-    UWORD foregroundColor, UWORD backgroundColor) {
+void CanvasDrawCurvedChar(const char ASCIIChar, UINT16 xCenter, UINT16 yCenter,
+    UINT16 radius, UINT16 startAngle, TextOrientation orientation, sFONT* font,
+    UINT16 foregroundColor, UINT16 backgroundColor) {
     if (font == NULL)
         return;
 
     if (ASCIIChar < 0x20 || ASCIIChar > 0x7E)
         return;
 
-    UWORD angle = startAngle % 360;
+    UINT16 angle = startAngle % 360;
     int32_t cosV = TrigCosQ16(angle);
     int32_t sinV = TrigSinQ16(angle);
 
@@ -405,21 +405,21 @@ void CanvasDrawCurvedChar(const char ASCIIChar, UWORD xCenter, UWORD yCenter,
      * placement angle alone would point each letter out of the center. INWARDS uses
      * the tangent (angle + 90, upright at the top of the circle); OUTWARDS flips it
      * 180 degrees so the text faces the other way. */
-    UWORD orientAngle = (angle + (orientation == TEXT_ORIENTATION_OUTWARDS ? 270 : 90)) % 360;
+    UINT16 orientAngle = (angle + (orientation == TEXT_ORIENTATION_OUTWARDS ? 270 : 90)) % 360;
     int32_t cosR = TrigCosQ16(orientAngle);
     int32_t sinR = TrigSinQ16(orientAngle);
 
     int32_t anchorX = (int32_t)xCenter + CanvasRoundDivAway((int64_t)radius * cosV, TRIG_Q16_SCALE);
     int32_t anchorY = (int32_t)yCenter + CanvasRoundDivAway((int64_t)radius * sinV, TRIG_Q16_SCALE);
 
-    UWORD width = font->Width;
-    UWORD height = font->Height;
+    UINT16 width = font->Width;
+    UINT16 height = font->Height;
 
     /* Glyph addressing mirrors CanvasDrawChar: 1bpp, MSB-first, byte-padded rows. */
     uint32_t charOffset = (ASCIIChar - ' ') * height * (width / 8 + (width % 8 ? 1 : 0));
     const unsigned char *ptr = &font->table[charOffset];
 
-    UWORD Page, Column;
+    UINT16 Page, Column;
     for (Page = 0; Page < height; Page++) {
         for (Column = 0; Column < width; Column++) {
             int bitSet = (*ptr & (0x80 >> (Column % 8))) != 0;
@@ -430,15 +430,15 @@ void CanvasDrawCurvedChar(const char ASCIIChar, UWORD xCenter, UWORD yCenter,
             int32_t offX, offY;
             CanvasRotateGlyphOffset(dx2, dy2, cosR, sinR, &offX, &offY);
 
-            /* Skip negatives before the UWORD cast so they don't wrap past the clip. */
+            /* Skip negatives before the UINT16 cast so they don't wrap past the clip. */
             int32_t targetX = anchorX + offX;
             int32_t targetY = anchorY + offY;
 
             if (targetX >= 0 && targetY >= 0) {
                 if (bitSet)
-                    CanvasSetPixel((UWORD)targetX, (UWORD)targetY, foregroundColor);
+                    CanvasSetPixel((UINT16)targetX, (UINT16)targetY, foregroundColor);
                 else if (backgroundColor != TRANSPARENT)
-                    CanvasSetPixel((UWORD)targetX, (UWORD)targetY, backgroundColor);
+                    CanvasSetPixel((UINT16)targetX, (UINT16)targetY, backgroundColor);
             }
 
             if (Column % 8 == 7)
@@ -450,13 +450,13 @@ void CanvasDrawCurvedChar(const char ASCIIChar, UWORD xCenter, UWORD yCenter,
     }
 }
 
-void CanvasDrawCurvedText(const char *text, UWORD xCenter, UWORD yCenter,
-    UWORD radius, UWORD startAngle, TextOrientation orientation, sFONT* font,
-    UWORD foregroundColor, UWORD backgroundColor) {
+void CanvasDrawCurvedText(const char *text, UINT16 xCenter, UINT16 yCenter,
+    UINT16 radius, UINT16 startAngle, TextOrientation orientation, sFONT* font,
+    UINT16 foregroundColor, UINT16 backgroundColor) {
     if (text == NULL || font == NULL)
         return;
 
-    UWORD width = font->Width;
+    UINT16 width = font->Width;
     int32_t arcPixels = 0;
 
     for (const char *p = text; *p != '\0'; p++) {
@@ -471,7 +471,7 @@ void CanvasDrawCurvedText(const char *text, UWORD xCenter, UWORD yCenter,
             offsetDeg = -offsetDeg;
 
         int32_t totalAngle = (int32_t)startAngle + offsetDeg;
-        UWORD charAngle = (UWORD)(((totalAngle % 360) + 360) % 360);
+        UINT16 charAngle = (UINT16)(((totalAngle % 360) + 360) % 360);
 
         CanvasDrawCurvedChar(*p, xCenter, yCenter, radius, charAngle, orientation, font,
             foregroundColor, backgroundColor);
@@ -480,10 +480,10 @@ void CanvasDrawCurvedText(const char *text, UWORD xCenter, UWORD yCenter,
     }
 }
 
-void CanvasDrawText(UWORD xStart, UWORD yStart, const char * text,
-    sFONT* font, UWORD foregroundColor, UWORD backgroundColor) {
-    UWORD xPoint = xStart;
-    UWORD yPoint = yStart;
+void CanvasDrawText(UINT16 xStart, UINT16 yStart, const char * text,
+    sFONT* font, UINT16 foregroundColor, UINT16 backgroundColor) {
+    UINT16 xPoint = xStart;
+    UINT16 yPoint = yStart;
 
     if (xStart > canvas.Width || yStart > canvas.Height) {
         SHOWDEBUG("Text exceeds texture boundaries\r\n");
@@ -509,8 +509,8 @@ void CanvasDrawText(UWORD xStart, UWORD yStart, const char * text,
     }
 }
 
-void CanvasDrawTextCN(UWORD xStart, UWORD yStart, const char * text, cFONT* font,
-    UWORD foregroundColor, UWORD backgroundColor) {
+void CanvasDrawTextCN(UINT16 xStart, UINT16 yStart, const char * text, cFONT* font,
+    UINT16 foregroundColor, UINT16 backgroundColor) {
     const char* pText = text;
     int x = xStart, y = yStart;
     int i, j, num;
@@ -594,8 +594,8 @@ void CanvasDrawTextCN(UWORD xStart, UWORD yStart, const char * text, cFONT* font
 }
 
 #define ARRAY_LEN 255
-void CanvasDrawNum(UWORD xPoint, UWORD yPoint, double number,
-    sFONT* font, UWORD digit, UWORD foregroundColor, UWORD backgroundColor) {
+void CanvasDrawNum(UINT16 xPoint, UINT16 yPoint, double number,
+    sFONT* font, UINT16 digit, UINT16 foregroundColor, UINT16 backgroundColor) {
     int16_t numberBit = 0, textBit = 0;
     uint8_t textArray[ARRAY_LEN] = {0}, numberArray[ARRAY_LEN] = {0};
     uint8_t *pStr = textArray;
@@ -647,10 +647,10 @@ void CanvasDrawNum(UWORD xPoint, UWORD yPoint, double number,
     CanvasDrawText(xPoint, yPoint, (const char*)pStr, font, foregroundColor, backgroundColor);
 }
 
-void CanvasDrawTime(UWORD xStart, UWORD yStart, DateTime *pTime, sFONT* font,
-    UWORD foregroundColor, UWORD backgroundColor) {
+void CanvasDrawTime(UINT16 xStart, UINT16 yStart, DateTime *pTime, sFONT* font,
+    UINT16 foregroundColor, UINT16 backgroundColor) {
     uint8_t value[10] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9'};
-    UWORD dX = font->Width;
+    UINT16 dX = font->Width;
     CanvasDrawChar(xStart, yStart, value[pTime->Hour / 10], font, foregroundColor, backgroundColor);
     CanvasDrawChar(xStart + dX, yStart, value[pTime->Hour % 10], font, foregroundColor, backgroundColor);
     CanvasDrawChar(xStart + dX  + dX / 4 + dX / 2, yStart, ':', font, foregroundColor, backgroundColor);
@@ -661,7 +661,7 @@ void CanvasDrawTime(UWORD xStart, UWORD yStart, DateTime *pTime, sFONT* font,
     CanvasDrawChar(xStart + dX * 6, yStart, value[pTime->Sec % 10], font, foregroundColor, backgroundColor);
 }
 
-void CanvasDrawTexture(const unsigned char *texture, UWORD xStart, UWORD yStart, UWORD imageWidth, UWORD imageHeight) {
+void CanvasDrawTexture(const unsigned char *texture, UINT16 xStart, UINT16 yStart, UINT16 imageWidth, UINT16 imageHeight) {
     int i, j;
     for (j = 0; j < imageHeight; j++) {
         for (i = 0; i < imageWidth; i++) {
@@ -674,8 +674,8 @@ void CanvasDrawTexture(const unsigned char *texture, UWORD xStart, UWORD yStart,
 }
 
 void CanvasDrawBitmap(const unsigned char* bitmap) {
-    UWORD x, y;
-    UDOUBLE addr = 0;
+    UINT16 x, y;
+    UINT32 addr = 0;
 
     for (y = 0; y < canvas.HeightByte; y++) {
         for (x = 0; x < canvas.WidthByte; x++) {//8 pixel =  1 byte
@@ -685,9 +685,9 @@ void CanvasDrawBitmap(const unsigned char* bitmap) {
     }
 }
 
-void CanvasDrawBitmapBlock(const unsigned char* bitmap, UBYTE region) {
-    UWORD x, y;
-    UDOUBLE addr = 0;
+void CanvasDrawBitmapBlock(const unsigned char* bitmap, UINT8 region) {
+    UINT16 x, y;
+    UINT32 addr = 0;
 
     for (y = 0; y < canvas.HeightByte; y++) {
         for (x = 0; x < canvas.WidthByte; x++) {//8 pixel =  1 byte
@@ -698,8 +698,8 @@ void CanvasDrawBitmapBlock(const unsigned char* bitmap, UBYTE region) {
     }
 }
 
-void CanvasDrawBitmapToArea(UWORD x, UWORD y, const unsigned char* bitmap,
-    UWORD width, UWORD height) {
+void CanvasDrawBitmapToArea(UINT16 x, UINT16 y, const unsigned char* bitmap,
+    UINT16 width, UINT16 height) {
     uint16_t i, j, byteWidth = (width + 7) / 8;
 
     for (j = 0; j < height; j ++) {
@@ -798,8 +798,8 @@ void CanvasDrawPng(FIL *file) {
             }
 
             /* The LCD uses RGB565 16-bits format: RRRRRGGG GGGBBBBB */
-            UWORD color = (UWORD)(((red & 0b11111000) | ((green & 0b11100000) >> 5)) << 8)
-                | (UWORD)(((green & 0b00011100) << 3) | ((blue & 0b11111000) >> 3));
+            UINT16 color = (UINT16)(((red & 0b11111000) | ((green & 0b11100000) >> 5)) << 8)
+                | (UINT16)(((green & 0b00011100) << 3) | ((blue & 0b11111000) >> 3));
             CanvasSetPixel(col, row, color);
         }
 
@@ -810,7 +810,7 @@ void CanvasDrawPng(FIL *file) {
     png_destroy_read_struct(&pngPointer, &infoPointer, NULL);
 }
 
-void CanvasDrawPngToArea(FIL *file, UWORD xSource, UWORD ySource, UWORD width, UWORD height, UWORD xTarget, UWORD yTarget) {
+void CanvasDrawPngToArea(FIL *file, UINT16 xSource, UINT16 ySource, UINT16 width, UINT16 height, UINT16 xTarget, UINT16 yTarget) {
     if (file == NULL)
         return;
 
@@ -906,8 +906,8 @@ void CanvasDrawPngToArea(FIL *file, UWORD xSource, UWORD ySource, UWORD width, U
             }
 
             /* The LCD uses RGB565 16-bits format: RRRRRGGG GGGBBBBB */
-            UWORD color = (UWORD)(((red & 0b11111000) | ((green & 0b11100000) >> 5)) << 8)
-                | (UWORD)(((green & 0b00011100) << 3) | ((blue & 0b11111000) >> 3));
+            UINT16 color = (UINT16)(((red & 0b11111000) | ((green & 0b11100000) >> 5)) << 8)
+                | (UINT16)(((green & 0b00011100) << 3) | ((blue & 0b11111000) >> 3));
 
             if (color != TRANSPARENT)
                 CanvasSetPixel(xTarget + col - xSource, yTarget + row - ySource, color);

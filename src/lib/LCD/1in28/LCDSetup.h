@@ -10,9 +10,9 @@
 #define VERTICAL 1
 
 typedef struct{
-    UWORD WIDTH;
-    UWORD HEIGHT;
-    UBYTE SCAN_DIR;
+    UINT16 WIDTH;
+    UINT16 HEIGHT;
+    UINT8 SCAN_DIR;
 }LCD_ATTRIBUTES;
 
 /* The single LCD attribute instance is defined in LCDSetup.c. */

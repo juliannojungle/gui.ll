@@ -99,10 +99,10 @@ static const int32_t trigSinTableQ16[360] = {
       -9121,   -7987,   -6850,   -5712,   -4572,   -3430,   -2287,   -1144,
 };
 
-int32_t TrigCosQ16(UWORD degrees) {
+int32_t TrigCosQ16(UINT16 degrees) {
     return trigCosTableQ16[degrees % 360];
 }
 
-int32_t TrigSinQ16(UWORD degrees) {
+int32_t TrigSinQ16(UINT16 degrees) {
     return trigSinTableQ16[degrees % 360];
 }

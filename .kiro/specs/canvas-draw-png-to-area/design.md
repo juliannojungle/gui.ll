@@ -42,8 +42,8 @@ The function lives entirely within `Canvas.c`, reusing the existing `static` hel
 
 ```c
 // Canvas.h — new prototype added after CanvasDrawPng
-void CanvasDrawPngToArea(FIL *file, UWORD xSource, UWORD ySource,
-    UWORD width, UWORD height, UWORD xTarget, UWORD yTarget);
+void CanvasDrawPngToArea(FIL *file, UINT16 xSource, UINT16 ySource,
+    UINT16 width, UINT16 height, UINT16 xTarget, UINT16 yTarget);
 ```
 
 **Parameters:**
@@ -51,12 +51,12 @@ void CanvasDrawPngToArea(FIL *file, UWORD xSource, UWORD ySource,
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `file` | `FIL *` | Open FatFS file handle, positioned at start of PNG data |
-| `xSource` | `UWORD` | Left column of the source rectangle within the PNG |
-| `ySource` | `UWORD` | Top row of the source rectangle within the PNG |
-| `width` | `UWORD` | Width of the source rectangle (columns to extract) |
-| `height` | `UWORD` | Height of the source rectangle (rows to extract) |
-| `xTarget` | `UWORD` | X coordinate in the canvas where the top-left pixel is placed |
-| `yTarget` | `UWORD` | Y coordinate in the canvas where the top-left pixel is placed |
+| `xSource` | `UINT16` | Left column of the source rectangle within the PNG |
+| `ySource` | `UINT16` | Top row of the source rectangle within the PNG |
+| `width` | `UINT16` | Width of the source rectangle (columns to extract) |
+| `height` | `UINT16` | Height of the source rectangle (rows to extract) |
+| `xTarget` | `UINT16` | X coordinate in the canvas where the top-left pixel is placed |
+| `yTarget` | `UINT16` | Y coordinate in the canvas where the top-left pixel is placed |
 
 ### Reused Internal Helpers (already in Canvas.c)
 
@@ -85,8 +85,8 @@ No new data structures. The function operates on:
 The conversion from decoded RGB888 to RGB565 uses the identical binary-literal formula from `CanvasDrawPng`:
 
 ```c
-UWORD color = (UWORD)(((red & 0b11111000) | ((green & 0b11100000) >> 5)) << 8)
-    | (UWORD)(((green & 0b00011100) << 3) | ((blue & 0b11111000) >> 3));
+UINT16 color = (UINT16)(((red & 0b11111000) | ((green & 0b11100000) >> 5)) << 8)
+    | (UINT16)(((green & 0b00011100) << 3) | ((blue & 0b11111000) >> 3));
 ```
 
 The TRANSPARENT sentinel is `0xF81F` (RGB565 magenta = R:31, G:0, B:31).

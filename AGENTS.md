@@ -59,7 +59,7 @@ gui.ll/
 │   ├── Sample.c                    # Entry point (app_entry → main or app_main)
 │   │
 │   ├── lib/
-│   │   ├── Types.h                 # Shared scalar aliases (UBYTE/UWORD/UDOUBLE)
+│   │   ├── Types.h                 # Shared scalar aliases (UINT8/UINT16/UINT32)
 │   │   ├── Helper/
 │   │   │   ├── FileHelper.c/.h     # SD card mount/open/close (single FatFS volume SD_DRIVE)
 │   │   │   ├── PNGHelper.c/.h      # PNG decode + LCD display via libpng
@@ -404,9 +404,9 @@ Recent work:
 - **Added `CanvasDrawCurvedText` to the Canvas module** (`src/lib/GUI/Canvas.c`, prototype in
   `Canvas.h`) — a thin loop over `CanvasDrawCurvedChar` that renders a whole string along the circle.
   Signature mirrors the curved-char primitive, leading with the text then the geometric placement:
-  `void CanvasDrawCurvedText(const char *text, UWORD xCenter, UWORD yCenter, UWORD radius,
-  UWORD startAngle, TextOrientation orientation, sFONT* font, UWORD foregroundColor,
-  UWORD backgroundColor)`. It holds center, radius, orientation, font and colors constant and
+  `void CanvasDrawCurvedText(const char *text, UINT16 xCenter, UINT16 yCenter, UINT16 radius,
+  UINT16 startAngle, TextOrientation orientation, sFONT* font, UINT16 foregroundColor,
+  UINT16 backgroundColor)`. It holds center, radius, orientation, font and colors constant and
   **advances the angle per glyph**:
   - **Per-glyph angular step from arc length, in integers.** Each glyph occupies `font->Width` pixels
     of arc; the angular step for a pixel arc `s` at radius `r` is `s/r` radians = `s/r * 180/PI`
@@ -418,7 +418,7 @@ Recent work:
     drift across the string. The first glyph is centered at `startAngle`; subsequent glyphs advance
     clockwise (increasing angle = the tangent reading direction).
   - **Guards / edge cases**: `text == NULL` or `font == NULL` is a no-op; each character angle is
-    normalized to 0..359 before being passed on (so a long string cannot overflow the `UWORD` angle);
+    normalized to 0..359 before being passed on (so a long string cannot overflow the `UINT16` angle);
     `radius == 0` keeps the offset at 0 (every glyph anchors at the center — degenerate but safe, no
     divide-by-zero); spaces advance the angle without drawing (handled by `CanvasDrawCurvedChar`).
   - **Resolution note**: `CanvasDrawCurvedChar` only accepts whole-degree angles (360-entry LUT), so
@@ -435,9 +435,9 @@ Recent work:
   `Canvas.h`) — a new drawing primitive that places a single ASCII character on a circle of a given
   `radius` around `(xCenter, yCenter)` at a whole-degree `startAngle`, with the glyph rotated so its
   baseline stays tangent to the circle border (text that follows the round panel's rim). Signature:
-  `void CanvasDrawCurvedChar(const char ASCIIChar, UWORD xCenter, UWORD yCenter, UWORD radius,
-  UWORD startAngle, TextOrientation orientation, sFONT* font, UWORD foregroundColor,
-  UWORD backgroundColor)` — parameter order
+  `void CanvasDrawCurvedChar(const char ASCIIChar, UINT16 xCenter, UINT16 yCenter, UINT16 radius,
+  UINT16 startAngle, TextOrientation orientation, sFONT* font, UINT16 foregroundColor,
+  UINT16 backgroundColor)` — parameter order
   leads with the char then the geometric placement values so a future `CanvasDrawCurvedText` /
   `CanvasDrawCurvedNumber` can loop over characters by advancing `startAngle` (those helpers are
   out of scope here). It reuses the existing 1bpp `sFONT` glyphs (Font8/12/16/20/24), writes every
@@ -451,7 +451,7 @@ Recent work:
     whole transform in integers so both targets compute bit-for-bit identical pixels (Req 7.2/7.3).
   - **Guards / safety**: NULL `font` and out-of-range `ASCIIChar` (outside 0x20..0x7E) are no-ops;
     `startAngle` is normalized `% 360`; rotated targets are computed as signed `int32_t` and skipped
-    when negative *before* the `UWORD` cast, so no negative wraps into `CanvasSetPixel`.
+    when negative *before* the `UINT16` cast, so no negative wraps into `CanvasSetPixel`.
   - **Angle convention & tangent orientation**: 0° at three-o'clock, increasing clockwise in screen
     coords; `radius == 0` anchors exactly at the center. The glyph is oriented **tangent** to the
     circle, not radial: the placement angle positions the anchor, but the glyph rotation uses
@@ -476,8 +476,8 @@ Recent work:
   - **Spec**: the requirements, design and task plan live in `.kiro/specs/canvas-draw-curved-char/`.
 - **Added `CanvasDrawPngToArea` to the Canvas module** (`src/lib/GUI/Canvas.c`, prototype in
   `Canvas.h`) for **sub-area extraction from PNG atlases with transparency**. Signature:
-  `void CanvasDrawPngToArea(FIL *file, UWORD xSource, UWORD ySource, UWORD width, UWORD height,
-  UWORD xTarget, UWORD yTarget)`. It is a faithful structural copy of `CanvasDrawPng` — same
+  `void CanvasDrawPngToArea(FIL *file, UINT16 xSource, UINT16 ySource, UINT16 width, UINT16 height,
+  UINT16 xTarget, UINT16 yTarget)`. It is a faithful structural copy of `CanvasDrawPng` — same
   libpng pipeline (`png_create_read_struct`, `png_set_read_fn`, `setjmp`/`longjmp`,
   `png_read_info`, `png_get_IHDR`, `png_read_rows`, `png_destroy_read_struct`), same variable
   names, same `volatile png_bytep rowPointers` pattern, same palette/non-palette conditional, same
@@ -519,7 +519,7 @@ Recent work:
   `lcdSelected` chip-select tracking, the CS restore in the error path, and the final
   `DriverSendCommand(0x29)`). Clipping is computed against the **canvas** dimensions
   (`canvas.Width`/`canvas.Height`), not the panel (`LCD.WIDTH`/`LCD.HEIGHT`). RGB565 is packed into
-  a single `UWORD` with the identical high/low byte layout `CanvasSetPixel` (scale 65) stores
+  a single `UINT16` with the identical high/low byte layout `CanvasSetPixel` (scale 65) stores
   big-endian, so the buffer bytes are bit-for-bit what `LCDRenderPng` would have streamed — and what
   `LCDRenderTexture` later blits.
   - **Why**: decoding straight to the panel updates the screen row-by-row with inflate latency
@@ -563,7 +563,7 @@ Recent work:
   `compile_commands.json`, so clangd had no compile command for the other `.c` files and couldn't
   resolve their includes/types (e.g. `ff.h`, project types, `SHOWDEBUG` all flagged red in
   `PNGHelper.c`). Changes:
-  - New shared header `src/lib/Types.h` holds the `UBYTE`/`UWORD`/`UDOUBLE` aliases (were `#define`
+  - New shared header `src/lib/Types.h` holds the `UINT8`/`UINT16`/`UINT32` aliases (were `#define`
     macros inside each `HAL.c`); added `src/lib` to the include path on both platforms.
   - New public headers with prototypes: `HAL.h` (RP2040 + ESP32), `Driver.h`, `FileHelper.h`,
     `PNGHelper.h`. `Canvas.h`/`LCD_1in28.h` gained their prototypes + `extern` for the `canvas` /
@@ -573,7 +573,7 @@ Recent work:
     across TUs).
   - `Driver.c`: the helpers called from other TUs (`DriverHardwareReset`, `DriverSendCommand`,
     `DriverSendData8Bit`, `DriverSendCommandData8Bit`, `DriverSendData16Bit`) lost `static`;
-    `slice_num` is now `static UDOUBLE` (file-local). All `#include "X.c"` were replaced by
+    `slice_num` is now `static UINT32` (file-local). All `#include "X.c"` were replaced by
     `#include "X.h"` in `Sample.c`, `PNGHelper.c`, `LCD_1in28.c`, `Canvas.c`, `FileHelper.c`.
   - Build: root `CMakeLists.txt` now lists the common TUs in `GUILL_COMMON_SRCS`; RP2040's
     `add_executable` adds them + `RP2040/HAL.c` + `RP2040/RTC.c`; ESP32's `idf_component_register
@@ -648,7 +648,7 @@ Recent work:
    declares the module's public prototypes, types and `extern` globals (see §5). Add new `.c`
    files to the build source list (RP2040: `add_executable` via `GUILL_COMMON_SRCS` +
    platform sources; ESP32: `idf_component_register SRCS`). Shared scalar aliases
-   (`UBYTE`/`UWORD`/`UDOUBLE`) live in `src/lib/Types.h`.
+   (`UINT8`/`UINT16`/`UINT32`) live in `src/lib/Types.h`.
 
    > Superseded approach: the project originally used a **unity build** — `.c` files were
    > `#include`d directly (`#include "HAL.c"`) so the whole program was one translation unit.
@@ -779,7 +779,7 @@ Recent work:
       RGB565 bit math are reproduced verbatim (including `SHOWDEBUG` traces/comments for retained
       steps). The *only* intended differences are the two below.
     - **Pixel destination**: the two `SPIWriteByte` calls are replaced by one
-      `CanvasSetPixel(col, row, color)`. The `UWORD` is packed with the identical high/low byte
+      `CanvasSetPixel(col, row, color)`. The `UINT16` is packed with the identical high/low byte
       layout `CanvasSetPixel` (scale 65) stores big-endian — so buffer bytes are bit-for-bit what
       the panel path would have streamed. The packing is host-endianness-independent integer math,
       giving identical buffer contents on RP2040 and ESP32.
@@ -812,12 +812,12 @@ Recent work:
       whatever is already in the buffer (e.g. the PNG) stays visible behind the text. Passing any
       other `backgroundColor` paints the glyph box opaquely as before. This replaced the old
       `FONT_BACKGROUND`-equals check.
-    - **`RGB_COLOR(r, g, b)` MUST cast to `UWORD` (unsigned), not `short`**. RGB565 values above
+    - **`RGB_COLOR(r, g, b)` MUST cast to `UINT16` (unsigned), not `short`**. RGB565 values above
       `0x7FFF` (red/magenta/white, etc.) are negative as a signed `short`; comparing a signed
-      `short` constant against a `UWORD` (e.g. `TRANSPARENT == backgroundColor`) is *always false*
+      `short` constant against a `UINT16` (e.g. `TRANSPARENT == backgroundColor`) is *always false*
       after integer promotion (clang warns: "comparison … always false"), silently breaking the
       transparency check. The unsigned cast is what makes the color key actually match. All color
-      macros (`WHITE`, `RED`, `TRANSPARENT`, …) go through `RGB_COLOR`, so they are all `UWORD`.
+      macros (`WHITE`, `RED`, `TRANSPARENT`, …) go through `RGB_COLOR`, so they are all `UINT16`.
     - **At render time there is still no panel-level transparency**: `LCDRenderTexture` blits the
       whole buffer. The "transparency" is purely a *compositing-in-RAM* effect — only meaningful
       because the buffer already holds the background. If you ever want to overlay onto an image
@@ -835,7 +835,7 @@ Recent work:
     - **No runtime floating point.** Calling `sinf`/`cosf` at runtime risks last-ULP differences
       between the two libm implementations that occasionally round to a different integer pixel.
       Instead, trigonometry is read from **Q16.16** integer lookup tables exposed by the
-      `Helper/Trigonometry` module (`TrigCosQ16(UWORD deg)` / `TrigSinQ16(UWORD deg)`, normalized
+      `Helper/Trigonometry` module (`TrigCosQ16(UINT16 deg)` / `TrigSinQ16(UINT16 deg)`, normalized
       mod 360; `TRIG_Q16_SCALE = 1 << 16`). The tables are `static const` literals generated offline
       and embedded in `Trigonometry.c` (~2.8 KB rodata, one copy), so both targets link identical
       integers; do NOT regenerate them with `libm` at runtime. (The tables originally lived inside
@@ -854,9 +854,9 @@ Recent work:
       the `/2` (for the doubling) and `/TRIG_Q16_SCALE` (Q16.16) into one
       `CanvasRoundDivAway(.., 2*TRIG_Q16_SCALE)` call. Doubling makes the half-pixel box center exact
       in integers (Req 3.3).
-    - **Signed-before-cast bounds check.** `CanvasSetPixel` takes `UWORD`; a negative rotated
+    - **Signed-before-cast bounds check.** `CanvasSetPixel` takes `UINT16`; a negative rotated
       coordinate would wrap to a huge value and bypass the upper-bound clip. So `targetX`/`targetY`
-      are `int32_t` and any negative component is skipped **before** the `UWORD` cast (Req 6.3). All
+      are `int32_t` and any negative component is skipped **before** the `UINT16` cast (Req 6.3). All
       writes still go through `CanvasSetPixel`, so its clip/rotate/flip and `WidthMemory`/`HeightMemory`
       guards apply.
     - **Forward (source-driven) mapping**, mirroring `CanvasDrawChar`'s glyph iteration, so the

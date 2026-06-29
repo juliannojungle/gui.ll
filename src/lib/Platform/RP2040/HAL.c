@@ -4,35 +4,35 @@
 #include "HAL.h"
 #include "pico/stdio_usb.h"
 
-void DigitalWrite(UINT pin, UBYTE value) {
+void DigitalWrite(UINT32 pin, UINT8 value) {
     gpio_put(pin, value);
 }
 
-UBYTE DigitalRead(UINT pin) {
+UINT8 DigitalRead(UINT32 pin) {
     return gpio_get(pin);
 }
 
-void SPIWriteByte(UBYTE value) {
+void SPIWriteByte(UINT8 value) {
     spi_write_blocking(LCD_SPI, &value, 1);
 }
 
-void SPIWriteNByte(UBYTE pData[], UDOUBLE len) {
+void SPIWriteNByte(UINT8 pData[], UINT32 len) {
     spi_write_blocking(LCD_SPI, pData, len);
 }
 
-void GPIOInit(UINT pin) {
+void GPIOInit(UINT32 pin) {
     gpio_init(pin);
 }
 
-void GPIOSetDir(UINT pin, UINT mode) {
+void GPIOSetDir(UINT32 pin, UINT32 mode) {
     gpio_set_dir(pin, mode);
 }
 
-void GPIOPullUp(UINT pin) {
+void GPIOPullUp(UINT32 pin) {
     gpio_pull_up(pin);
 }
 
-void Delay(UINT milliseconds) {
+void Delay(UINT32 milliseconds) {
     sleep_ms(milliseconds);
 }
 
@@ -41,31 +41,31 @@ void STDIOInitAll(void) {
     stdio_set_translate_crlf(&stdio_usb, false);
 }
 
-void SPIInit(UINT speed) {
+void SPIInit(UINT32 speed) {
     spi_init(LCD_SPI, speed);
 }
 
-void GPIOSetFunction(UINT pin, UINT function) {
-    gpio_set_function(pin, (UINT)function);
+void GPIOSetFunction(UINT32 pin, UINT32 function) {
+    gpio_set_function(pin, (UINT32)function);
 }
 
-UINT PWMGPIOToSliceNum(UINT pin) {
+UINT32 PWMGPIOToSliceNum(UINT32 pin) {
     return pwm_gpio_to_slice_num(pin);
 }
 
-void PWMSetWrap(UINT slice, UINT value) {
+void PWMSetWrap(UINT32 slice, UINT32 value) {
     pwm_set_wrap(slice, value);
 }
 
-void PWMSetChannelLevel(UINT slice, UINT channel, UWORD level) {
-    pwm_set_chan_level(slice, (UINT)channel, level);
+void PWMSetChannelLevel(UINT32 slice, UINT32 channel, UINT16 level) {
+    pwm_set_chan_level(slice, (UINT32)channel, level);
 }
 
-void PWMSetClockDivider(UINT slice, float divider) {
+void PWMSetClockDivider(UINT32 slice, float divider) {
     pwm_set_clkdiv(slice, divider);
 }
 
-void PWMSetEnabled(UINT slice, bool enable) {
+void PWMSetEnabled(UINT32 slice, bool enable) {
     pwm_set_enabled(slice, enable);
 }
 

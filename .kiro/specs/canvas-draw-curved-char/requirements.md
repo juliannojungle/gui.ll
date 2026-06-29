@@ -57,10 +57,10 @@ curved text and number helpers on top of the same primitive.
 1. THE Canvas SHALL declare a `CanvasDrawCurvedChar` function prototype in `Canvas.h` and define
    the function in `Canvas.c`.
 2. THE Canvas SHALL accept the following parameters for `CanvasDrawCurvedChar` with these types:
-   the ASCII character as a `const char`, the circle center X coordinate as a `UWORD`, the circle
-   center Y coordinate as a `UWORD`, the radius as a `UWORD`, the start angle as a `UWORD`, a
-   pointer to an `sFONT` font, the foreground color as a `UWORD` RGB565 value, and the background
-   color as a `UWORD` RGB565 value.
+   the ASCII character as a `const char`, the circle center X coordinate as a `UINT16`, the circle
+   center Y coordinate as a `UINT16`, the radius as a `UINT16`, the start angle as a `UINT16`, a
+   pointer to an `sFONT` font, the foreground color as a `UINT16` RGB565 value, and the background
+   color as a `UINT16` RGB565 value.
 3. THE Canvas SHALL order the `CanvasDrawCurvedChar` parameters as ASCII character, center X
    coordinate, center Y coordinate, radius, start angle, font pointer, foreground color, and
    background color, so that a caller can advance the start angle to position consecutive
@@ -172,7 +172,7 @@ that placing a character near the border never corrupts memory outside the canva
    remaining glyph pixels, leaving the canvas buffer unmodified for the skipped pixel.
 3. IF the rotation transform produces a negative intermediate column or row coordinate before
    translation, THEN THE Canvas SHALL treat that pixel as out of bounds and skip it, so that no
-   negative value is converted to an unsigned `UWORD` coordinate and passed to `CanvasSetPixel`.
+   negative value is converted to an unsigned `UINT16` coordinate and passed to `CanvasSetPixel`.
 4. WHEN `CanvasDrawCurvedChar` finishes rendering a character at any placement, including
    placements adjacent to or beyond the canvas border, THE Canvas SHALL write only within the
    canvas buffer bounded by `canvas.WidthMemory` and `canvas.HeightMemory` and SHALL NOT write to

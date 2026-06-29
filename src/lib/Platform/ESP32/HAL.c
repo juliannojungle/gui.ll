@@ -14,15 +14,15 @@
 
 static spi_device_handle_t lcdSpiHandle = NULL;
 
-void DigitalWrite(uint32_t pin, UBYTE value) {
+void DigitalWrite(uint32_t pin, UINT8 value) {
     gpio_set_level((gpio_num_t)pin, value);
 }
 
-UBYTE DigitalRead(uint32_t pin) {
-    return (UBYTE)gpio_get_level((gpio_num_t)pin);
+UINT8 DigitalRead(uint32_t pin) {
+    return (UINT8)gpio_get_level((gpio_num_t)pin);
 }
 
-void SPIWriteByte(UBYTE value) {
+void SPIWriteByte(UINT8 value) {
     if (lcdSpiHandle == NULL) return;
     spi_transaction_t trans = {
         .length = 8,
@@ -31,7 +31,7 @@ void SPIWriteByte(UBYTE value) {
     spi_device_transmit(lcdSpiHandle, &trans);
 }
 
-void SPIWriteNByte(UBYTE pData[], UDOUBLE len) {
+void SPIWriteNByte(UINT8 pData[], UINT32 len) {
     if (lcdSpiHandle == NULL) return;
     spi_transaction_t trans = {
         .length = len * 8,
@@ -106,7 +106,7 @@ void PWMSetWrap(uint32_t slice, uint32_t value) {
     // LEDC duty resolution is set during channel config
 }
 
-void PWMSetChannelLevel(uint32_t slice, uint32_t channel, UWORD level) {
+void PWMSetChannelLevel(uint32_t slice, uint32_t channel, UINT16 level) {
     (void)slice;
     (void)channel;
     ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, level);

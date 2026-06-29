@@ -8,7 +8,7 @@ Add a `CanvasDrawPngToArea` method to the Canvas module that decodes a rectangul
 
 - **Canvas**: The in-RAM drawing surface (RGB565 texture buffer) used for flicker-free compositing before panel blit
 - **Canvas_Module**: The `Canvas.c` / `Canvas.h` module that implements the drawing API
-- **CanvasDrawPngToArea**: The new method being specified: `void CanvasDrawPngToArea(FIL *file, UWORD xSource, UWORD ySource, UWORD width, UWORD height, UWORD xTarget, UWORD yTarget)`
+- **CanvasDrawPngToArea**: The new method being specified: `void CanvasDrawPngToArea(FIL *file, UINT16 xSource, UINT16 ySource, UINT16 width, UINT16 height, UINT16 xTarget, UINT16 yTarget)`
 - **Source_Area**: The rectangular region [xSource, ySource] to [xSource + width, ySource + height] within the PNG image
 - **Target_Position**: The point [xTarget, yTarget] in the canvas texture where the top-left of the extracted sub-area is placed
 - **TRANSPARENT**: The color-key sentinel `RGB_COLOR(255, 0, 255)` = `0xF81F` (magenta); pixels matching this value are skipped during compositing
@@ -26,7 +26,7 @@ Add a `CanvasDrawPngToArea` method to the Canvas module that decodes a rectangul
 
 #### Acceptance Criteria
 
-1. THE Canvas_Module SHALL expose `CanvasDrawPngToArea` with the signature `void CanvasDrawPngToArea(FIL *file, UWORD xSource, UWORD ySource, UWORD width, UWORD height, UWORD xTarget, UWORD yTarget)`
+1. THE Canvas_Module SHALL expose `CanvasDrawPngToArea` with the signature `void CanvasDrawPngToArea(FIL *file, UINT16 xSource, UINT16 ySource, UINT16 width, UINT16 height, UINT16 xTarget, UINT16 yTarget)`
 2. THE Canvas_Module SHALL declare the `CanvasDrawPngToArea` prototype in `Canvas.h`
 3. THE CanvasDrawPngToArea SHALL use the same libpng decode pipeline as CanvasDrawPng: `png_create_read_struct`, `png_create_info_struct`, `png_set_read_fn`, `setjmp`/`longjmp` error recovery, `png_read_info`, `png_get_IHDR`, row-by-row `png_read_rows`, and `png_destroy_read_struct`
 4. THE CanvasDrawPngToArea SHALL use the same SHOWDEBUG traces as CanvasDrawPng for each corresponding step
@@ -78,7 +78,7 @@ Add a `CanvasDrawPngToArea` method to the Canvas module that decodes a rectangul
 
 #### Acceptance Criteria
 
-1. THE CanvasDrawPngToArea SHALL use only integer arithmetic (no `float`, `double`, or floating-point library calls) for all computations including RGB565 conversion, row/column indexing, and bounds clamping, matching the bit-manipulation formula in CanvasDrawPng: `(UWORD)(((red & 0b11111000) | ((green & 0b11100000) >> 5)) << 8) | (UWORD)(((green & 0b00011100) << 3) | ((blue & 0b11111000) >> 3))`
+1. THE CanvasDrawPngToArea SHALL use only integer arithmetic (no `float`, `double`, or floating-point library calls) for all computations including RGB565 conversion, row/column indexing, and bounds clamping, matching the bit-manipulation formula in CanvasDrawPng: `(UINT16)(((red & 0b11111000) | ((green & 0b11100000) >> 5)) << 8) | (UINT16)(((green & 0b00011100) << 3) | ((blue & 0b11111000) >> 3))`
 2. THE CanvasDrawPngToArea SHALL contain no preprocessor conditional compilation directives (`#if`, `#ifdef`, `#ifndef`) that select platform-variant code paths
 3. THE CanvasDrawPngToArea SHALL produce byte-for-byte identical canvas buffer contents on RP2040 and ESP32-S3 when given the same PNG file content and the same function arguments (xSource, ySource, width, height, xTarget, yTarget)
 

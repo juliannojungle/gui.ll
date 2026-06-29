@@ -33,9 +33,9 @@
 #include "HAL.h"
 #include "Driver.h"
 
-static UDOUBLE pwmBacklightBrightnessLevel;
+static UINT32 pwmBacklightBrightnessLevel;
 
-void DriverGPIOMode(UWORD pin, UWORD mode) {
+void DriverGPIOMode(UINT16 pin, UINT16 mode) {
     GPIOInit(pin);
 
     if(mode == 0 || mode == GPIO_IN) {
@@ -65,13 +65,13 @@ void DriverBacklightPWMInitialize(void) {
     PWMSetEnabled(pwmBacklightBrightnessLevel, true);
 }
 
-void DriverSetBacklightBrightness(UINT brightness) {
+void DriverSetBacklightBrightness(UINT8 brightness) {
     if (brightness < 100) {
         PWMSetChannelLevel(pwmBacklightBrightnessLevel, 1, brightness);
     }
 }
 
-UBYTE DriverInitialize(void) {
+UINT8 DriverInitialize(void) {
     STDIOInitAll();
 
     // SPI Config
@@ -94,7 +94,7 @@ void DriverHardwareReset(void)
     Delay(100);
 }
 
-void DriverSendCommand(UBYTE Reg)
+void DriverSendCommand(UINT8 Reg)
 {
     DigitalWrite(LCD_DC_PIN, 0);
     DigitalWrite(LCD_CS_PIN, 0);
@@ -102,7 +102,7 @@ void DriverSendCommand(UBYTE Reg)
     DigitalWrite(LCD_CS_PIN, 1);
 }
 
-void DriverSendData8Bit(UBYTE Data)
+void DriverSendData8Bit(UINT8 Data)
 {
     DigitalWrite(LCD_DC_PIN, 1);
     DigitalWrite(LCD_CS_PIN, 0);
@@ -110,7 +110,7 @@ void DriverSendData8Bit(UBYTE Data)
     DigitalWrite(LCD_CS_PIN, 1);
 }
 
-void DriverSendCommandData8Bit(UBYTE command, UBYTE data[], int dataSize)
+void DriverSendCommandData8Bit(UINT8 command, UINT8 data[], int dataSize)
 {
     DriverSendCommand(command);
     for (int i = 0; i < dataSize; i++) {
@@ -118,7 +118,7 @@ void DriverSendCommandData8Bit(UBYTE command, UBYTE data[], int dataSize)
     }
 }
 
-void DriverSendData16Bit(UWORD Data)
+void DriverSendData16Bit(UINT16 Data)
 {
     DigitalWrite(LCD_DC_PIN, 1);
     DigitalWrite(LCD_CS_PIN, 0);

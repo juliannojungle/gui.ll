@@ -22,7 +22,7 @@ existing `Canvas.c` style).
 - [x] 1. Add public API signature and input guards
   - [x] 1.1 Declare the prototype and implement the guard/no-op skeleton
     - Add the `CanvasDrawCurvedChar` prototype in `Canvas.h` next to `CanvasDrawChar`, with the exact
-      parameter order, `UWORD`/`const char`/`sFONT*` types, camelCase names, and `void` return type.
+      parameter order, `UINT16`/`const char`/`sFONT*` types, camelCase names, and `void` return type.
     - Add the definition in `Canvas.c` with the early-return guards: return immediately if `font` is
       NULL, then return if `ASCIIChar` is outside the inclusive range 0x20..0x7E, then normalize the
       angle with `angle = startAngle % 360` (leave the render body as a stub for now so the module still
@@ -63,7 +63,7 @@ existing `Canvas.c` style).
       iterate every source cell `(Column, Page)` over the full `Width x Height` box.
     - For each cell compute `dx2 = 2*Column - (width-1)`, `dy2 = 2*Page - (height-1)`, rotate via
       `CanvasRotateGlyphOffset`, add the anchor to get signed `targetX`/`targetY`, skip the pixel if
-      either is negative (before any `UWORD` cast), then write the set bit with `foregroundColor`, write
+      either is negative (before any `UINT16` cast), then write the set bit with `foregroundColor`, write
       unset bits with `backgroundColor`, or skip unset bits when `backgroundColor == TRANSPARENT`. All
       writes go through `CanvasSetPixel`.
     - _Requirements: 2.1, 2.2, 2.4, 2.5, 3.1, 3.2, 3.3, 3.4, 4.1, 4.2, 4.3, 5.1, 5.2, 5.3, 5.4, 6.1, 6.2, 6.3, 6.4_

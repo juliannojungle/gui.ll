@@ -7,9 +7,8 @@
  * separate compilation they live here so every translation unit can see them. */
 #include <stdint.h>
 
-typedef unsigned int UINT;
-typedef uint8_t  UBYTE;
-typedef uint16_t UWORD;
-typedef uint32_t UDOUBLE;
+typedef uint8_t  UINT8; // unsigned char
+typedef uint16_t UINT16; // unsigned short int
+typedef uint32_t UINT32; // unsigned int
 
 #endif /* TYPES_H */

@@ -17,11 +17,11 @@ void app_entry(void) {
     DriverSetBacklightBrightness(90);
     // Delay(3000); // give us time to start serial monitor
 
-    UDOUBLE imageSize = LCD.HEIGHT * LCD.WIDTH * 2;
-    UWORD *texture = (UWORD *) malloc(imageSize);
+    UINT32 imageSize = LCD.HEIGHT * LCD.WIDTH * 2;
+    UINT16 *texture = (UINT16 *) malloc(imageSize);
     if (texture == NULL)
         exit(EXIT_FAILURE);
-    CanvasNewTexture((UBYTE *)texture, LCD.WIDTH, LCD.HEIGHT, ROTATE_0);
+    CanvasNewTexture((UINT8 *)texture, LCD.WIDTH, LCD.HEIGHT, ROTATE_0);
     CanvasSetScale(65);
 
     FIL file;
