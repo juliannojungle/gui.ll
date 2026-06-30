@@ -1,6 +1,5 @@
 #include "HAL.h"
 #include "RTC.h"
-#include "Driver.h"
 #include "LCDSetup.h"
 #include "LCDRenderer.h"
 #include "FileHelper.h"
@@ -14,7 +13,6 @@ void app_entry(void) {
     RTCInitialize();
     LCDInitialize();
     LCDClear(BLACK);
-    DriverSetBacklightBrightness(90);
     // Delay(3000); // give us time to start serial monitor
 
     UINT32 imageSize = LCD.HEIGHT * LCD.WIDTH * 2;

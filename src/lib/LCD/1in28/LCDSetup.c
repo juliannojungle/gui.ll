@@ -95,6 +95,7 @@ int LCDInitialize()
     DriverHardwareReset();
     LCDSetAttributes(HORIZONTAL);
     LCDInitRegister();
+    DriverSetBacklightBrightness(90);
     return EXIT_SUCCESS;
 }
 
