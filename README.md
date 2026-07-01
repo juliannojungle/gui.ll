@@ -90,7 +90,7 @@ The GC9A01A LCD driver datasheet is versioned in `Documentation/` in two complem
 - **IDE**: [Kiro](https://kiro.dev) or [VSCode](https://code.visualstudio.com/)
 - **RP2040**: arm-none-eabi-gcc, Pico SDK (installed via `Setup: RP2040 toolchain`)
 - **ESP32**: ESP-IDF ≥ 5.x, xtensa toolchain, espflash (installed via `Setup: ESP32 toolchain`)
-- **Simulator**: libsdl2-dev, gdb (installed via `Setup: Simulator toolchain`)
+- **Simulator**: libsdl2-dev, gdb, dosfstools, mtools (installed via `Setup: Simulator toolchain`)
 - **CMake** ≥ 3.16
 
 > The preferred IDE is **[Kiro](https://kiro.dev)**, which provides agent-assisted development with project-aware context via `AGENTS.md`. The project also works fully with **VS Code** — all tasks and settings are configured in `.vscode/`.
@@ -110,7 +110,7 @@ gui.ll/
 │   │   ├── Platform/
 │   │   │   ├── RP2040/             # HAL, SPI, DiskIO, RTC (Pico SDK)
 │   │   │   ├── ESP32/              # HAL, SPI, DiskIO, RTC (ESP-IDF)
-│   │   │   └── Simulator/          # HAL stubs, POSIX file I/O, SDL2 event pump
+│   │   │   └── Simulator/          # HAL stubs, DiskIO (FatFS ↔ disk image), SDL2 event pump
 │   │   ├── Driver/GC9A01/          # LCD driver
 │   │   ├── LCD/1in28/              # Display layer: LCDSetup (init) + LCDRenderer (blit)
 │   │   ├── LCD/Simulator/          # SDL2 display layer: same API, renders to window

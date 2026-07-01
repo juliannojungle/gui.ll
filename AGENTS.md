@@ -55,7 +55,7 @@ gui.ll/
 ├── Toolchain/
 │   ├── RP2040/Setup.sh             # Installs arm-none-eabi-gcc, pico-sdk
 │   ├── ESP32/Setup.sh              # Installs ESP-IDF, xtensa toolchain, Rust, espflash
-│   ├── Simulator/Setup.sh          # Installs libsdl2-dev, gdb (idempotent)
+│   ├── Simulator/Setup.sh          # Installs libsdl2-dev, gdb, dosfstools, mtools; creates sample/sdcard.img
 │   └── wsl.sh                      # Restores WSL Windows interop (.exe) under systemd
 │
 ├── src/
@@ -86,10 +86,9 @@ gui.ll/
 │   │   │   │
 │   │   │   └── Simulator/
 │   │   │       ├── HAL.c/.h        # HAL: no-op stubs + Delay with SDL event pump; Pico-SDK compat constants
-│   │   │       ├── HALConfig.h     # Dummy pin defines + SD_DIRECTORY "sample/sdcard"
+│   │   │       ├── HALConfig.h     # Dummy pin defines + SD_DISK_IMAGE "sample/sdcard.img"
 │   │   │       ├── RTC.c/.h        # RTCInitialize (no-op) + get_fattime (host time via localtime)
-│   │   │       ├── FileHelper.c/.h # POSIX file I/O (fopen/fread/fclose) replacing FatFS; defines FIL, FRESULT, f_read
-│   │   │       └── ff.h            # Shim header — redirects #include "ff.h" to FileHelper.h for simulator builds
+│   │   │       └── DiskIO.c        # FatFS disk I/O (POSIX fopen/fseek/fread/fwrite against sample/sdcard.img)
 │   │   │
 │   │   ├── Driver/GC9A01/          # LCD driver (Driver.c/.h) — uses LCD_* defines from HALConfig.h; DriverInitialize configures SPI, GPIO and backlight PWM; DriverSetBacklightBrightness sets PWM level
 │   │   ├── LCD/1in28/               # GC9A01 1.28" panel layer, split in two TUs:
@@ -299,13 +298,18 @@ fi
 ### Simulator
 - Uses **cmake + make** with the host compiler (gcc/clang, no cross-compilation)
 - Selected via `cmake -DPLATFORM_NAME=Simulator`
-- Links SDL2 (`find_package`), libpng and zlib from submodules (`zlibstatic.cmake` approach)
-- Does NOT link FatFS, DiskIO, or Driver/GC9A01 — replaced by POSIX file I/O and SDL2 rendering
-- A shim `Platform/Simulator/ff.h` redirects `#include "ff.h"` to `FileHelper.h` so shared code
-  (`Canvas.h`) compiles without FatFS headers
+- Links SDL2 (`find_package`), libpng, zlib, and **real FatFS** from submodules
+- Compiles the real FatFS (`ff.c`, `ffsystem.c`, `ffunicode.c`) + `Platform/Simulator/DiskIO.c` +
+  the shared `Helper/FileHelper.c` — same file I/O stack as RP2040/ESP32
+- `DiskIO.c` backs FatFS against `sample/sdcard.img` (a FAT disk image file) using POSIX
+  `fopen`/`fseek`/`fread`/`fwrite`/`fflush`
+- Does NOT link Driver/GC9A01 — LCD rendering is via SDL2 (`LCD/Simulator/`)
+- `fatfs.ffconf_patch.cmake` is applied before compilation (same patch as RP2040)
 - Produces a native ELF executable (`build/gui.ll`)
 - `Delay(ms)` integrates an SDL event-pump loop to keep the window responsive
-- Requires `libsdl2-dev` and `gdb` (installed by `Toolchain/Simulator/Setup.sh`)
+- Requires `libsdl2-dev`, `gdb`, `dosfstools`, and `mtools` (installed by `Toolchain/Simulator/Setup.sh`)
+- `Toolchain/Simulator/Setup.sh` also creates `sample/sdcard.img` from `sample/sdcard/` contents
+  on every run (not idempotent — intentional so sample file changes are always reflected)
 
 ### Simulator Incremental Build
 
@@ -455,22 +459,37 @@ This prevents the git plugin from showing false "modified" files in submodules
   compile-tested on ESP32-S3** (earlier parity changes elsewhere may still predate this). SD path
   rewritten for parity but **not yet hardware-tested**.
 - **Simulator**: Builds and runs. SDL2 window displays the 240×240 LCD output; PNG loading from
-  `sample/sdcard/` works via POSIX file I/O. GDB debugging via launch.json confirmed working.
-  `Sample.c` runs unchanged — no `#ifdef` needed.
+  `sample/sdcard.img` works via real FatFS backed by a disk image file (same I/O stack as hardware
+  platforms). GDB debugging via launch.json confirmed working. `Sample.c` runs unchanged — no
+  `#ifdef` needed.
 
 Recent work:
+- **Refactored Simulator file I/O to use real FatFS** — eliminated the POSIX shim
+  (`Platform/Simulator/FileHelper.c`, `FileHelper.h`, `ff.h`) and replaced it with a new
+  `Platform/Simulator/DiskIO.c` that backs FatFS against a local FAT-formatted disk image file
+  (`sample/sdcard.img`). All three platforms now share the identical `Helper/FileHelper.c` → FatFS
+  → platform `DiskIO.c` stack, making file I/O behavior consistent across targets. Changes:
+  - New `src/lib/Platform/Simulator/DiskIO.c` — implements `disk_initialize`, `disk_status`,
+    `disk_read`, `disk_write`, `disk_ioctl`, `SDCardInit` using POSIX file I/O against a disk image
+  - Updated `HALConfig.h` — `SD_DIRECTORY` replaced by `SD_DISK_IMAGE "sample/sdcard.img"`
+  - Updated `Toolchain/Simulator/Setup.sh` — installs `dosfstools` + `mtools`, creates
+    `sample/sdcard.img` on every run from `sample/sdcard/` contents
+  - Updated CMake Simulator block — compiles FatFS sources + DiskIO + shared FileHelper; adds
+    FatFS include path; applies `fatfs.ffconf_patch.cmake`
+  - Deleted old shim files: `FileHelper.c`, `FileHelper.h`, `ff.h` from `Platform/Simulator/`
+  - Build verified: clean compile + link with `cmake -DPLATFORM_NAME=Simulator && make`
+  - **Spec**: `.kiro/specs/refactor-file-io-layer/`
 - **Added LCD Simulator platform target** — a third platform (`Simulator`) that produces a native
   desktop executable rendering the 240×240 RGB565 display in an SDL2 window. Enables rapid
   screen-design iteration without flashing to hardware. `Sample.c` and all shared code compile
-  unchanged; only the platform layer (HAL stubs, SDL2-backed LCD, POSIX file I/O) is swapped at
-  build time via `cmake -DPLATFORM_NAME=Simulator`. Key points:
+  unchanged; only the platform layer (HAL stubs, SDL2-backed LCD, FatFS-backed disk image) is
+  swapped at build time via `cmake -DPLATFORM_NAME=Simulator`. Key points:
   - HAL functions are no-ops except `Delay(ms)` which integrates an SDL event-pump loop
-  - File I/O replaces FatFS with `fopen`/`fread`/`fclose` against `sample/sdcard/`
-  - A shim `Platform/Simulator/ff.h` redirects shared code's `#include "ff.h"` to the simulator's
-    `FileHelper.h` (defines `FIL`, `FRESULT`, `f_read` without actual FatFS)
+  - File I/O uses the real FatFS stack backed by `sample/sdcard.img` (a FAT disk image)
   - LCD layer uses `SDL_UpdateTexture` + byte-swap (big-endian → native) for pixel fidelity
-  - CMake block: `elseif(PLATFORM_NAME STREQUAL "Simulator")` links SDL2, libpng, zlibstatic, m
-  - Toolchain setup: `Toolchain/Simulator/Setup.sh` installs `libsdl2-dev` + `gdb`
+  - CMake block: `elseif(PLATFORM_NAME STREQUAL "Simulator")` links SDL2, libpng, zlibstatic, m,
+    and compiles FatFS + DiskIO
+  - Toolchain setup: `Toolchain/Simulator/Setup.sh` installs deps + creates disk image
   - VS Code integration: tasks.json (Full + Incremental build), launch.json (GDB debug)
   - **Spec**: `.kiro/specs/lcd-simulator/`
 - **Added `CanvasDrawCurvedText` to the Canvas module** (`src/lib/GUI/Canvas.c`, prototype in

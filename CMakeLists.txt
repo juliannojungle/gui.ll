@@ -51,7 +51,7 @@ elseif(PLATFORM_NAME STREQUAL "Simulator")
         ${CMAKE_SOURCE_DIR}/src/Sample.c
         ${CMAKE_SOURCE_DIR}/src/lib/Platform/Simulator/HAL.c
         ${CMAKE_SOURCE_DIR}/src/lib/Platform/Simulator/RTC.c
-        ${CMAKE_SOURCE_DIR}/src/lib/Platform/Simulator/FileHelper.c
+        ${CMAKE_SOURCE_DIR}/src/lib/Platform/Simulator/DiskIO.c
         ${CMAKE_SOURCE_DIR}/src/lib/LCD/Simulator/LCDSetup.c
         ${CMAKE_SOURCE_DIR}/src/lib/LCD/Simulator/LCDRenderer.c
         ${CMAKE_SOURCE_DIR}/src/lib/GUI/Canvas.c
@@ -60,9 +60,14 @@ elseif(PLATFORM_NAME STREQUAL "Simulator")
         ${CMAKE_SOURCE_DIR}/src/lib/GUI/Fonts/font16.c
         ${CMAKE_SOURCE_DIR}/src/lib/GUI/Fonts/font20.c
         ${CMAKE_SOURCE_DIR}/src/lib/GUI/Fonts/font24.c
+        ${CMAKE_SOURCE_DIR}/src/lib/Helper/FileHelper.c
         ${CMAKE_SOURCE_DIR}/src/lib/Helper/Trigonometry.c
+        ${CMAKE_SOURCE_DIR}/src/Dependency/fatfs/source/ff.c
+        ${CMAKE_SOURCE_DIR}/src/Dependency/fatfs/source/ffsystem.c
+        ${CMAKE_SOURCE_DIR}/src/Dependency/fatfs/source/ffunicode.c
     )
 
+    include(${CMAKE_SOURCE_DIR}/src/Dependency/fatfs.ffconf_patch.cmake)
     add_executable(${PROJECT_NAME} ${GUILL_SIM_SRCS})
 
     set(GUILL_LIB ${CMAKE_SOURCE_DIR}/src/lib)
@@ -72,6 +77,7 @@ elseif(PLATFORM_NAME STREQUAL "Simulator")
     include_directories(${GUILL_LIB}/GUI)
     include_directories(${GUILL_LIB}/GUI/Fonts)
     include_directories(${GUILL_LIB}/Helper)
+    include_directories(${CMAKE_SOURCE_DIR}/src/Dependency/fatfs/source)
 
     find_package(SDL2 REQUIRED)
     include_directories(${SDL2_INCLUDE_DIRS})
