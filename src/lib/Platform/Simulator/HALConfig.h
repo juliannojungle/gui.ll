@@ -17,6 +17,6 @@
 #define SD_SPI_BAUDRATE 25000000
 #define SD_DETECT_PIN   10
 
-#define SD_DIRECTORY "sample/sdcard"
+#define SD_DISK_IMAGE "sample/sdcard.img"
 
 #endif /* HAL_CONFIG_H */
