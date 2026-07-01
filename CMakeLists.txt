@@ -43,6 +43,64 @@ if(PLATFORM_NAME STREQUAL "ESP32")
     include($ENV{IDF_PATH}/tools/cmake/project.cmake)
     project(gui.ll)
 
+elseif(PLATFORM_NAME STREQUAL "Simulator")
+    set(CMAKE_C_STANDARD 11)
+    project(gui.ll)
+
+    set(GUILL_SIM_SRCS
+        ${CMAKE_SOURCE_DIR}/src/Sample.c
+        ${CMAKE_SOURCE_DIR}/src/lib/Platform/Simulator/HAL.c
+        ${CMAKE_SOURCE_DIR}/src/lib/Platform/Simulator/RTC.c
+        ${CMAKE_SOURCE_DIR}/src/lib/Platform/Simulator/FileHelper.c
+        ${CMAKE_SOURCE_DIR}/src/lib/LCD/Simulator/LCDSetup.c
+        ${CMAKE_SOURCE_DIR}/src/lib/LCD/Simulator/LCDRenderer.c
+        ${CMAKE_SOURCE_DIR}/src/lib/GUI/Canvas.c
+        ${CMAKE_SOURCE_DIR}/src/lib/GUI/Fonts/font8.c
+        ${CMAKE_SOURCE_DIR}/src/lib/GUI/Fonts/font12.c
+        ${CMAKE_SOURCE_DIR}/src/lib/GUI/Fonts/font16.c
+        ${CMAKE_SOURCE_DIR}/src/lib/GUI/Fonts/font20.c
+        ${CMAKE_SOURCE_DIR}/src/lib/GUI/Fonts/font24.c
+        ${CMAKE_SOURCE_DIR}/src/lib/Helper/Trigonometry.c
+    )
+
+    add_executable(${PROJECT_NAME} ${GUILL_SIM_SRCS})
+
+    set(GUILL_LIB ${CMAKE_SOURCE_DIR}/src/lib)
+    include_directories(${GUILL_LIB})
+    include_directories(${GUILL_LIB}/Platform/Simulator)
+    include_directories(${GUILL_LIB}/LCD/Simulator)
+    include_directories(${GUILL_LIB}/GUI)
+    include_directories(${GUILL_LIB}/GUI/Fonts)
+    include_directories(${GUILL_LIB}/Helper)
+
+    find_package(SDL2 REQUIRED)
+    include_directories(${SDL2_INCLUDE_DIRS})
+
+    set(LIB_ZLIB ${CMAKE_SOURCE_DIR}/src/Dependency/zlib)
+    file(REMOVE ${LIB_ZLIB}/CMakeLists.txt)
+    file(COPY ${CMAKE_SOURCE_DIR}/src/Dependency/zlibstatic.cmake DESTINATION ${LIB_ZLIB})
+    file(RENAME ${LIB_ZLIB}/zlibstatic.cmake ${LIB_ZLIB}/CMakeLists.txt)
+    add_subdirectory(${LIB_ZLIB} zlib_build)
+    set(LIB_ZCONF ${CMAKE_BINARY_DIR}/zlib_build)
+    include_directories(${LIB_ZLIB} ${LIB_ZCONF})
+    set(PNG_BUILD_ZLIB ON CACHE BOOL "" FORCE)
+    set(SKIP_INSTALL_ALL ON)
+    set(ZLIB_LIBRARIES zlibstatic)
+    set(ZLIB_INCLUDE_DIRS ${LIB_ZLIB} ${LIB_ZCONF})
+
+    set(PNG_LIB ${CMAKE_SOURCE_DIR}/src/Dependency/libpng)
+    set(PNG_SHARED OFF CACHE BOOL "")
+    set(PNG_STATIC ON CACHE BOOL "")
+    set(PNG_FRAMEWORK OFF CACHE BOOL "")
+    set(PNG_EXECUTABLES OFF CACHE BOOL "")
+    set(PNG_TESTS OFF CACHE BOOL "")
+    set(PNG_DEBUG OFF CACHE BOOL "")
+    include_directories(${PNG_LIB})
+    add_subdirectory(${PNG_LIB})
+    configure_file(${PNG_LIB}/scripts/pnglibconf.h.prebuilt ${PNG_LIB}/pnglibconf.h)
+
+    target_link_libraries(${PROJECT_NAME} PUBLIC ${SDL2_LIBRARIES} png_static zlibstatic m)
+
 else() # RP2040 (default)
     set(CMAKE_C_STANDARD 11)
     set(CMAKE_CXX_STANDARD 14)

@@ -34,7 +34,15 @@ void app_entry(void) {
     CanvasDrawCurvedText("abcdefghijklmnopqrstuvw", 120, 120, 105, 172, TEXT_ORIENTATION_OUTWARDS, &Font20, RGB_COLOR(252, 82, 0), TRANSPARENT);
     LCDRenderTexture(texture);
 
+    int cont = 0;
     while(true) {
+        CanvasDrawNum(100, 100, cont, &Font20, 0, BLACK, WHITE);
+        LCDRenderTexture(texture);
+        if (cont < 1000)
+          cont++;
+        else
+          cont = 0;
+        Delay(1000);
     }
 }
 

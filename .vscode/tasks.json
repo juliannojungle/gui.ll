@@ -304,6 +304,76 @@
                 "focus": true
             },
             "problemMatcher": []
+        },
+        {
+            "label": "Build: Simulator Incremental",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "-c",
+                "cd ~/gui.ll && if [ -d build ] && grep -q 'Simulator' build/CMakeCache.txt 2>/dev/null; then cd build && make; else rm -rf build && mkdir build && cd build && cmake .. -DPLATFORM_NAME=Simulator && make; fi"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "build",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared",
+                "clear": true
+            },
+            "problemMatcher": {
+                "owner": "gcc",
+                "fileLocation": ["autoDetect", "${workspaceFolder}"],
+                "pattern": {
+                    "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
+                    "file": 1, "line": 2, "column": 3, "severity": 4, "message": 5
+                }
+            }
+        },
+        {
+            "label": "Build: Simulator Full",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "-c",
+                "cd ~/gui.ll && rm -rf build && mkdir build && cd build && cmake .. -DPLATFORM_NAME=Simulator && make"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "build",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared",
+                "clear": true
+            },
+            "problemMatcher": {
+                "owner": "gcc",
+                "fileLocation": ["autoDetect", "${workspaceFolder}"],
+                "pattern": {
+                    "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
+                    "file": 1, "line": 2, "column": 3, "severity": 4, "message": 5
+                }
+            }
+        },
+        {
+            "label": "Setup: Simulator toolchain in WSL2",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "-c", "bash $HOME/gui.ll/Toolchain/Simulator/Setup.sh"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared",
+                "clear": true,
+                "focus": true
+            },
+            "problemMatcher": []
         }
     ]
 }

@@ -3,12 +3,14 @@
 ## Overview
 
 **gui.ll** is a multi-platform embedded C project that reads PNG files from an SD card
-and displays them on a GC9A01 round LCD (240x240). It targets **RP2040** (Raspberry Pi Pico)
-and **ESP32-S3** from a single codebase with platform-specific abstractions.
+and displays them on a GC9A01 round LCD (240x240). It targets **RP2040** (Raspberry Pi Pico),
+**ESP32-S3**, and a **Simulator** (native desktop via SDL2) from a single codebase with
+platform-specific abstractions.
 
 Target devices (both expose 2×20 pin headers at 1.27mm pitch with an embedded round LCD on the back):
 - **[RP2040-LCD-1.28](https://www.waveshare.com/wiki/RP2040-LCD-1.28)** — Waveshare RP2040 board
 - **[ESP32-S3-LCD-1.28](https://www.waveshare.com/wiki/ESP32-S3-LCD-1.28)** — Waveshare ESP32-S3 board
+- **Simulator** — Native desktop executable rendering the LCD in an SDL2 window (240×240, RGB565)
 
 ---
 
@@ -53,6 +55,7 @@ gui.ll/
 ├── Toolchain/
 │   ├── RP2040/Setup.sh             # Installs arm-none-eabi-gcc, pico-sdk
 │   ├── ESP32/Setup.sh              # Installs ESP-IDF, xtensa toolchain, Rust, espflash
+│   ├── Simulator/Setup.sh          # Installs libsdl2-dev, gdb (idempotent)
 │   └── wsl.sh                      # Restores WSL Windows interop (.exe) under systemd
 │
 ├── src/
@@ -74,17 +77,27 @@ gui.ll/
 │   │   │   │   ├── PreExecutable.cmake   # fatfs lib, patch inclusion
 │   │   │   │   └── PostExecutable.cmake  # zlib, libpng, link libraries
 │   │   │   │
-│   │   │   └── ESP32/
-│   │   │       ├── CMakeLists.txt   # idf_component_register (ESP-IDF component)
-│   │   │       ├── HAL.c/.h        # HAL: GPIO, SPI (ESP-IDF), LEDC PWM compat — LCD SPI uses LCD_SPI from HALConfig.h
-│   │   │       ├── HALConfig.h     # SD pins + SD_SPI(SPI2_HOST) + SD_SPI_BAUDRATE; LCD pins + LCD_SPI(SPI3_HOST); SD_DETECT_PIN
-│   │   │       ├── RTC.c/.h        # RTC via settimeofday; defines RTCInitialize() + get_fattime()
-│   │   │       └── DiskIO.c        # FatFS disk I/O (ESP-IDF SPI master) — parity with RP2040: CRC7, manual CS, card detect ISR (IRAM_ATTR)
+│   │   │   ├── ESP32/
+│   │   │   │   ├── CMakeLists.txt   # idf_component_register (ESP-IDF component)
+│   │   │   │   ├── HAL.c/.h        # HAL: GPIO, SPI (ESP-IDF), LEDC PWM compat — LCD SPI uses LCD_SPI from HALConfig.h
+│   │   │   │   ├── HALConfig.h     # SD pins + SD_SPI(SPI2_HOST) + SD_SPI_BAUDRATE; LCD pins + LCD_SPI(SPI3_HOST); SD_DETECT_PIN
+│   │   │   │   ├── RTC.c/.h        # RTC via settimeofday; defines RTCInitialize() + get_fattime()
+│   │   │   │   └── DiskIO.c        # FatFS disk I/O (ESP-IDF SPI master) — parity with RP2040: CRC7, manual CS, card detect ISR (IRAM_ATTR)
+│   │   │   │
+│   │   │   └── Simulator/
+│   │   │       ├── HAL.c/.h        # HAL: no-op stubs + Delay with SDL event pump; Pico-SDK compat constants
+│   │   │       ├── HALConfig.h     # Dummy pin defines + SD_DIRECTORY "sample/sdcard"
+│   │   │       ├── RTC.c/.h        # RTCInitialize (no-op) + get_fattime (host time via localtime)
+│   │   │       ├── FileHelper.c/.h # POSIX file I/O (fopen/fread/fclose) replacing FatFS; defines FIL, FRESULT, f_read
+│   │   │       └── ff.h            # Shim header — redirects #include "ff.h" to FileHelper.h for simulator builds
 │   │   │
 │   │   ├── Driver/GC9A01/          # LCD driver (Driver.c/.h) — uses LCD_* defines from HALConfig.h; DriverInitialize configures SPI, GPIO and backlight PWM; DriverSetBacklightBrightness sets PWM level
 │   │   ├── LCD/1in28/               # GC9A01 1.28" panel layer, split in two TUs:
 │   │   │   ├── LCDSetup.c/.h       # Panel bring-up: DriverInitialize + reset, scan/attributes, register init, backlight; owns the LCD_ATTRIBUTES LCD global; exposes LCDInitialize()
 │   │   │   └── LCDRenderer.c/.h    # Pixel/area blitting: LCDSetDisplayArea, LCDClear, LCDDisplayTexture(/InArea/Point)
+│   │   ├── LCD/Simulator/           # SDL2-backed LCD layer (same API as LCD/1in28):
+│   │   │   ├── LCDSetup.c/.h       # SDL2 init: window, renderer, RGB565 texture; owns LCD global
+│   │   │   └── LCDRenderer.c/.h    # Byte-swap + SDL_UpdateTexture + SDL_RenderPresent
 │   │   ├── GUI/                     # Canvas/drawing utilities (Canvas.c/.h) — includes CanvasDrawPng (PNG → RAM texture)
 │   │   └── Fonts/                   # Font data
 │   │
@@ -283,6 +296,30 @@ else
 fi
 ```
 
+### Simulator
+- Uses **cmake + make** with the host compiler (gcc/clang, no cross-compilation)
+- Selected via `cmake -DPLATFORM_NAME=Simulator`
+- Links SDL2 (`find_package`), libpng and zlib from submodules (`zlibstatic.cmake` approach)
+- Does NOT link FatFS, DiskIO, or Driver/GC9A01 — replaced by POSIX file I/O and SDL2 rendering
+- A shim `Platform/Simulator/ff.h` redirects `#include "ff.h"` to `FileHelper.h` so shared code
+  (`Canvas.h`) compiles without FatFS headers
+- Produces a native ELF executable (`build/gui.ll`)
+- `Delay(ms)` integrates an SDL event-pump loop to keep the window responsive
+- Requires `libsdl2-dev` and `gdb` (installed by `Toolchain/Simulator/Setup.sh`)
+
+### Simulator Incremental Build
+
+The "Build: Simulator Incremental" task checks whether the existing `build/` directory was
+configured for Simulator (by grepping `CMakeCache.txt`). If so, runs only `make`; otherwise
+does a clean full configure + build:
+```bash
+cd ~/gui.ll && if [ -d build ] && grep -q 'Simulator' build/CMakeCache.txt 2>/dev/null; then
+    cd build && make
+else
+    rm -rf build && mkdir build && cd build && cmake .. -DPLATFORM_NAME=Simulator && make
+fi
+```
+
 ---
 
 ## Dependency Management — CRITICAL RULES
@@ -383,11 +420,15 @@ This prevents the git plugin from showing false "modified" files in submodules
 |------|-------------|
 | Build: Full RP2040 | Clean build with cmake + make |
 | Build: Full ESP32 | Clean build with idf.py |
+| Build: Simulator Full | Clean cmake + make with `-DPLATFORM_NAME=Simulator` |
+| Build: Simulator Incremental | Reuses existing build dir if Simulator; else full |
 | Build: Incremental | Detects platform, runs make or ninja |
 | Copy UF2 to Windows | Copies .uf2 to C:\temp for flashing |
 | Setup: RP2040 toolchain | Installs arm toolchain + pico-sdk |
 | Setup: ESP32 toolchain | Installs ESP-IDF + tools + Rust + espflash |
+| Setup: Simulator toolchain | Installs libsdl2-dev + gdb |
 | Setup: WSL interop | Restores running Windows `.exe` from WSL (unmasks systemd-binfmt) |
+| Debug Simulator | launch.json: GDB debug of `build/gui.ll` (preLaunchTask = Incremental) |
 
 ---
 
@@ -399,8 +440,25 @@ This prevents the git plugin from showing false "modified" files in submodules
   `gui.ll.elf`/`.bin` linked, so the separate-compilation + curved-char changes **are now
   compile-tested on ESP32-S3** (earlier parity changes elsewhere may still predate this). SD path
   rewritten for parity but **not yet hardware-tested**.
+- **Simulator**: Builds and runs. SDL2 window displays the 240×240 LCD output; PNG loading from
+  `sample/sdcard/` works via POSIX file I/O. GDB debugging via launch.json confirmed working.
+  `Sample.c` runs unchanged — no `#ifdef` needed.
 
 Recent work:
+- **Added LCD Simulator platform target** — a third platform (`Simulator`) that produces a native
+  desktop executable rendering the 240×240 RGB565 display in an SDL2 window. Enables rapid
+  screen-design iteration without flashing to hardware. `Sample.c` and all shared code compile
+  unchanged; only the platform layer (HAL stubs, SDL2-backed LCD, POSIX file I/O) is swapped at
+  build time via `cmake -DPLATFORM_NAME=Simulator`. Key points:
+  - HAL functions are no-ops except `Delay(ms)` which integrates an SDL event-pump loop
+  - File I/O replaces FatFS with `fopen`/`fread`/`fclose` against `sample/sdcard/`
+  - A shim `Platform/Simulator/ff.h` redirects shared code's `#include "ff.h"` to the simulator's
+    `FileHelper.h` (defines `FIL`, `FRESULT`, `f_read` without actual FatFS)
+  - LCD layer uses `SDL_UpdateTexture` + byte-swap (big-endian → native) for pixel fidelity
+  - CMake block: `elseif(PLATFORM_NAME STREQUAL "Simulator")` links SDL2, libpng, zlibstatic, m
+  - Toolchain setup: `Toolchain/Simulator/Setup.sh` installs `libsdl2-dev` + `gdb`
+  - VS Code integration: tasks.json (Full + Incremental build), launch.json (GDB debug)
+  - **Spec**: `.kiro/specs/lcd-simulator/`
 - **Added `CanvasDrawCurvedText` to the Canvas module** (`src/lib/GUI/Canvas.c`, prototype in
   `Canvas.h`) — a thin loop over `CanvasDrawCurvedChar` that renders a whole string along the circle.
   Signature mirrors the curved-char primitive, leading with the text then the geometric placement:

@@ -4,7 +4,7 @@
 
 A lightweight, bare-metal GUI library for embedded systems. Draws visual elements directly on a GC9A01 round LCD (240×240) and renders PNG images streamed from an SD card — all with minimal memory footprint, no OS, no heap allocations in the critical path.
 
-Currently supports **RP2040** (Raspberry Pi Pico) and **ESP32** from a single codebase.
+Currently supports **RP2040** (Raspberry Pi Pico), **ESP32**, and a **Simulator** (native desktop via SDL2) from a single codebase.
 
 ---
 
@@ -12,7 +12,8 @@ Currently supports **RP2040** (Raspberry Pi Pico) and **ESP32** from a single co
 
 - 🎨 **Direct LCD rendering** — pixels, lines, circles, rectangles, and text written straight to the display without a framebuffer
 - 🖼️ **PNG from SD card** — PNG files decoded on-the-fly from an SD card and streamed directly to the LCD, row by row
-- 🔌 **Multi-platform** — same application code compiles for RP2040 and ESP32; platform differences are fully encapsulated in the HAL layer
+- 🔌 **Multi-platform** — same application code compiles for RP2040, ESP32, and a native desktop Simulator; platform differences are fully encapsulated in the HAL layer
+- 🖥️ **Desktop simulator** — renders the LCD output in an SDL2 window for rapid iteration without hardware
 - ⚡ **Bare-metal** — no RTOS, no dynamic memory allocator required, runs on the metal
 - 📦 **Self-contained** — zlib, libpng, and FatFS are bundled as submodules; no package manager needed
 - 🔧 **CMake-native** — integrates cleanly as a CMake component into any parent project
@@ -21,12 +22,12 @@ Currently supports **RP2040** (Raspberry Pi Pico) and **ESP32** from a single co
 
 ## 🖥️ Supported Platforms
 
-| Platform | RP2040 | ESP32 |
-|---|---|---|
-| Pinout |<img alt="RP2040 LCD 1.28" src="Documentation\Image\RP2040_LCD_1_28.png" width="300px">|<img alt="ESP32-S3 LCD 1.28" src="Documentation\Image\ESP32_S3_LCD_1_28.png" width="300px">|
-| Device | [RP2040-LCD-1.28](https://www.waveshare.com/wiki/RP2040-LCD-1.28) | [ESP32-S3-LCD-1.28](https://www.waveshare.com/wiki/ESP32-S3-LCD-1.28) |
-| Toolchain | arm-none-eabi-gcc + Pico SDK | xtensa-esp32-elf-gcc + ESP-IDF |
-| Output | `.uf2` | `.bin` |
+| Platform | RP2040 | ESP32 | Simulator |
+|---|---|---|---|
+| Pinout |<img alt="RP2040 LCD 1.28" src="Documentation\Image\RP2040_LCD_1_28.png" width="300px">|<img alt="ESP32-S3 LCD 1.28" src="Documentation\Image\ESP32_S3_LCD_1_28.png" width="300px">| N/A (desktop) |
+| Device | [RP2040-LCD-1.28](https://www.waveshare.com/wiki/RP2040-LCD-1.28) | [ESP32-S3-LCD-1.28](https://www.waveshare.com/wiki/ESP32-S3-LCD-1.28) | Any Linux/WSL desktop |
+| Toolchain | arm-none-eabi-gcc + Pico SDK | xtensa-esp32-elf-gcc + ESP-IDF | Host gcc + SDL2 |
+| Output | `.uf2` | `.bin` | Native ELF executable |
 
 ---
 
@@ -89,6 +90,7 @@ The GC9A01A LCD driver datasheet is versioned in `Documentation/` in two complem
 - **IDE**: [Kiro](https://kiro.dev) or [VSCode](https://code.visualstudio.com/)
 - **RP2040**: arm-none-eabi-gcc, Pico SDK (installed via `Setup: RP2040 toolchain`)
 - **ESP32**: ESP-IDF ≥ 5.x, xtensa toolchain, espflash (installed via `Setup: ESP32 toolchain`)
+- **Simulator**: libsdl2-dev, gdb (installed via `Setup: Simulator toolchain`)
 - **CMake** ≥ 3.16
 
 > The preferred IDE is **[Kiro](https://kiro.dev)**, which provides agent-assisted development with project-aware context via `AGENTS.md`. The project also works fully with **VS Code** — all tasks and settings are configured in `.vscode/`.
@@ -107,9 +109,11 @@ gui.ll/
 │   │   │   └── Trigonometry.c      # Integer Q16.16 cos/sin LUT (used by curved text)
 │   │   ├── Platform/
 │   │   │   ├── RP2040/             # HAL, SPI, DiskIO, RTC (Pico SDK)
-│   │   │   └── ESP32/              # HAL, SPI, DiskIO, RTC (ESP-IDF)
+│   │   │   ├── ESP32/              # HAL, SPI, DiskIO, RTC (ESP-IDF)
+│   │   │   └── Simulator/          # HAL stubs, POSIX file I/O, SDL2 event pump
 │   │   ├── Driver/GC9A01/          # LCD driver
 │   │   ├── LCD/1in28/              # Display layer: LCDSetup (init) + LCDRenderer (blit)
+│   │   ├── LCD/Simulator/          # SDL2 display layer: same API, renders to window
 │   │   ├── GUI/                    # Canvas / drawing primitives (Canvas.c/.h)
 │   │   └── Fonts/                  # Bitmap font data
 │   └── Dependency/
@@ -122,7 +126,8 @@ gui.ll/
 │   └── Image/                      # Pinout reference images
 └── Toolchain/
     ├── RP2040/Setup.sh
-    └── ESP32/Setup.sh
+    ├── ESP32/Setup.sh
+    └── Simulator/Setup.sh
 ```
 
 ### Platform abstraction
@@ -254,6 +259,7 @@ Before building for the first time, install the required toolchain for your targ
 
 - `Setup: RP2040 toolchain in WSL` — installs arm-none-eabi-gcc and Pico SDK
 - `Setup: ESP32 toolchain in WSL` — installs ESP-IDF, xtensa toolchain, Rust, and espflash
+- `Setup: Simulator toolchain in WSL2` — installs libsdl2-dev and gdb
 
 These scripts are idempotent — safe to run again if you need to repair an installation.
 
@@ -267,6 +273,8 @@ Once the toolchain is ready, build using the tasks:
 |---|---|
 | `Build: Full RP2040` | Clean CMake configure + make for RP2040 |
 | `Build: Full ESP32` | Clean idf.py build for ESP32 |
+| `Build: Simulator Full` | Clean CMake configure + make for Simulator |
+| `Build: Simulator Incremental` | Reuses build dir if Simulator; else clean full |
 | `Build: Incremental` | Auto-detects platform, runs `make` or `ninja` |
 | `Copy UF2 to Windows` | Copies `.uf2` to `C:\temp` for drag-and-drop flashing |
 
