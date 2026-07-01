@@ -13,3 +13,6 @@
 	url = https://github.com/abbrev/fatfs.git
 	shallow = true
 	ignore = all
+[submodule "src/Dependency/fs.ll"]
+	path = src/Dependency/fs.ll
+	url = https://github.com/juliannojungle/fs.ll.git
