@@ -4,16 +4,16 @@
 #include <stdbool.h>
 
 #ifndef SD_SPI_SCLK
-#define SD_SPI_SCLK 2 //2|18
+#define SD_SPI_SCLK 18 //2|18
 #endif
 #ifndef SD_SPI_MOSI
-#define SD_SPI_MOSI 3 //3|19
+#define SD_SPI_MOSI 19 //3|19
 #endif
 #ifndef SD_SPI_MISO
-#define SD_SPI_MISO 0 //0|16
+#define SD_SPI_MISO 16 //0|16
 #endif
 #ifndef SD_SPI_CS
-#define SD_SPI_CS 1 //1|17
+#define SD_SPI_CS 17 //1|17
 #endif
 
 /* SPI peripheral instance — MUST match the SD_SPI_* pins above.
@@ -27,7 +27,7 @@
 #endif
 
 #ifndef SD_DETECT_PIN
-#define SD_DETECT_PIN 5 //5|20   // H1 pin 12 — card detect switch (LOW = card present, pull-up assumed)
+#define SD_DETECT_PIN 20 //5|20   // H1 pin 12 — card detect switch (LOW = card present, pull-up assumed)
 #endif
 
 #ifndef LCD_DC_PIN

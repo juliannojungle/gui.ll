@@ -388,6 +388,20 @@ Python env, Rust, and espflash.
   `wsl --shutdown`. (`systemd-binfmt.service` is a static unit — it cannot be `systemctl enable`d
   and does not need to be; unmasking is what matters.) Verify with
   `cat /proc/sys/fs/binfmt_misc/WSLInterop`.
+- **GDB debuginfod freezes the Simulator launch (Ubuntu 24.04)**: The `debuginfod` package
+  installs `/etc/profile.d/debuginfod.sh` which exports
+  `DEBUGINFOD_URLS=https://debuginfod.ubuntu.com` in every login shell. GDB 15.1's
+  `libdebuginfod` reads this env and attempts to download separate debug info for every
+  loaded `.so` (SDL2, libasound, libpulse, libX11, …). Each failed download blocks for
+  ~10 s (timeout), so the Simulator appears frozen in the debug console. The `set debuginfod
+  enabled off` GDB command (even via `setupCommands` in `launch.json`) is processed **after**
+  the initial library loads, so it has no effect — the env variable takes precedence in
+  `libdebuginfod`. Fix: `launch.json` points `miDebuggerPath` to
+  `Toolchain/Simulator/gdb-wrapper.sh`, a thin wrapper that does `unset DEBUGINFOD_URLS`
+  before `exec /usr/bin/gdb "$@"`. `Toolchain/Simulator/Setup.sh` also appends
+  `set debuginfod enabled off` to `~/.gdbinit` (idempotent) as belt-and-suspenders. The
+  wrapper is the authoritative fix; the `.gdbinit` line catches edge cases where GDB is
+  invoked outside the wrapper.
 
 ### Language
 
@@ -426,9 +440,9 @@ This prevents the git plugin from showing false "modified" files in submodules
 | Copy UF2 to Windows | Copies .uf2 to C:\temp for flashing |
 | Setup: RP2040 toolchain | Installs arm toolchain + pico-sdk |
 | Setup: ESP32 toolchain | Installs ESP-IDF + tools + Rust + espflash |
-| Setup: Simulator toolchain | Installs libsdl2-dev + gdb |
+| Setup: Simulator toolchain | Installs libsdl2-dev + gdb; disables debuginfod in ~/.gdbinit |
 | Setup: WSL interop | Restores running Windows `.exe` from WSL (unmasks systemd-binfmt) |
-| Debug Simulator | launch.json: GDB debug of `build/gui.ll` (preLaunchTask = Incremental) |
+| Debug Simulator | launch.json: GDB via `gdb-wrapper.sh` debug of `build/gui.ll` (preLaunchTask = Incremental) |
 
 ---
 

@@ -12,3 +12,8 @@ else
     sudo apt-get update
     sudo apt-get install -y $PACKAGES
 fi
+
+if ! grep -q "set debuginfod enabled off" ~/.gdbinit 2>/dev/null; then
+    echo "set debuginfod enabled off" >> ~/.gdbinit
+    echo "GDB: disabled debuginfod in ~/.gdbinit"
+fi
