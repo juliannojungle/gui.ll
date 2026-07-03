@@ -3,3 +3,5 @@ sdkconfig
 
 # should not change the dependency here
 src/Dependency/fs.ll
+src/Dependency/libpng
+src/Dependency/zlib
