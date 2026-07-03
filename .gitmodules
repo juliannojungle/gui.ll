@@ -8,11 +8,6 @@
 	url = https://github.com/madler/zlib.git
 	shallow = true
 	ignore = all
-[submodule "src/Dependency/fatfs"]
-	path = src/Dependency/fatfs
-	url = https://github.com/abbrev/fatfs.git
-	shallow = true
-	ignore = all
 [submodule "src/Dependency/fs.ll"]
 	path = src/Dependency/fs.ll
 	url = https://github.com/juliannojungle/fs.ll.git
