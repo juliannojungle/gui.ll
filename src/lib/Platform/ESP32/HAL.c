@@ -86,7 +86,7 @@ void SPIInit(uint32_t speed) {
 
 void GPIOSetFunction(uint32_t pin, uint32_t function) {
     // On ESP32, pin functions are set via peripheral-specific configs.
-    // SPI pins are configured in SPIInit, I2C in I2CInit, PWM via LEDC.
+    // SPI pins are configured in SPIInit, PWM via LEDC.
     (void)pin;
     (void)function;
 }

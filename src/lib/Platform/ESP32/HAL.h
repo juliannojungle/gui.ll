@@ -14,7 +14,6 @@
 #define GPIO_OUT        1
 #define GPIO_FUNC_SPI   0  // No-op on ESP32 (SPI pins configured in SPIInit)
 #define GPIO_FUNC_PWM   0  // No-op on ESP32 (PWM configured via LEDC)
-#define GPIO_FUNC_I2C   0  // No-op on ESP32 (I2C pins configured in I2CInit)
 #define PWM_CHAN_B      1
 
 void DigitalWrite(uint32_t pin, UINT8 value);

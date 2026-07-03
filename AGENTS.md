@@ -70,7 +70,7 @@ gui.ll/
 │   │   │
 │   │   ├── Platform/
 │   │   │   ├── RP2040/
-│   │   │   │   ├── HAL.c/.h        # HAL: GPIO, SPI, PWM, I2C (Pico SDK) — LCD SPI uses LCD_SPI from HALConfig.h
+│   │   │   │   ├── HAL.c/.h        # HAL: GPIO, SPI, PWM (Pico SDK) — LCD SPI uses LCD_SPI from HALConfig.h
 │   │   │   │   ├── HALConfig.h     # SD pins + SD_SPI(spi0) + SD_SPI_BAUDRATE; LCD pins + LCD_SPI(spi1); SD_DETECT_PIN
 │   │   │   │   ├── RTC.c/.h        # RTC via hardware/rtc.h; defines RTCInitialize() + get_fattime()
 │   │   │   │   ├── DiskIO.c        # FatFS disk I/O (SPI SD) — real CRC7 on all cmds; faithful no-OS-FatFS handshake; card detect ISR

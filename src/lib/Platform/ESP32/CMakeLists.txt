@@ -1,94 +1,35 @@
 set(PROJ_ROOT ${CMAKE_SOURCE_DIR})
+
 # Fallback: if CMAKE_SOURCE_DIR doesn't point to project root (ESP-IDF context),
 # derive it from this file's location (src/lib/Platform/ESP32/CMakeLists.txt)
 if(NOT EXISTS "${PROJ_ROOT}/src/Dependency/fatfs.ffconf_patch.cmake")
     get_filename_component(PROJ_ROOT "${CMAKE_CURRENT_LIST_DIR}/../../../.." ABSOLUTE)
 endif()
-set(FATFS_SRC ${PROJ_ROOT}/src/Dependency/fatfs/source)
-set(ZLIB_SRC ${PROJ_ROOT}/src/Dependency/zlib)
-set(PNG_SRC ${PROJ_ROOT}/src/Dependency/libpng)
-set(PLATFORM_SRC ${PROJ_ROOT}/src/lib/Platform/ESP32)
 
-# Apply patch to ffconf.h (FF_FS_RPATH=1, FF_VOLUMES=2)
-include(${PROJ_ROOT}/src/Dependency/fatfs.ffconf_patch.cmake)
+set(PLATFORM_NAME "ESP32")
+include(${PROJ_ROOT}/gui.ll.cmake)
 
 idf_component_register(
     SRCS
         "${PROJ_ROOT}/src/Sample.c"
-        "${PLATFORM_SRC}/HAL.c"
-        "${PLATFORM_SRC}/RTC.c"
-        "${PROJ_ROOT}/src/lib/Driver/GC9A01/Driver.c"
-        "${PROJ_ROOT}/src/lib/LCD/1in28/LCDSetup.c"
-        "${PROJ_ROOT}/src/lib/LCD/1in28/LCDRenderer.c"
-        "${PROJ_ROOT}/src/lib/GUI/Canvas.c"
-        "${PROJ_ROOT}/src/lib/GUI/Fonts/font8.c"
-        "${PROJ_ROOT}/src/lib/GUI/Fonts/font12.c"
-        "${PROJ_ROOT}/src/lib/GUI/Fonts/font16.c"
-        "${PROJ_ROOT}/src/lib/GUI/Fonts/font20.c"
-        "${PROJ_ROOT}/src/lib/GUI/Fonts/font24.c"
-        "${PROJ_ROOT}/src/lib/Helper/FileHelper.c"
-        "${PROJ_ROOT}/src/lib/Helper/Trigonometry.c"
-        "${FATFS_SRC}/ff.c"
-        "${FATFS_SRC}/ffsystem.c"
-        "${FATFS_SRC}/ffunicode.c"
-        "${PLATFORM_SRC}/DiskIO.c"
-        # zlib
-        "${ZLIB_SRC}/adler32.c"
-        "${ZLIB_SRC}/compress.c"
-        "${ZLIB_SRC}/crc32.c"
-        "${ZLIB_SRC}/deflate.c"
-        "${ZLIB_SRC}/inflate.c"
-        "${ZLIB_SRC}/inftrees.c"
-        "${ZLIB_SRC}/inffast.c"
-        "${ZLIB_SRC}/trees.c"
-        "${ZLIB_SRC}/uncompr.c"
-        "${ZLIB_SRC}/zutil.c"
-        # libpng
-        "${PNG_SRC}/png.c"
-        "${PNG_SRC}/pngerror.c"
-        "${PNG_SRC}/pngget.c"
-        "${PNG_SRC}/pngmem.c"
-        "${PNG_SRC}/pngpread.c"
-        "${PNG_SRC}/pngread.c"
-        "${PNG_SRC}/pngrio.c"
-        "${PNG_SRC}/pngrtran.c"
-        "${PNG_SRC}/pngrutil.c"
-        "${PNG_SRC}/pngset.c"
-        "${PNG_SRC}/pngtrans.c"
-        "${PNG_SRC}/pngwio.c"
-        "${PNG_SRC}/pngwrite.c"
-        "${PNG_SRC}/pngwtran.c"
-        "${PNG_SRC}/pngwutil.c"
-    INCLUDE_DIRS
-        "${FATFS_SRC}"
-        "${ZLIB_SRC}"
-        "${PNG_SRC}"
-        "${PROJ_ROOT}/src/lib"
-        "${PLATFORM_SRC}"
-        "${PROJ_ROOT}/src/lib/Driver/GC9A01"
-        "${PROJ_ROOT}/src/lib/GUI/Fonts"
-        "${PROJ_ROOT}/src/lib/LCD/1in28"
-        "${PROJ_ROOT}/src/lib/GUI"
-        "${PROJ_ROOT}/src/lib/Helper"
-    REQUIRES
-        driver
-        esp_system
-)
+        ${SOURCES}
+    INCLUDE_DIRS ${INCLUDE_DIRS}
+    REQUIRES driver esp_system)
 
-# Generate pnglibconf.h required by libpng (copied from prebuilt template)
+set(PNG_SRC ${PROJ_ROOT}/src/Dependency/libpng)
+
+# Generate pnglibconf.h required by libpng
 configure_file(
     ${PNG_SRC}/scripts/pnglibconf.h.prebuilt
     ${PNG_SRC}/pnglibconf.h
-    COPYONLY
-)
+    COPYONLY)
 
 # Disable -Werror for third-party dependencies (libpng, zlib) that produce
 # warnings with the xtensa toolchain under ESP-IDF's strict -Werror=all.
 # Using target_compile_options ensures -Wno-error comes after -Werror=all.
 target_compile_options(${COMPONENT_LIB} PRIVATE
     -Wno-error=maybe-uninitialized
-    -Wno-error=unused-but-set-variable
-)
+    -Wno-error=unused-but-set-variable)
 
 # Suppress -Wmaybe-uninitialized specifically for libpng files that produce
 # false positives when GCC analyzes data flow through macros (PNG_FORMAT_NUMBER).
@@ -96,5 +37,4 @@ target_compile_options(${COMPONENT_LIB} PRIVATE
 set_source_files_properties(
     "${PNG_SRC}/pngerror.c"
     "${PNG_SRC}/png.c"
-    PROPERTIES COMPILE_OPTIONS "-Wno-maybe-uninitialized"
-)
+    PROPERTIES COMPILE_OPTIONS "-Wno-maybe-uninitialized")
