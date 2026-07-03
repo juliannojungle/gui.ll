@@ -2,7 +2,7 @@
 #include "RTC.h"
 #include "LCDSetup.h"
 #include "LCDRenderer.h"
-#include "FileHelper.h"
+#include "FileSystem.h"
 #include "Canvas.h"
 #include "fonts.h"
 #include <stdlib.h>

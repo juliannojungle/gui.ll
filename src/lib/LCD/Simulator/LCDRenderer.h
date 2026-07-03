@@ -1,7 +1,7 @@
 #ifndef __LCD_RENDERER_H
 #define __LCD_RENDERER_H
 
-#include "FileHelper.h"
+#include "FileSystem.h"
 #include "Types.h"
 
 void LCDSetDisplayArea(UINT16 Xstart, UINT16 Ystart, UINT16 Xend, UINT16 Yend);
