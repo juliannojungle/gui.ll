@@ -62,9 +62,13 @@ set(SOURCES
     "${DEPENDENCY_DIR}/libpng/pngwtran.c"
     "${DEPENDENCY_DIR}/libpng/pngwutil.c")
 configure_file(
-    "${DEPENDENCY_DIR}/libpng/scripts/pnglibconf.h.prebuilt"
+    "${DEPENDENCY_DIR}/libpng/scripts/pnglibconf.h.prebuilt" # libpng default configs
     "${DEPENDENCY_DIR}/libpng/pnglibconf.h"
     COPYONLY)
+set_source_files_properties(
+    "${DEPENDENCY_DIR}/libpng/pngerror.c"
+    "${DEPENDENCY_DIR}/libpng/png.c"
+    PROPERTIES COMPILE_OPTIONS "-Wno-maybe-uninitialized") # suppress warnings for libpng
 
 set(INCLUDE_DIRS
     ${INCLUDE_DIRS}
