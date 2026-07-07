@@ -101,7 +101,7 @@ typedef enum {
 } DrawFillStyle;
 
 typedef struct {
-    UINT16	Year;
+    UINT16 Year;
     UINT8 Month;
     UINT8 Day;
     UINT8 Hour;

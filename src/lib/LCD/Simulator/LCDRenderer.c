@@ -71,3 +71,25 @@ void LCDRenderPoint(UINT16 x, UINT16 y, UINT16 color)
 void LCDRenderPng(FIL *file)
 {
 }
+
+SDLState sdlState;
+bool LCDRenderShouldClose()
+{
+    if (sdlState.ShouldQuit)
+        return true;
+
+    SDL_Event event;
+
+    if (SDL_PollEvent(&event) && event.type == SDL_QUIT)
+        sdlState.ShouldQuit = true;
+
+    return sdlState.ShouldQuit;
+}
+
+void LCDRenderClose()
+{
+    SDL_DestroyTexture(sdlTexture);
+    SDL_DestroyRenderer(sdlRenderer);
+    SDL_DestroyWindow(sdlWindow);
+    SDL_Quit(); // shutdown all SDL subsystems
+}

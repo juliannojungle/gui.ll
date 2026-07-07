@@ -4,11 +4,17 @@
 #include "FileSystem.h"
 #include "Types.h"
 
+typedef struct {
+    bool ShouldQuit;
+} SDLState;
+
 void LCDSetDisplayArea(UINT16 Xstart, UINT16 Ystart, UINT16 Xend, UINT16 Yend);
 void LCDClear(UINT16 FillColor);
 void LCDRenderTexture(UINT16 *texture);
 void LCDRenderTextureInArea(UINT16 xStart, UINT16 yStart, UINT16 xEnd, UINT16 yEnd, UINT16 *texture);
 void LCDRenderPoint(UINT16 x, UINT16 y, UINT16 color);
 void LCDRenderPng(FIL *file);
+bool LCDRenderShouldClose();
+void LCDRenderClose();
 
 #endif

@@ -186,4 +186,10 @@ void LCDRenderPng(FIL *file) {
     png_destroy_read_struct(&pngPointer, &infoPointer, NULL);
 }
 
+bool LCDRenderShouldClose() {
+    return false;
+}
+
+void LCDRenderClose() {}
+
 #endif /* __LCD_RENDERER_ */
