@@ -15,7 +15,6 @@ typedef struct {
     UINT16 Flip;
     UINT16 WidthByte;
     UINT16 HeightByte;
-    UINT16 Scale;
 } Canvas;
 extern Canvas canvas;
 
@@ -113,7 +112,6 @@ typedef struct {
 void CanvasNewTexture(UINT8 *texture, UINT16 width, UINT16 height, UINT16 rotate);
 void CanvasSelectTexture(UINT8 *texture);
 void CanvasSetRotate(UINT16 rotate);
-void CanvasSetScale(UINT8 scale);
 void CanvasFlipTexture(UINT8 mirror);
 void CanvasSetPixel(UINT16 xPoint, UINT16 yPoint, UINT16 color);
 void CanvasClear(UINT16 color);

@@ -11,9 +11,8 @@ void CanvasNewTexture(UINT8 *texture, UINT16 width, UINT16 height, UINT16 rotate
 
     canvas.WidthMemory = width;
     canvas.HeightMemory = height;
-    canvas.Scale = 2;
 
-    canvas.WidthByte = (width % 8 == 0)? (width / 8 ): (width / 8 + 1);
+    canvas.WidthByte = width * 2;
     canvas.HeightByte = height;
 
     canvas.Rotate = rotate;
@@ -39,27 +38,6 @@ void CanvasSetRotate(UINT16 rotate) {
     }
 }
 
-void CanvasSetScale(UINT8 scale) {
-    switch (scale) {
-        case 2: {
-            canvas.Scale = scale;
-            canvas.WidthByte = (canvas.WidthMemory % 8 == 0) ? (canvas.WidthMemory / 8 ) : (canvas.WidthMemory / 8 + 1);
-        } break;
-        case 4: {
-            canvas.Scale = scale;
-            canvas.WidthByte = (canvas.WidthMemory % 4 == 0) ? (canvas.WidthMemory / 4 ) : (canvas.WidthMemory / 4 + 1);
-        } break;
-        case 16: {
-            canvas.Scale = scale;
-            canvas.WidthByte = (canvas.WidthMemory % 2 == 0) ? (canvas.WidthMemory / 2) : (canvas.WidthMemory / 2 + 1);
-        } break;
-        case 65: {
-            canvas.Scale = scale;
-            canvas.WidthByte = canvas.WidthMemory * 2;
-        } break;
-    }
-}
-
 void CanvasFlipTexture(UINT8 flipDirection) {
     if (flipDirection == FLIP_NONE || flipDirection == FLIP_HORIZONTAL ||
         flipDirection == FLIP_VERTICAL || flipDirection == FLIP_ORIGIN) {
@@ -76,19 +54,19 @@ void CanvasSetPixel(UINT16 xPoint, UINT16 yPoint, UINT16 color) {
     UINT16 x, y;
 
     switch (canvas.Rotate) {
-        case 0:
+        case ROTATE_0:
             x = xPoint;
             y = yPoint;
             break;
-        case 90:
+        case ROTATE_90:
             x = canvas.WidthMemory - yPoint - 1;
             y = xPoint;
             break;
-        case 180:
+        case ROTATE_180:
             x = canvas.WidthMemory - xPoint - 1;
             y = canvas.HeightMemory - yPoint - 1;
             break;
-        case 270:
+        case ROTATE_270:
             x = yPoint;
             y = canvas.HeightMemory - xPoint - 1;
             break;
@@ -116,55 +94,17 @@ void CanvasSetPixel(UINT16 xPoint, UINT16 yPoint, UINT16 color) {
         return;
     }
 
-    if (canvas.Scale == 2) {
-        UINT32 addr = x / 8 + y * canvas.WidthByte;
-        UINT8 rData = canvas.Texture[addr];
-        if ((color & 0xff) == BLACK)
-            canvas.Texture[addr] = rData & ~(0x80 >> (x % 8));
-        else
-            canvas.Texture[addr] = rData | (0x80 >> (x % 8));
-    } else if (canvas.Scale == 4) {
-        UINT32 addr = x / 4 + y * canvas.WidthByte;
-        color = color % 4; //Guaranteed color scale is 4  --- 0~3
-        UINT8 rData = canvas.Texture[addr];
-        rData = rData & (~(0xC0 >> ((x % 4) * 2)));
-        canvas.Texture[addr] = rData | ((color << 6) >> ((x % 4) * 2));
-    } else if (canvas.Scale == 16) {
-        UINT32 addr = x / 2 + y * canvas.WidthByte;
-        UINT8 rData = canvas.Texture[addr];
-        color = color % 16;
-        rData = rData & (~(0xf0 >> ((x % 2) * 4)));
-        canvas.Texture[addr] = rData | ((color << 4) >> ((x % 2) * 4));
-    } else if (canvas.Scale == 65) {
-        UINT32 addr = x * 2 + y * canvas.WidthByte;
-        canvas.Texture[addr] = 0xff & (color >> 8);
-        canvas.Texture[addr + 1] = 0xff & color;
-    }
+    UINT32 addr = x * 2 + y * canvas.WidthByte;
+    canvas.Texture[addr] = 0xff & (color >> 8);
+    canvas.Texture[addr + 1] = 0xff & color;
 }
 
 void CanvasClear(UINT16 color) {
-    if (canvas.Scale == 2 || canvas.Scale == 4) {
-        for (UINT16 y = 0; y < canvas.HeightByte; y++) {
-            for (UINT16 x = 0; x < canvas.WidthByte; x++) {//8 pixel =  1 byte
-                UINT32 Addr = x + y * canvas.WidthByte;
-                canvas.Texture[Addr] = color;
-            }
-        }
-    } else if (canvas.Scale == 16) {
-        for (UINT16 y = 0; y < canvas.HeightByte; y++) {
-            for (UINT16 x = 0; x < canvas.WidthByte; x++ ) {//8 pixel =  1 byte
-                UINT32 Addr = x + y * canvas.WidthByte;
-                color = color & 0x0f;
-                canvas.Texture[Addr] = (color << 4) | color;
-            }
-        }
-    } else if (canvas.Scale == 65) {
-        for (UINT16 y = 0; y < canvas.HeightByte; y++) {
-            for (UINT16 x = 0; x < canvas.WidthByte; x++) {//8 pixel =  1 byte
-                UINT32 Addr = x * 2 + y * canvas.WidthByte;
-                canvas.Texture[Addr] = 0xff & (color >> 8);
-                canvas.Texture[Addr+1] = 0xff & color;
-            }
+    for (UINT16 y = 0; y < canvas.HeightByte; y++) {
+        for (UINT16 x = 0; x < canvas.WidthByte; x++) {
+            UINT32 Addr = x * 2 + y * canvas.WidthByte;
+            canvas.Texture[Addr] = 0xff & (color >> 8);
+            canvas.Texture[Addr + 1] = 0xff & color;
         }
     }
 }

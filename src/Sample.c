@@ -20,7 +20,6 @@ void app_entry(void) {
     if (texture == NULL)
         exit(EXIT_FAILURE);
     CanvasNewTexture((UINT8 *)texture, LCD.WIDTH, LCD.HEIGHT, ROTATE_0);
-    CanvasSetScale(65);
 
     FIL file;
     if (MountSdCard() && SelectActiveDrive() && OpenFile(&file, "01.png")) {
