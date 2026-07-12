@@ -15,28 +15,26 @@ void app_entry(void) {
     LCDClear(BLACK);
     // Delay(3000); // give us time to start serial monitor
 
-    UINT32 imageSize = LCD.HEIGHT * LCD.WIDTH * 2;
-    UINT16 *texture = (UINT16 *) malloc(imageSize);
-    if (texture == NULL)
+    Texture texture = CanvasNewTexture(LCD.WIDTH, LCD.HEIGHT);
+    if (texture.Data == NULL)
         exit(EXIT_FAILURE);
-    CanvasNewTexture((UINT8 *)texture, LCD.WIDTH, LCD.HEIGHT, ROTATE_0);
 
     FIL file;
     if (MountSdCard() && SelectActiveDrive() && OpenFile(&file, "01.png")) {
-        CanvasDrawPng(&file);
+        CanvasDrawPng(texture, &file);
         CloseFile(&file);
     }
     UnMountSdCard();
 
-    CanvasDrawText(52, 112, "0123456789", &Font20, RGB_COLOR(252, 82, 0), TRANSPARENT);
-    CanvasDrawCurvedText("ABCDEFGHIJKLMNOPQRSTUVW", 120, 120, 102, 181, TEXT_ORIENTATION_INWARDS, &Font20, RGB_COLOR(252, 82, 0), TRANSPARENT);
-    CanvasDrawCurvedText("abcdefghijklmnopqrstuvw", 120, 120, 105, 172, TEXT_ORIENTATION_OUTWARDS, &Font20, RGB_COLOR(252, 82, 0), TRANSPARENT);
-    LCDRenderTexture(texture);
+    CanvasDrawText(texture, 52, 112, "0123456789", &Font20, RGB_COLOR(252, 82, 0), TRANSPARENT);
+    CanvasDrawCurvedText(texture, "ABCDEFGHIJKLMNOPQRSTUVW", 120, 120, 102, 181, TEXT_ORIENTATION_INWARDS, &Font20, RGB_COLOR(252, 82, 0), TRANSPARENT);
+    CanvasDrawCurvedText(texture, "abcdefghijklmnopqrstuvw", 120, 120, 105, 172, TEXT_ORIENTATION_OUTWARDS, &Font20, RGB_COLOR(252, 82, 0), TRANSPARENT);
+    LCDRenderTexture(texture.Data);
 
     int cont = 0;
     while(true) {
-        CanvasDrawNum(100, 100, cont, &Font20, 0, BLACK, WHITE);
-        LCDRenderTexture(texture);
+        CanvasDrawNum(texture, 100, 100, cont, &Font20, 0, BLACK, WHITE);
+        LCDRenderTexture(texture.Data);
         if (cont < 1000)
           cont++;
         else

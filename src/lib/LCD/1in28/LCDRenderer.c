@@ -37,7 +37,7 @@ void LCDClear(UINT16 fillColor)
     DigitalWrite(LCD_CS_PIN, 1);
 }
 
-void LCDRenderTexture(UINT16 *texture)
+void LCDRenderTexture(UINT8 *texture)
 {
     UINT16 j;
     LCDSetDisplayArea(0, 0, LCD.WIDTH, LCD.HEIGHT); /* full screen */
@@ -45,14 +45,14 @@ void LCDRenderTexture(UINT16 *texture)
     DigitalWrite(LCD_CS_PIN, 0);
 
     for (j = 0; j < LCD.HEIGHT; j++) {
-        SPIWriteNByte((uint8_t *)&texture[j*LCD.WIDTH], LCD.WIDTH*2);
+        SPIWriteNByte(&texture[j * LCD.WIDTH * 2], LCD.WIDTH * 2);
     }
 
     DigitalWrite(LCD_CS_PIN, 1);
     DriverSendCommand(0x29); /* recover from DISPLAY OFF mode */
 }
 
-void LCDRenderTextureInArea(UINT16 xStart, UINT16 yStart, UINT16 xEnd, UINT16 yEnd, UINT16 *texture)
+void LCDRenderTextureInArea(UINT16 xStart, UINT16 yStart, UINT16 xEnd, UINT16 yEnd, UINT8 *texture)
 {
     UINT32 addr = 0;
     UINT16 j;
@@ -61,8 +61,8 @@ void LCDRenderTextureInArea(UINT16 xStart, UINT16 yStart, UINT16 xEnd, UINT16 yE
     DigitalWrite(LCD_CS_PIN, 0);
 
     for (j = yStart; j < yEnd - 1; j++) {
-        addr = xStart + j * LCD.WIDTH ;
-        SPIWriteNByte((uint8_t *)&texture[addr], (xEnd-xStart)*2);
+        addr = (xStart + j * LCD.WIDTH) * 2;
+        SPIWriteNByte(&texture[addr], (xEnd - xStart) * 2);
     }
 
     DigitalWrite(LCD_CS_PIN, 1);

@@ -115,39 +115,39 @@ typedef struct {
 Texture CanvasNewTexture(UINT16 width, UINT16 height);
 void CanvasSetRotate(UINT16 rotate);
 void CanvasSetFlip(UINT8 mirror);
-void CanvasSetPixel(UINT16 xPoint, UINT16 yPoint, UINT16 color);
-void CanvasClear(UINT16 color);
-void CanvasClearArea(UINT16 xStart, UINT16 yStart, UINT16 xEnd, UINT16 yEnd, UINT16 color);
-void CanvasDrawPoint(UINT16 xPoint, UINT16 yPoint, UINT16 color,
+void CanvasSetPixel(Texture texture, UINT16 xPoint, UINT16 yPoint, UINT16 color);
+void CanvasClear(Texture texture, UINT16 color);
+void CanvasClearArea(Texture texture, UINT16 xStart, UINT16 yStart, UINT16 xEnd, UINT16 yEnd, UINT16 color);
+void CanvasDrawPoint(Texture texture, UINT16 xPoint, UINT16 yPoint, UINT16 color,
     PixelSize pixelSize, PixelFillStyle pixelFillStyle);
-void CanvasDrawLine(UINT16 xStart, UINT16 yStart, UINT16 xEnd, UINT16 yEnd,
+void CanvasDrawLine(Texture texture, UINT16 xStart, UINT16 yStart, UINT16 xEnd, UINT16 yEnd,
     UINT16 color, PixelSize pixelSize, LineStyle lineStyle);
-void CanvasDrawRectangle(UINT16 xStart, UINT16 yStart, UINT16 xEnd, UINT16 yEnd,
+void CanvasDrawRectangle(Texture texture, UINT16 xStart, UINT16 yStart, UINT16 xEnd, UINT16 yEnd,
     UINT16 color, PixelSize lineWidth, DrawFillStyle rectangleFillStyle);
-void CanvasDrawCircle(UINT16 xCenter, UINT16 yCenter, UINT16 radius,
+void CanvasDrawCircle(Texture texture, UINT16 xCenter, UINT16 yCenter, UINT16 radius,
     UINT16 color, PixelSize lineWidth, DrawFillStyle circleFillStyle);
-void CanvasDrawChar(UINT16 xPoint, UINT16 yPoint, const char ASCIIChar,
+void CanvasDrawChar(Texture texture, UINT16 xPoint, UINT16 yPoint, const char ASCIIChar,
     sFONT* font, UINT16 foregroundColor, UINT16 backgroundColor);
-void CanvasDrawCurvedChar(const char ASCIIChar, UINT16 xCenter, UINT16 yCenter,
+void CanvasDrawCurvedChar(Texture texture, const char ASCIIChar, UINT16 xCenter, UINT16 yCenter,
     UINT16 radius, UINT16 startAngle, TextOrientation orientation, sFONT* font,
     UINT16 foregroundColor, UINT16 backgroundColor);
-void CanvasDrawCurvedText(const char *text, UINT16 xCenter, UINT16 yCenter,
+void CanvasDrawCurvedText(Texture texture, const char *text, UINT16 xCenter, UINT16 yCenter,
     UINT16 radius, UINT16 startAngle, TextOrientation orientation, sFONT* font,
     UINT16 foregroundColor, UINT16 backgroundColor);
-void CanvasDrawText(UINT16 xStart, UINT16 yStart, const char * text,
+void CanvasDrawText(Texture texture, UINT16 xStart, UINT16 yStart, const char * text,
     sFONT* font, UINT16 foregroundColor, UINT16 backgroundColor);
-void CanvasDrawTextCN(UINT16 xStart, UINT16 yStart, const char * text, cFONT* font,
+void CanvasDrawTextCN(Texture texture, UINT16 xStart, UINT16 yStart, const char * text, cFONT* font,
     UINT16 foregroundColor, UINT16 backgroundColor);
-void CanvasDrawNum(UINT16 xPoint, UINT16 yPoint, double number,
+void CanvasDrawNum(Texture texture, UINT16 xPoint, UINT16 yPoint, double number,
     sFONT* font, UINT16 digit, UINT16 foregroundColor, UINT16 backgroundColor);
-void CanvasDrawTime(UINT16 xStart, UINT16 yStart, DateTime *pTime, sFONT* font,
+void CanvasDrawTime(Texture texture, UINT16 xStart, UINT16 yStart, DateTime *pTime, sFONT* font,
     UINT16 foregroundColor, UINT16 backgroundColor);
-void CanvasDrawPng(FIL *file);
-void CanvasDrawPngToArea(FIL *file, UINT16 xSource, UINT16 ySource, UINT16 width, UINT16 height, UINT16 xTarget, UINT16 yTarget);
-void CanvasDrawTexture(const unsigned char *texture, UINT16 xStart, UINT16 yStart, UINT16 imageWidth, UINT16 imageHeight);
-void CanvasDrawBitmap(const unsigned char* imageBuffer);
-void CanvasDrawBitmapBlock(const unsigned char* imageBuffer, UINT8 region);
-void CanvasDrawBitmapToArea(UINT16 x, UINT16 y, const unsigned char *pBitmap,
+void CanvasDrawPng(Texture texture, FIL *file);
+void CanvasDrawPngToArea(Texture texture, FIL *file, UINT16 xSource, UINT16 ySource, UINT16 width, UINT16 height, UINT16 xTarget, UINT16 yTarget);
+void CanvasDrawTexture(Texture texture, UINT16 xStart, UINT16 yStart, UINT16 imageWidth, UINT16 imageHeight);
+void CanvasDrawBitmap(Texture texture, const unsigned char* imageBuffer);
+void CanvasDrawBitmapBlock(Texture texture, const unsigned char* imageBuffer, UINT8 region);
+void CanvasDrawBitmapToArea(Texture texture, UINT16 x, UINT16 y, const unsigned char *pBitmap,
     UINT16 areaWidth, UINT16 areaHeight);
 
 #endif /* __CANVAS_H */

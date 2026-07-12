@@ -24,12 +24,13 @@ void LCDClear(UINT16 fillColor)
     SDL_RenderPresent(sdlRenderer);
 }
 
-void LCDRenderTexture(UINT16 *texture)
+void LCDRenderTexture(UINT8 *texture)
 {
     UINT16 swapped[LCD.WIDTH * LCD.HEIGHT];
 
     for (int i = 0; i < LCD.WIDTH * LCD.HEIGHT; i++) {
-        swapped[i] = (texture[i] << 8) | (texture[i] >> 8);
+        UINT32 addr = i * 2;
+        swapped[i] = (texture[addr] << 8) | texture[addr + 1];
     }
 
     SDL_UpdateTexture(sdlTexture, NULL, swapped, LCD.WIDTH * sizeof(UINT16));
@@ -37,19 +38,18 @@ void LCDRenderTexture(UINT16 *texture)
     SDL_RenderPresent(sdlRenderer);
 }
 
-void LCDRenderTextureInArea(UINT16 xStart, UINT16 yStart, UINT16 xEnd, UINT16 yEnd, UINT16 *texture)
+void LCDRenderTextureInArea(UINT16 xStart, UINT16 yStart, UINT16 xEnd, UINT16 yEnd, UINT8 *texture)
 {
     UINT16 regionWidth = xEnd - xStart;
     UINT16 regionHeight = yEnd - yStart - 1;
     UINT16 swapped[regionWidth * regionHeight];
-    UINT32 addr;
     int idx = 0;
 
     for (UINT16 row = yStart; row < yEnd - 1; row++) {
-        addr = xStart + row * LCD.WIDTH;
+        UINT32 baseAddr = (xStart + row * LCD.WIDTH) * 2;
         for (UINT16 col = 0; col < regionWidth; col++) {
-            UINT16 pixel = texture[addr + col];
-            swapped[idx++] = (pixel << 8) | (pixel >> 8);
+            UINT32 addr = baseAddr + col * 2;
+            swapped[idx++] = (texture[addr] << 8) | texture[addr + 1];
         }
     }
 
