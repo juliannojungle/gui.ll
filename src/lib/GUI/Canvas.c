@@ -3,44 +3,40 @@
 #include "Debug.h"
 #include "Trigonometry.h"
 
-Canvas canvas;
+Canvas canvas = { ROTATE_0, FLIP_NONE };
 
-void CanvasNewTexture(UINT8 *texture, UINT16 width, UINT16 height, UINT16 rotate) {
-    canvas.Texture = NULL;
-    canvas.Texture = texture;
+Texture CanvasNewTexture(UINT16 width, UINT16 height) {
+    Texture texture;
+    UINT32 imageSize = height * width * 2;
+    texture.Data = (UINT16 *) malloc(imageSize);
 
-    canvas.WidthMemory = width;
-    canvas.HeightMemory = height;
+    texture.WidthMemory = width;
+    texture.HeightMemory = height;
+    texture.WidthByte = width * 2;
+    texture.HeightByte = height;
 
-    canvas.WidthByte = width * 2;
-    canvas.HeightByte = height;
-
-    canvas.Rotate = rotate;
-    canvas.Flip = FLIP_NONE;
-
-    if (rotate == ROTATE_0 || rotate == ROTATE_180) {
-        canvas.Width = width;
-        canvas.Height = height;
+    if (canvas.Rotate == ROTATE_0 || canvas.Rotate == ROTATE_180) {
+        texture.Width = width;
+        texture.Height = height;
     } else {
-        canvas.Width = height;
-        canvas.Height = width;
+        texture.Width = height;
+        texture.Height = width;
     }
-}
 
-void CanvasSelectTexture(UINT8 *texture) {
-    canvas.Texture = texture;
+    return texture;
 }
 
 void CanvasSetRotate(UINT16 rotate) {
     if (rotate == ROTATE_0 || rotate == ROTATE_90 || rotate == ROTATE_180 || rotate == ROTATE_270) {
-        SHOWDEBUG("Set texture Rotate %d\r\n", rotate);
+        SHOWDEBUG("Set canvas rotate %d\r\n", rotate);
         canvas.Rotate = rotate;
     }
 }
 
-void CanvasFlipTexture(UINT8 flipDirection) {
+void CanvasSetFlip(UINT8 flipDirection) {
     if (flipDirection == FLIP_NONE || flipDirection == FLIP_HORIZONTAL ||
         flipDirection == FLIP_VERTICAL || flipDirection == FLIP_ORIGIN) {
+        SHOWDEBUG("Set canvas flip %d\r\n", flipDirection);
         canvas.Flip = flipDirection;
     }
 }

@@ -6,15 +6,18 @@
 #include "ff.h"
 
 typedef struct {
-    UINT8 *Texture;
+    UINT8 *Data;
     UINT16 Width;
     UINT16 Height;
     UINT16 WidthMemory;
     UINT16 HeightMemory;
-    UINT16 Rotate;
-    UINT16 Flip;
     UINT16 WidthByte;
     UINT16 HeightByte;
+} Texture;
+
+typedef struct {
+    UINT16 Rotate;
+    UINT16 Flip;
 } Canvas;
 extern Canvas canvas;
 
@@ -109,10 +112,9 @@ typedef struct {
 } DateTime;
 
 /* Drawing API — definitions in Canvas.c */
-void CanvasNewTexture(UINT8 *texture, UINT16 width, UINT16 height, UINT16 rotate);
-void CanvasSelectTexture(UINT8 *texture);
+Texture CanvasNewTexture(UINT16 width, UINT16 height);
 void CanvasSetRotate(UINT16 rotate);
-void CanvasFlipTexture(UINT8 mirror);
+void CanvasSetFlip(UINT8 mirror);
 void CanvasSetPixel(UINT16 xPoint, UINT16 yPoint, UINT16 color);
 void CanvasClear(UINT16 color);
 void CanvasClearArea(UINT16 xStart, UINT16 yStart, UINT16 xEnd, UINT16 yEnd, UINT16 color);
