@@ -36,6 +36,7 @@ void LCDRenderTexture(UINT8 *texture)
     SDL_UpdateTexture(sdlTexture, NULL, swapped, LCD.WIDTH * sizeof(UINT16));
     SDL_RenderCopy(sdlRenderer, sdlTexture, NULL, NULL);
     SDL_RenderPresent(sdlRenderer);
+    SDL_PumpEvents();
 }
 
 void LCDRenderTextureInArea(UINT16 xStart, UINT16 yStart, UINT16 xEnd, UINT16 yEnd, UINT8 *texture)
