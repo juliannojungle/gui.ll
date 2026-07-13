@@ -128,6 +128,8 @@ void LCDRenderPng(FIL *file) {
     SHOWDEBUG("Reading info\n");
     /* png_read_info gets information about PNG file before the first IDAT (texture data chunk). REQUIRED. */
     png_read_info(pngPointer, infoPointer);
+    png_set_packing(pngPointer); /* expand 1/2/4-bit samples to 1 byte per pixel */
+    png_read_update_info(pngPointer, infoPointer);
 
     SHOWDEBUG("\nParsing texture info\n");
     png_uint_32 width, height;
