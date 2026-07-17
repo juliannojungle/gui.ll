@@ -219,7 +219,7 @@
             "problemMatcher": []
         },
         {
-            "label": "Setup: WSL interop",
+            "label": "Setup: WSL",
             "type": "shell",
             "command": "bash",
             "args": [

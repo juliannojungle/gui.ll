@@ -365,7 +365,7 @@ All dependencies are git submodules with `ignore = all`:
 Run the setup tasks (idempotent — safe to re-run):
 - **"Setup: RP2040 toolchain in WSL"** → `Toolchain/RP2040/Setup.sh`
 - **"Setup: ESP32 toolchain in WSL"** → `Toolchain/ESP32/Setup.sh`
-- **"Setup: WSL interop"** → `Toolchain/wsl.sh` (restores running Windows `.exe` from WSL)
+- **"Setup: WSL"** → `Toolchain/wsl.sh` (WSL environment: Windows interop + dev tools like clangd)
 
 Setup scripts check for existing installations before downloading.
 ESP32 setup installs: apt deps, ESP-IDF, idf_tools (xtensa, gdb, openocd),
@@ -387,7 +387,7 @@ Python env, Rust, and espflash.
   the handler is never registered on boot and any `.exe` (e.g. `usbipd.exe`) fails with
   "cannot execute binary file: Exec format error". This is **not** a `wsl.conf` problem — interop
   does not need a `[interop]` entry, and `wsl.conf` is not being wiped. Fix: run the
-  **"Setup: WSL interop"** task (`Toolchain/wsl.sh`), which ensures `WSLInterop.conf` exists and
+  **"Setup: WSL"** task (`Toolchain/wsl.sh`), which ensures `WSLInterop.conf` exists and
   unmasks/restarts `systemd-binfmt.service` so the handler survives every reboot and
   `wsl --shutdown`. (`systemd-binfmt.service` is a static unit — it cannot be `systemctl enable`d
   and does not need to be; unmasking is what matters.) Verify with
@@ -445,7 +445,7 @@ This prevents the git plugin from showing false "modified" files in submodules
 | Setup: RP2040 toolchain | Installs arm toolchain + pico-sdk |
 | Setup: ESP32 toolchain | Installs ESP-IDF + tools + Rust + espflash |
 | Setup: Simulator toolchain | Installs libsdl2-dev + gdb; disables debuginfod in ~/.gdbinit |
-| Setup: WSL interop | Restores running Windows `.exe` from WSL (unmasks systemd-binfmt) |
+| Setup: WSL | WSL environment setup: Windows interop + dev tools (clangd) |
 | Debug Simulator | launch.json: GDB via `gdb-wrapper.sh` debug of `build/gui.ll` (preLaunchTask = Incremental) |
 
 ---

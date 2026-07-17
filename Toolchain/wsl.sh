@@ -1,15 +1,7 @@
 #!/bin/bash
 set -e
 
-# Restores Windows interop (running .exe from inside WSL) when systemd is enabled.
-#
-# Root cause this fixes: with systemd=true, the WSL interop binfmt_misc handler is
-# registered by systemd-binfmt.service from /etc/binfmt.d/WSLInterop.conf. If that
-# service is masked (a common leftover), the handler is never registered on boot and
-# running any Windows .exe fails with "Exec format error". This script ensures the
-# config file exists and the service is unmasked/enabled so the handler survives
-# every reboot and `wsl --shutdown`.
-#
+# General WSL environment setup: Windows interop + development tools.
 # Idempotent: safe to re-run.
 
 INTEROP_CONF="/etc/binfmt.d/WSLInterop.conf"
@@ -43,3 +35,17 @@ else
 fi
 
 echo "=== Done ==="
+
+# --- Development tools ---
+
+echo ""
+echo "=== Installing development tools ==="
+
+if command -v clangd &>/dev/null; then
+    echo "clangd already installed: $(clangd --version | head -1)"
+else
+    echo "--- Installing clangd ---"
+    sudo apt-get install -y clangd
+fi
+
+echo "=== WSL setup complete ==="
