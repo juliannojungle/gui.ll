@@ -1,6 +1,7 @@
 #ifndef __LCD_RENDERER_H
 #define __LCD_RENDERER_H
 
+#include <stdbool.h>
 #include "ff.h"
 #include "Types.h"
 

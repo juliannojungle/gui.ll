@@ -176,7 +176,7 @@
             "type": "shell",
             "command": "bash",
             "args": [
-                "-c", "~/gui.ll/Toolchain/ESP32/Setup.sh"
+                "-c", "bash $HOME/gui.ll/Toolchain/ESP32/Setup.sh"
             ],
             "options": {
                 "cwd": "${workspaceFolder}"

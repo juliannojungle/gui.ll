@@ -15,6 +15,10 @@ else
     echo "Python3 found: $(python3 --version)"
 fi
 
+PYTHON_VER=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
+echo "--- Installing python${PYTHON_VER}-venv ---"
+sudo apt-get install -y "python${PYTHON_VER}-venv"
+
 echo "--- Cloning ESP-IDF (v5.3 stable) ---"
 if [ ! -d ~/esp-idf ]; then
     git clone --depth 1 --branch v5.3 https://github.com/espressif/esp-idf.git ~/esp-idf
