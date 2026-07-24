@@ -1,14 +1,12 @@
 #include "HAL.h"
 #include "LCDRenderer.h"
-#include <stdlib.h>
 #include <SDL2/SDL.h>
 
 void Delay(UINT32 milliseconds) {
     UINT32 start = SDL_GetTicks();
-    SDL_Event event;
     while (SDL_GetTicks() - start < milliseconds) {
         if (LCDRenderShouldClose())
-            exit(0);
+            return;
         SDL_Delay(1);
     }
 }
