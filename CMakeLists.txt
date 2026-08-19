@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 3.16)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON) # Generate compile_commands.json (consumed by clangd for code intelligence)
 set(PROJECT_NAME "gui.ll")
 
+# In-tree build: this repository is the gui.ll root, so no lookup/download is needed.
+set(GUI_LL_PATH "${CMAKE_SOURCE_DIR}")
+
 if(DEFINED DEBUGMSGS) # Optional debug messages: pass -DDEBUGMSGS (no value needed)
     add_compile_definitions(DEBUGMSGS)
 endif()

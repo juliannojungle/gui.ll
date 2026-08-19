@@ -42,10 +42,11 @@ Notes / known limitations of the markdown:
 
 ```
 gui.ll/
-├── CMakeLists.txt                  # Root cmake: if/else by PLATFORM_NAME
+├── gui.ll.cmake                    # Build contract for consumers (see "Build Contract" below)
+├── CMakeLists.txt                  # Root cmake: builds src/Sample.c, if/else by PLATFORM_NAME
 ├── AGENTS.md                       # This file
-├── .gitmodules                     # Submodule config (all locked with update=none)
-├── .gitignore                      # build/, sdkconfig
+├── .gitmodules                     # Submodule config (libpng, zlib — both ignore = all)
+├── .gitignore                      # build/, sdkconfig, src/Dependency/{fs.ll,libpng,zlib}
 │
 ├── Documentation/
 │   ├── GC9A01A.pdf                 # LCD driver datasheet (original, 192 pages) — versioned
@@ -64,31 +65,22 @@ gui.ll/
 │   ├── lib/
 │   │   ├── Types.h                 # Shared scalar aliases (UINT8/UINT16/UINT32)
 │   │   ├── Helper/
-│   │   │   ├── FileHelper.c/.h     # SD card mount/open/close (single FatFS volume SD_DRIVE)
-│   │   │   ├── PNGHelper.c/.h      # PNG decode + LCD display via libpng
+│   │   │   ├── Debug.h             # SHOWDEBUG traces (enabled by -DDEBUGMSGS)
 │   │   │   └── Trigonometry.c/.h   # Q16.16 integer cos/sin LUT (TrigCosQ16/TrigSinQ16) — float-free, deterministic
 │   │   │
-│   │   ├── Platform/
+│   │   ├── Platform/               # HAL only: file I/O, RTC and disk I/O come from fs.ll
 │   │   │   ├── RP2040/
 │   │   │   │   ├── HAL.c/.h        # HAL: GPIO, SPI, PWM (Pico SDK) — LCD SPI uses LCD_SPI from HALConfig.h
-│   │   │   │   ├── HALConfig.h     # SD pins + SD_SPI(spi0) + SD_SPI_BAUDRATE; LCD pins + LCD_SPI(spi1); SD_DETECT_PIN
-│   │   │   │   ├── RTC.c/.h        # RTC via hardware/rtc.h; defines RTCInitialize() + get_fattime()
-│   │   │   │   ├── DiskIO.c        # FatFS disk I/O (SPI SD) — real CRC7 on all cmds; faithful no-OS-FatFS handshake; card detect ISR
-│   │   │   │   ├── PreExecutable.cmake   # fatfs lib, patch inclusion
-│   │   │   │   └── PostExecutable.cmake  # zlib, libpng, link libraries
+│   │   │   │   └── HALConfig.h     # SD pins + SD_SPI(spi0) + SD_SPI_BAUDRATE; LCD pins + LCD_SPI(spi1); SD_DETECT_PIN
 │   │   │   │
 │   │   │   ├── ESP32/
 │   │   │   │   ├── CMakeLists.txt   # idf_component_register (ESP-IDF component)
 │   │   │   │   ├── HAL.c/.h        # HAL: GPIO, SPI (ESP-IDF), LEDC PWM compat — LCD SPI uses LCD_SPI from HALConfig.h
-│   │   │   │   ├── HALConfig.h     # SD pins + SD_SPI(SPI2_HOST) + SD_SPI_BAUDRATE; LCD pins + LCD_SPI(SPI3_HOST); SD_DETECT_PIN
-│   │   │   │   ├── RTC.c/.h        # RTC via settimeofday; defines RTCInitialize() + get_fattime()
-│   │   │   │   └── DiskIO.c        # FatFS disk I/O (ESP-IDF SPI master) — parity with RP2040: CRC7, manual CS, card detect ISR (IRAM_ATTR)
+│   │   │   │   └── HALConfig.h     # SD pins + SD_SPI(SPI2_HOST) + SD_SPI_BAUDRATE; LCD pins + LCD_SPI(SPI3_HOST); SD_DETECT_PIN
 │   │   │   │
 │   │   │   └── Simulator/
 │   │   │       ├── HAL.c/.h        # HAL: no-op stubs + Delay with SDL event pump; Pico-SDK compat constants
-│   │   │       ├── HALConfig.h     # Dummy pin defines + SD_DISK_IMAGE "sample/sdcard.img"
-│   │   │       ├── RTC.c/.h        # RTCInitialize (no-op) + get_fattime (host time via localtime)
-│   │   │       └── DiskIO.c        # FatFS disk I/O (POSIX fopen/fseek/fread/fwrite against sample/sdcard.img)
+│   │   │       └── HALConfig.h     # Dummy pin defines + SD_DISK_IMAGE "sample/sdcard.img"
 │   │   │
 │   │   ├── Driver/GC9A01/          # LCD driver (Driver.c/.h) — uses LCD_* defines from HALConfig.h; DriverInitialize configures SPI, GPIO and backlight PWM; DriverSetBacklightBrightness sets PWM level
 │   │   ├── LCD/1in28/               # GC9A01 1.28" panel layer, split in two TUs:
@@ -97,15 +89,14 @@ gui.ll/
 │   │   ├── LCD/Simulator/           # SDL2-backed LCD layer (same API as LCD/1in28):
 │   │   │   ├── LCDSetup.c/.h       # SDL2 init: window, renderer, RGB565 texture; owns LCD global
 │   │   │   └── LCDRenderer.c/.h    # Byte-swap + SDL_UpdateTexture + SDL_RenderPresent
-│   │   ├── GUI/                     # Canvas/drawing utilities (Canvas.c/.h) — includes CanvasDrawPng (PNG → RAM texture)
-│   │   └── Fonts/                   # Font data
+│   │   └── GUI/                     # Canvas/drawing utilities (Canvas.c/.h) — includes CanvasDrawPng (PNG → RAM texture)
+│   │       └── Fonts/               # Font data (font8..font24, fonts.h)
 │   │
 │   └── Dependency/
-│       ├── fatfs/                   # Submodule: ChaN FatFS (DO NOT MODIFY)
+│       ├── fs.ll.cmake              # Copy of fs.ll's build contract — versioned here, included by gui.ll.cmake
+│       ├── fs.ll/                   # Resolved through FS_LL_PATH by fs.ll.cmake — NOT a submodule, git-ignored
 │       ├── libpng/                  # Submodule: libpng (DO NOT MODIFY)
 │       ├── zlib/                    # Submodule: zlib (DO NOT MODIFY)
-│       ├── fatfs.ffconf_patch.cmake # Patches ffconf.h at build time
-│       ├── zlibstatic.cmake         # Replaces zlib CMakeLists.txt at build time
 │       └── pico_sdk_import.cmake    # Pico SDK cmake helper
 │
 └── .vscode/
@@ -169,15 +160,20 @@ selected platform is added to the build's source list (RP2040: `add_executable`;
 
 ### 2. Single SD Card
 
+> The file I/O layer itself now lives in **fs.ll** (`FileSystem.c`, `DiskIO.c`, `RTC.c` and FatFS) —
+> see "Relationship with fs.ll" under Build System. What stays here is the pin/peripheral
+> configuration, because one `HALConfig.h` serves both the card and the panel.
+
 The design targets a **single SD card** on one SPI bus. The pins, SPI peripheral and baud rate
 are defined in each platform's `HALConfig.h` (`SD_SPI`, `SD_SPI_SCLK/MOSI/MISO/CS`,
-`SD_SPI_BAUDRATE`, `SD_DETECT_PIN`). `DiskIO.c` reads those defines directly and is wired to
-FatFS physical drive 0.
+`SD_SPI_BAUDRATE`, `SD_DETECT_PIN`). fs.ll's `DiskIO.c` reads those defines directly (it picks up
+gui.ll's `HALConfig.h`, which comes first on the include path) and is wired to FatFS physical
+drive 0.
 
-`FileHelper.c` mounts/opens/closes that single card using a local `#define SD_DRIVE "0:"` — the
-FatFS logical volume name. `"0:"` is a FatFS-level concept (maps to physical drive 0) and is
-identical across platforms, so it lives in `FileHelper.c`, not in `HALConfig.h`. The helper
-functions take no `SdCard` argument; they operate implicitly on `SD_DRIVE`.
+fs.ll's `FileSystem.c` mounts/opens/closes that single card using a local `#define SD_DRIVE "0:"` —
+the FatFS logical volume name. `"0:"` is a FatFS-level concept (maps to physical drive 0) and is
+identical across platforms, so it lives there and not in `HALConfig.h`. The API takes no `SdCard`
+argument; it operates implicitly on `SD_DRIVE`.
 
 > Multi-card support (the old `spi_t` / `SdCard` structs, `spis[]` / `sd_cards[]` arrays and
 > `sd_get_num()` / `sd_get_by_num()` in `SDConfig.h` / `SDHWConfig.h`) was **removed** — see
@@ -196,6 +192,9 @@ int main(void) { app_entry(); return 0; }  // RP2040 entry
 ```
 
 ### 4. RTC / Timestamps
+
+> These files live in **fs.ll**'s platform folders, not here. Kept in this document because the
+> contract matters when reading the build or debugging timestamps.
 
 Each platform provides an `RTC.h` (prototype) + `RTC.c` (definitions) pair with:
 - `RTCInitialize()` — initializes timekeeping (hardware RTC on RP2040, settimeofday on ESP32)
@@ -267,19 +266,82 @@ Only add a comment when it carries information the code cannot:
 This applies to new code and to edits of existing code. (Pre-existing third-party/port code under
 `src/Dependency/` and inherited Waveshare comments are left as-is unless touched.)
 
+---
 
+## Build System
+
+gui.ll is a **library meant to be consumed by other projects**. `src/lib` is the library,
+`src/Sample.c` is only a usage example, and the root `CMakeLists.txt` exists to build that
+example. There is no `add_library` anywhere: the library publishes two list variables that the
+consumer feeds into its own target.
+
+### Build Contract — `gui.ll.cmake`
+
+This is the entry point for consumers. **A consumer copies this one file into its own repository**
+(anywhere) and `include()`s it after `project()`. Contract:
+
+| variable | role |
+|---|---|
+| `GUI_LL_PATH` | in/out. Root of the gui.ll checkout. Accepted as a normal variable or an environment variable; relative paths resolve against `CMAKE_SOURCE_DIR`. Defaults to a `gui.ll` folder next to the copied file. Ends up in the cache. |
+| `PLATFORM_NAME` | in. `Simulator` (default), `RP2040` or `ESP32`. Selects the platform and LCD folders. |
+| `GUI_LL_PLATFORM_DIR` | out. The resolved platform folder. |
+| `SOURCES` | out. **Appended** with the gui.ll, libpng, zlib and (through `fs.ll.cmake`) fs.ll + FatFS sources. |
+| `INCLUDE_DIRS` | out. **Appended** with the matching include directories. |
+
+Both lists are appended to, never overwritten, so a consumer can accumulate several libraries
+following this same architecture into one target. On `Simulator`, SDL2 is located with
+`find_package` and its include dirs are added, but the **consumer** links `${SDL2_LIBRARIES}` and
+`m`.
+
+Resolution is two steps: default the path, then check the sentinel file `src/lib/GUI/Canvas.c`.
+If the sentinel is missing, the directory is populated with `git clone --branch main --depth 1
+--recurse-submodules --shallow-submodules` at configure time via `execute_process` (the recursion
+is what brings libpng and zlib in). Consequences to be aware of:
+
+- Because `GUI_LL_PATH` is cached with `FORCE`, several submodules of the same project can each
+  carry their own copy of `gui.ll.cmake` and still share a single checkout: the first one to
+  resolve it wins, the rest reuse the cached path. `list(REMOVE_DUPLICATES)` on
+  `SOURCES`/`INCLUDE_DIRS` keeps the second include from duplicating sources.
+- The download is deliberately **not** `FetchContent` — see fs.ll's `AGENTS.md` §6 for the full
+  rationale (build-tree placement, forced `add_subdirectory`, deprecated `FetchContent_Populate`).
+- All variables are prefixed `GUI_LL_` on purpose. Sibling libraries following this architecture
+  get included into the same `CMakeLists.txt`, so generic names would collide. `PLATFORM_NAME` is
+  the one intentionally shared input.
+- **A consumer does not need to include `fs.ll.cmake` itself** — `gui.ll.cmake` ends by including
+  gui.ll's own versioned copy (`src/Dependency/fs.ll.cmake`). When a consumer includes it anyway
+  (to pin `FS_LL_PATH` to a shared checkout), that include has to come **first**: the last thing
+  `gui.ll.cmake` does is `list(REMOVE_ITEM SOURCES "${FS_LL_PLATFORM_DIR}/HAL.c")`, and a later
+  include would put that file back and break the link with duplicate symbols.
+
+### Relationship with fs.ll
+
+All file I/O, RTC and SD disk I/O live in [fs.ll](https://github.com/juliannojungle/fs.ll):
+`FileSystem.c`, the platform `RTC.c` and `DiskIO.c`, plus the three FatFS sources. gui.ll keeps
+only the HAL, because a single HAL has to serve both the SD card and the LCD panel: gui.ll's
+`HAL.c`/`HAL.h` is a superset of fs.ll's (it adds SPI/GPIO/PWM for the panel) and its
+`HALConfig.h` carries the `SD_*` **and** `LCD_*` defines. gui.ll's include dirs are appended
+before fs.ll's, so `#include "HAL.h"` and `#include "HALConfig.h"` resolve to gui.ll's copies —
+including from inside fs.ll's `DiskIO.c`. That is the reason fs.ll's `HAL.c` is removed from
+`SOURCES`.
+
+`src/Dependency/fs.ll` is therefore **not a git submodule** (it is git-ignored): `fs.ll.cmake`
+resolves or downloads it at configure time.
 
 ### RP2040
 - Uses **cmake + make** directly
 - Pico SDK is included via `pico_sdk_import.cmake`
-- FatFS compiled as static library in `PreExecutable.cmake`
-- zlib/libpng compiled as static libraries in `PostExecutable.cmake`
+- libpng, zlib and FatFS are compiled straight into the target (no intermediate static libraries)
 - Generates `.uf2` for drag-and-drop flashing
 
 ### ESP32
 - Uses **idf.py** (ESP-IDF build system) which internally calls cmake + ninja
 - `EXTRA_COMPONENT_DIRS` points to `src/lib/Platform/ESP32` (avoids needing a `main/` folder)
-- Component registered via `idf_component_register()` with all sources and includes
+- The root `CMakeLists.txt` does *not* include `gui.ll.cmake` on this platform: the component's
+  own `CMakeLists.txt` does, then calls `idf_component_register()` with `${SOURCES}` /
+  `${INCLUDE_DIRS}`. That file also derives `PROJ_ROOT` from its own location and sets
+  `GUI_LL_PATH` from it as a fallback, because ESP-IDF may process the component in a scope where
+  neither `CMAKE_SOURCE_DIR` nor an inherited `GUI_LL_PATH` is available — without it the default
+  path rule would clone gui.ll into the repository itself
 - Requires `source ~/esp-idf/export.sh` before build (sets toolchain in PATH)
 - Third-party code (libpng, zlib) compiled with `-Wno-error=maybe-uninitialized` to suppress
   warnings promoted to errors by ESP-IDF's strict `-Werror=all`
@@ -298,13 +360,13 @@ fi
 ### Simulator
 - Uses **cmake + make** with the host compiler (gcc/clang, no cross-compilation)
 - Selected via `cmake -DPLATFORM_NAME=Simulator`
-- Links SDL2 (`find_package`), libpng, zlib, and **real FatFS** from submodules
-- Compiles the real FatFS (`ff.c`, `ffsystem.c`, `ffunicode.c`) + `Platform/Simulator/DiskIO.c` +
-  the shared `Helper/FileHelper.c` — same file I/O stack as RP2040/ESP32
-- `DiskIO.c` backs FatFS against `sample/sdcard.img` (a FAT disk image file) using POSIX
+- Links SDL2 (`find_package`) and compiles libpng, zlib and the **real FatFS** (from fs.ll)
+- File I/O is the same stack as RP2040/ESP32: fs.ll's `FileSystem.c` + FatFS
+  (`ff.c`, `ffsystem.c`, `ffunicode.c`) + fs.ll's `Platform/Simulator/DiskIO.c`
+- That `DiskIO.c` backs FatFS against `sample/sdcard.img` (a FAT disk image file) using POSIX
   `fopen`/`fseek`/`fread`/`fwrite`/`fflush`
 - Does NOT link Driver/GC9A01 — LCD rendering is via SDL2 (`LCD/Simulator/`)
-- `fatfs.ffconf_patch.cmake` is applied before compilation (same patch as RP2040)
+- fs.ll's `fatfs.ffconf_patch.cmake` is applied before compilation (same patch on every platform)
 - Produces a native ELF executable (`build/gui.ll`)
 - `Delay(ms)` integrates an SDL event-pump loop to keep the window responsive
 - Requires `libsdl2-dev`, `gdb`, `dosfstools`, and `mtools` (installed by `Toolchain/Simulator/Setup.sh`)
@@ -328,12 +390,18 @@ fi
 
 ## Dependency Management — CRITICAL RULES
 
-### DO NOT modify submodule contents directly
+### DO NOT modify dependency contents directly
 
-All dependencies are git submodules with `ignore = all`:
-- `src/Dependency/fatfs` — ChaN FatFS
+Third-party code is pinned as git submodules with `ignore = all`:
 - `src/Dependency/libpng` — libpng
 - `src/Dependency/zlib` — zlib
+
+Sibling libraries are **not** submodules — they are resolved (and downloaded when missing) at
+configure time by their own `.cmake` contract, so that several projects can share one checkout:
+- `src/Dependency/fs.ll` — fs.ll, through `src/Dependency/fs.ll.cmake` / `FS_LL_PATH`
+
+Either way the content is read-only build input. Never `git add` anything under
+`src/Dependency/`, and never commit a patched dependency file.
 
 **If a dependency needs configuration changes, use cmake patches applied at build time.**
 
@@ -341,14 +409,17 @@ All dependencies are git submodules with `ignore = all`:
 
 | File | What it does |
 |------|-------------|
-| `fatfs.ffconf_patch.cmake` | Sets `FF_FS_RPATH=1` and `FF_VOLUMES=2` in `ffconf.h` |
-| `zlibstatic.cmake` | Replaces zlib's `CMakeLists.txt` with a minimal static-only build |
+| `fs.ll`'s `fatfs.ffconf_patch.cmake` | Rewrites FatFS `ffconf.h` (`FF_FS_RPATH=1`, `FF_VOLUMES=2`, `FF_CODE_PAGE=437`, `FF_USE_LFN=2`) — included by `fs.ll.cmake`, not owned here |
 | `configure_file(pnglibconf.h.prebuilt → pnglibconf.h)` | Generates required libpng config header |
+| `set_source_files_properties(... -Wno-maybe-uninitialized)` | Silences libpng warnings on `png.c` / `pngerror.c` |
 
 ### Rationale
 - Submodules stay at pinned commits (shallow clones)
 - `ignore = all` prevents git from showing false "modified" status inside submodules
-- Anyone cloning the repo gets a working build without manual intervention
+- The patches write inside the dependency trees, so those paths are also listed in `.gitignore`
+  to hide the dirt they create
+- Anyone cloning the repo gets a working build without manual intervention: submodules come with
+  `--recurse-submodules`, and fs.ll is downloaded by the first configure if it is not there
 
 ---
 
@@ -464,6 +535,32 @@ This prevents the git plugin from showing false "modified" files in submodules
   `#ifdef` needed.
 
 Recent work:
+- **`gui.ll.cmake` turned into a self-resolving build contract** (see "Build System" above), mirroring
+  fs.ll's. It now resolves `GUI_LL_PATH` (variable or environment, relative resolved against
+  `CMAKE_SOURCE_DIR`, defaulting to a `gui.ll` folder next to the copied file), uses
+  `src/lib/GUI/Canvas.c` as the sentinel, `git clone`s the project when the directory is not
+  populated, and caches the path with `FORCE` so sibling submodules share one checkout. A consumer
+  only has to copy `gui.ll.cmake` into its tree. Details:
+  - Internal variables gained the `GUI_LL_` prefix (`GUI_LL_LIB_DIR`, `GUI_LL_DEPENDENCY_DIR`,
+    `GUI_LL_PLATFORM_DIR`, `GUI_LL_LCD_TYPE`) — the old `DEPENDENCY_DIR` / `LCD_TYPE` would collide
+    with sibling libraries included into the same `CMakeLists.txt`.
+  - The fs.ll `HAL.c` exclusion moved from a `list(FILTER ... REGEX "fs\.ll/.../HAL\.c$")` to
+    `list(REMOVE_ITEM SOURCES "${FS_LL_PLATFORM_DIR}/HAL.c")`. The regex assumed the checkout
+    directory is literally named `fs.ll`, so a consumer pointing `FS_LL_PATH` elsewhere would get a
+    silent duplicate-symbol link failure.
+  - Root `CMakeLists.txt` sets `GUI_LL_PATH` to `CMAKE_SOURCE_DIR` (in-tree build downloads nothing);
+    `Platform/ESP32/CMakeLists.txt` sets it from `PROJ_ROOT` as the scope fallback and its stale
+    `PROJ_ROOT` probe (looking for `src/Dependency/fatfs.ffconf_patch.cmake`, gone since the fs.ll
+    split, so it never matched) now probes its own path.
+  - **fs.ll dropped from `.gitmodules`** (`git rm --cached`, folder kept in place, path added to
+    `.gitignore`) — it is downloaded by the contract when absent.
+  - **`src/Dependency/zlibstatic.cmake` deleted** — orphaned since `gui.ll.cmake` started compiling
+    the zlib sources directly into the target.
+  - Verified: in-tree `Simulator`, `RP2040` and `ESP32-S3` (isolated build dir + sdkconfig) all
+    compile and link; external consumer with `GUI_LL_PATH` given; external consumer with nothing set
+    (cloned gui.ll + submodules, then built); reconfigure over a populated directory (no
+    re-download); and a consumer including its own `fs.ll.cmake` first, which resolved fs.ll once at
+    the consumer level and had gui.ll reuse the cached path.
 - **Refactored Simulator file I/O to use real FatFS** — eliminated the POSIX shim
   (`Platform/Simulator/FileHelper.c`, `FileHelper.h`, `ff.h`) and replaced it with a new
   `Platform/Simulator/DiskIO.c` that backs FatFS against a local FAT-formatted disk image file
@@ -971,3 +1068,26 @@ Recent work:
       clips with `>` (not `>=`), so a coordinate equal to `canvas.Width`/`Height` is still written.
       `CanvasDrawCurvedChar` itself relies only on `CanvasSetPixel`'s clipping and is unaffected, but
       these are worth knowing before changing the buffer layout.
+16. **Sibling libraries are resolved by a copied `.cmake` contract, not by git submodules**: gui.ll
+    consumes fs.ll, and is itself consumed by other projects. Wiring that with submodules means every
+    consumer carries its own nested checkout of the same dependency, and each level has to keep a
+    `.gitmodules` entry in sync. Instead, each library publishes a single file (`gui.ll.cmake`,
+    `fs.ll.cmake`) that the consumer **copies** into its tree: the file resolves a cached
+    `<LIB>_PATH`, downloads the library with `git clone` when that path is not populated, and appends
+    to `SOURCES` / `INCLUDE_DIRS`. Consequences that motivated the choice:
+    - **One checkout per dependency per project.** The path is cached with `FORCE`, so the first
+      include to resolve it wins and every other copy of the same contract reuses it. Two submodules
+      that both need fs.ll share one fs.ll instead of cloning it twice.
+    - **No `.gitmodules` bookkeeping for siblings.** A library that is not present at configure time
+      is simply downloaded, so the dependency does not have to be declared at every level. Only
+      third-party code (libpng, zlib) stays as a pinned submodule.
+    - **Version pinning is looser on purpose.** The clone is `--branch main --depth 1`: sibling
+      libraries move together with the parent project and are expected to track `main`. A consumer
+      that needs a specific revision points `<LIB>_PATH` at its own checkout, which the contract then
+      leaves alone.
+    - **Not `FetchContent`**, for the reasons recorded in fs.ll's `AGENTS.md` §6: it places sources in
+      the build tree, pushes towards `add_subdirectory` (which would build the library's own example
+      project), and `FetchContent_Populate` is deprecated (`CMP0169`).
+    - **The `<LIB>_` prefix on every variable is load-bearing**, since sibling contracts are included
+      into the same `CMakeLists.txt` and would otherwise clobber each other's paths. `PLATFORM_NAME`
+      is the one deliberately shared input.

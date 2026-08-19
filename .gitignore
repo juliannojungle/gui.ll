@@ -2,6 +2,7 @@ build/
 sdkconfig
 
 # should not change the dependency here
+# fs.ll is not a submodule: gui.ll.cmake resolves/downloads it through FS_LL_PATH
 src/Dependency/fs.ll
 src/Dependency/libpng
 src/Dependency/zlib
