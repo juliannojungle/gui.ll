@@ -307,11 +307,13 @@ is what brings libpng and zlib in). Consequences to be aware of:
 - All variables are prefixed `GUI_LL_` on purpose. Sibling libraries following this architecture
   get included into the same `CMakeLists.txt`, so generic names would collide. `PLATFORM_NAME` is
   the one intentionally shared input.
-- **A consumer does not need to include `fs.ll.cmake` itself** — `gui.ll.cmake` ends by including
-  gui.ll's own versioned copy (`src/Dependency/fs.ll.cmake`). When a consumer includes it anyway
-  (to pin `FS_LL_PATH` to a shared checkout), that include has to come **first**: the last thing
-  `gui.ll.cmake` does is `list(REMOVE_ITEM SOURCES "${FS_LL_PLATFORM_DIR}/HAL.c")`, and a later
-  include would put that file back and break the link with duplicate symbols.
+- **A consumer that only draws does not need to include `fs.ll.cmake` itself** — `gui.ll.cmake` ends
+  by including gui.ll's own versioned copy (`src/Dependency/fs.ll.cmake`). A consumer that also uses
+  fs.ll **directly** (its own file access) carries that file too, and that is precisely what stops
+  fs.ll from being downloaded twice: whoever resolves `FS_LL_PATH` first wins, the other include
+  reuses the cached checkout. In that case the `fs.ll.cmake` include has to come **first**: the last
+  thing `gui.ll.cmake` does is `list(REMOVE_ITEM SOURCES "${FS_LL_PLATFORM_DIR}/HAL.c")`, and a
+  later include would put that file back and break the link with duplicate symbols.
 
 ### Relationship with fs.ll
 

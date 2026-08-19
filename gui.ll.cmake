@@ -7,10 +7,12 @@
 # GUI_LL_PATH is cached, so several submodules of the same project (each one carrying its
 # own copy of this file) share a single gui.ll checkout: the first one to resolve it wins.
 #
-# gui.ll builds on top of fs.ll and includes gui.ll's own copy of fs.ll.cmake, so a consumer
-# does not need to include fs.ll.cmake as well. When it does anyway (to pin FS_LL_PATH), that
-# include has to come first: gui.ll replaces fs.ll's HAL.c with its own, and a later include
-# would put it back and break the link with duplicate symbols.
+# gui.ll builds on top of fs.ll and includes gui.ll's own copy of fs.ll.cmake, so a consumer that
+# only draws does not have to include fs.ll.cmake as well. A consumer that uses fs.ll directly
+# (its own file access) carries that file too, which is what keeps the two from being downloaded
+# twice: whoever resolves FS_LL_PATH first wins and the other include reuses the cached checkout.
+# In that case the fs.ll.cmake include has to come FIRST: gui.ll replaces fs.ll's HAL.c with its
+# own, and a later include would put it back and break the link with duplicate symbols.
 #
 # Inputs:
 #   GUI_LL_PATH    - path to the gui.ll root directory (variable or environment).
