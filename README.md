@@ -1,5 +1,7 @@
 # gui.ll (GUI Low Level)
 
+> 🦖 **Part of [dot-ll-collection](https://github.com/topics/dot-ll-collection)**
+
 > ⚠️ **This project is under active development. The documentation is growing along the project as it's a work-in-progress.**
 
 A lightweight, bare-metal GUI library for embedded systems. Draws visual elements directly on a GC9A01 round LCD (240×240) and renders PNG images streamed from an SD card — all with minimal memory footprint, no OS, no heap allocations in the critical path.
