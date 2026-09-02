@@ -102,15 +102,6 @@ typedef enum {
     DRAW_FILL_STYLE_FULL,
 } DrawFillStyle;
 
-typedef struct {
-    UINT16 Year;
-    UINT8 Month;
-    UINT8 Day;
-    UINT8 Hour;
-    UINT8 Min;
-    UINT8 Sec;
-} DateTime;
-
 /* Drawing API — definitions in Canvas.c */
 Texture CanvasNewTexture(UINT16 width, UINT16 height);
 void CanvasSetRotate(UINT16 rotate);

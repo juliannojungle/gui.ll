@@ -31,7 +31,7 @@ void LCDClear(UINT16 fillColor)
     DigitalWrite(LCD_CS_PIN, 0);
 
     for (j = 0; j < LCD.HEIGHT; j++) {
-        SPIWriteNByte((uint8_t *)&texture[j*LCD.WIDTH], LCD.WIDTH*2);
+        SPIWriteNByte(LCD_SPI, (uint8_t *)&texture[j*LCD.WIDTH], LCD.WIDTH*2);
     }
 
     DigitalWrite(LCD_CS_PIN, 1);
@@ -45,7 +45,7 @@ void LCDRenderTexture(UINT8 *texture)
     DigitalWrite(LCD_CS_PIN, 0);
 
     for (j = 0; j < LCD.HEIGHT; j++) {
-        SPIWriteNByte(&texture[j * LCD.WIDTH * 2], LCD.WIDTH * 2);
+        SPIWriteNByte(LCD_SPI, &texture[j * LCD.WIDTH * 2], LCD.WIDTH * 2);
     }
 
     DigitalWrite(LCD_CS_PIN, 1);
@@ -62,7 +62,7 @@ void LCDRenderTextureInArea(UINT16 xStart, UINT16 yStart, UINT16 xEnd, UINT16 yE
 
     for (j = yStart; j < yEnd - 1; j++) {
         addr = (xStart + j * LCD.WIDTH) * 2;
-        SPIWriteNByte(&texture[addr], (xEnd - xStart) * 2);
+        SPIWriteNByte(LCD_SPI, &texture[addr], (xEnd - xStart) * 2);
     }
 
     DigitalWrite(LCD_CS_PIN, 1);
@@ -173,8 +173,8 @@ void LCDRenderPng(FIL *file) {
             }
 
             /* The LCD uses RGB565 16-bits format: RRRRRGGG GGGBBBBB */
-            SPIWriteByte((red & 0b11111000) | ((green & 0b11100000) >> 5));
-            SPIWriteByte(((green & 0b00011100) << 3) | ((blue & 0b11111000) >> 3));
+            SPIWriteByte(LCD_SPI, (red & 0b11111000) | ((green & 0b11100000) >> 5));
+            SPIWriteByte(LCD_SPI, ((green & 0b00011100) << 3) | ((blue & 0b11111000) >> 3));
         }
 
         png_free(pngPointer, rowBuffer);

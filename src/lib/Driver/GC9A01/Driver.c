@@ -75,7 +75,7 @@ UINT8 DriverInitialize(void) {
     STDIOInitAll();
 
     // SPI Config
-    SPIInit(10000 * 1000);
+    SPIInit(LCD_SPI, 10000 * 1000);
     GPIOSetFunction(LCD_CLK_PIN, GPIO_FUNC_SPI);
     GPIOSetFunction(LCD_MOSI_PIN, GPIO_FUNC_SPI);
 
@@ -98,7 +98,7 @@ void DriverSendCommand(UINT8 Reg)
 {
     DigitalWrite(LCD_DC_PIN, 0);
     DigitalWrite(LCD_CS_PIN, 0);
-    SPIWriteByte(Reg);
+    SPIWriteByte(LCD_SPI, Reg);
     DigitalWrite(LCD_CS_PIN, 1);
 }
 
@@ -106,7 +106,7 @@ void DriverSendData8Bit(UINT8 Data)
 {
     DigitalWrite(LCD_DC_PIN, 1);
     DigitalWrite(LCD_CS_PIN, 0);
-    SPIWriteByte(Data);
+    SPIWriteByte(LCD_SPI, Data);
     DigitalWrite(LCD_CS_PIN, 1);
 }
 
@@ -122,8 +122,8 @@ void DriverSendData16Bit(UINT16 Data)
 {
     DigitalWrite(LCD_DC_PIN, 1);
     DigitalWrite(LCD_CS_PIN, 0);
-    SPIWriteByte((Data >> 8) & 0xFF);
-    SPIWriteByte(Data & 0xFF);
+    SPIWriteByte(LCD_SPI, (Data >> 8) & 0xFF);
+    SPIWriteByte(LCD_SPI, Data & 0xFF);
     DigitalWrite(LCD_CS_PIN, 1);
 }
 

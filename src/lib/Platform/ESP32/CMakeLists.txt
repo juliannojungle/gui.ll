@@ -22,7 +22,7 @@ idf_component_register(
         "${PROJ_ROOT}/src/Sample.c"
         ${SOURCES}
     INCLUDE_DIRS ${INCLUDE_DIRS}
-    REQUIRES driver esp_system)
+    REQUIRES ${PLATFORM_REQUIRES})
 
 # Disable -Werror for third-party dependencies (libpng, zlib) that produce
 # warnings with the xtensa toolchain under ESP-IDF's strict -Werror=all.

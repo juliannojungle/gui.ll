@@ -2,7 +2,9 @@ build/
 sdkconfig
 
 # should not change the dependency here
-# fs.ll is not a submodule: gui.ll.cmake resolves/downloads it through FS_LL_PATH
+# fs.ll and hal.ll are not submodules: their contracts resolve/download them through
+# FS_LL_PATH and HAL_LL_PATH
 src/Dependency/fs.ll
+src/Dependency/hal.ll
 src/Dependency/libpng
 src/Dependency/zlib

@@ -7,12 +7,11 @@
 # GUI_LL_PATH is cached, so several submodules of the same project (each one carrying its
 # own copy of this file) share a single gui.ll checkout: the first one to resolve it wins.
 #
-# gui.ll builds on top of fs.ll and includes gui.ll's own copy of fs.ll.cmake, so a consumer that
-# only draws does not have to include fs.ll.cmake as well. A consumer that uses fs.ll directly
-# (its own file access) carries that file too, which is what keeps the two from being downloaded
-# twice: whoever resolves FS_LL_PATH first wins and the other include reuses the cached checkout.
-# In that case the fs.ll.cmake include has to come FIRST: gui.ll replaces fs.ll's HAL.c with its
-# own, and a later include would put it back and break the link with duplicate symbols.
+# gui.ll builds on top of hal.ll and fs.ll, and includes its own copies of their contracts, so a
+# consumer that only draws does not have to include them as well. A consumer that uses either one
+# directly carries that file too, which is what keeps them from being downloaded twice: whoever
+# resolves the path first wins and the other include reuses the cached checkout. Order between the
+# sibling contracts does not matter, because hal.ll owns the only HAL.h and HALConfig.h in the tree.
 #
 # Inputs:
 #   GUI_LL_PATH    - path to the gui.ll root directory (variable or environment).
@@ -22,7 +21,7 @@
 #
 # Outputs:
 #   GUI_LL_PATH    - cached, absolute path to the gui.ll root directory.
-#   SOURCES        - appended with the gui.ll, libpng, zlib and fs.ll sources.
+#   SOURCES        - appended with the gui.ll, libpng, zlib, hal.ll and fs.ll sources.
 #   INCLUDE_DIRS   - appended with the matching include directories.
 #
 # On the Simulator platform SDL2 is located with find_package, and the consumer target is the
@@ -38,6 +37,15 @@ if(NOT GUI_LL_PATH)
 endif()
 
 get_filename_component(GUI_LL_PATH "${GUI_LL_PATH}" REALPATH BASE_DIR "${CMAKE_SOURCE_DIR}")
+
+# ESP-IDF evaluates the consumer's component twice, and the first pass runs in script
+# mode (cmake -P) only to collect REQUIRES. hal.ll is what publishes that list, so the
+# chain still has to reach it, but nothing below needs to run: there is no cache to read
+# a caller-provided path from, and no source gets compiled in that pass.
+if(DEFINED CMAKE_SCRIPT_MODE_FILE)
+    include(${GUI_LL_PATH}/src/Dependency/hal.ll.cmake)
+    return()
+endif()
 
 # Sentinel file used to tell a populated checkout from an empty/missing directory.
 set(GUI_LL_SENTINEL_FILE "${GUI_LL_PATH}/src/lib/GUI/Canvas.c")
@@ -76,11 +84,10 @@ endif()
 
 set(GUI_LL_LIB_DIR "${GUI_LL_PATH}/src/lib")
 set(GUI_LL_DEPENDENCY_DIR "${GUI_LL_PATH}/src/Dependency")
-set(GUI_LL_PLATFORM_DIR "${GUI_LL_LIB_DIR}/Platform/${PLATFORM_NAME}")
 
-if(NOT EXISTS "${GUI_LL_PLATFORM_DIR}")
-    message(FATAL_ERROR "gui.ll has no support for platform '${PLATFORM_NAME}' ('${GUI_LL_PLATFORM_DIR}' not found)")
-endif()
+# No platform-folder check here: since the HAL moved to hal.ll, the only thing left under
+# src/lib/Platform is the ESP32 component file, so there is nothing per-platform to find.
+# An unsupported PLATFORM_NAME is rejected by hal.ll's contract instead.
 
 if(PLATFORM_NAME STREQUAL "Simulator")
     set(GUI_LL_LCD_TYPE "Simulator")
@@ -103,8 +110,7 @@ set(SOURCES
     "${GUI_LL_LIB_DIR}/GUI/Fonts/font16.c"
     "${GUI_LL_LIB_DIR}/GUI/Fonts/font20.c"
     "${GUI_LL_LIB_DIR}/GUI/Fonts/font24.c"
-    "${GUI_LL_LIB_DIR}/Helper/Trigonometry.c"
-    "${GUI_LL_PLATFORM_DIR}/HAL.c")
+    "${GUI_LL_LIB_DIR}/Helper/Trigonometry.c")
 
 # zlib
 set(SOURCES
@@ -139,16 +145,14 @@ set(SOURCES
     "${GUI_LL_DEPENDENCY_DIR}/libpng/pngwtran.c"
     "${GUI_LL_DEPENDENCY_DIR}/libpng/pngwutil.c")
 
-if(NOT CMAKE_SCRIPT_MODE_FILE)
-    configure_file(
-        "${GUI_LL_DEPENDENCY_DIR}/libpng/scripts/pnglibconf.h.prebuilt" # libpng default configs
-        "${GUI_LL_DEPENDENCY_DIR}/libpng/pnglibconf.h"
-        COPYONLY)
-    set_source_files_properties(
-        "${GUI_LL_DEPENDENCY_DIR}/libpng/pngerror.c"
-        "${GUI_LL_DEPENDENCY_DIR}/libpng/png.c"
-        PROPERTIES COMPILE_OPTIONS "-Wno-maybe-uninitialized") # suppress warnings for libpng
-endif()
+configure_file(
+    "${GUI_LL_DEPENDENCY_DIR}/libpng/scripts/pnglibconf.h.prebuilt" # libpng default configs
+    "${GUI_LL_DEPENDENCY_DIR}/libpng/pnglibconf.h"
+    COPYONLY)
+set_source_files_properties(
+    "${GUI_LL_DEPENDENCY_DIR}/libpng/pngerror.c"
+    "${GUI_LL_DEPENDENCY_DIR}/libpng/png.c"
+    PROPERTIES COMPILE_OPTIONS "-Wno-maybe-uninitialized") # suppress warnings for libpng
 
 set(INCLUDE_DIRS
     ${INCLUDE_DIRS}
@@ -157,7 +161,6 @@ set(INCLUDE_DIRS
     "${GUI_LL_LIB_DIR}/GUI/Fonts"
     "${GUI_LL_LIB_DIR}/Helper"
     "${GUI_LL_LIB_DIR}/LCD/${GUI_LL_LCD_TYPE}"
-    "${GUI_LL_PLATFORM_DIR}"
     "${GUI_LL_DEPENDENCY_DIR}/libpng"
     "${GUI_LL_DEPENDENCY_DIR}/zlib")
 
@@ -165,5 +168,8 @@ set(INCLUDE_DIRS
 list(REMOVE_DUPLICATES SOURCES)
 list(REMOVE_DUPLICATES INCLUDE_DIRS)
 
+# All hardware access goes through hal.ll: the panel's SPI, GPIO, PWM and timing come from
+# there, as do HAL.h, Types.h and the board definition in HALConfig.h.
+include(${GUI_LL_DEPENDENCY_DIR}/hal.ll.cmake)
+
 include(${GUI_LL_DEPENDENCY_DIR}/fs.ll.cmake)
-list(REMOVE_ITEM SOURCES "${FS_LL_PLATFORM_DIR}/HAL.c") # gui.ll's HAL.c supersedes fs.ll's

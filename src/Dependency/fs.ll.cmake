@@ -29,6 +29,15 @@ endif()
 
 get_filename_component(FS_LL_PATH "${FS_LL_PATH}" REALPATH BASE_DIR "${CMAKE_SOURCE_DIR}")
 
+# ESP-IDF evaluates the consumer's component twice, and the first pass runs in script
+# mode (cmake -P) only to collect REQUIRES. hal.ll is what publishes that list, so the
+# chain still has to reach it, but nothing below needs to run: there is no cache to read
+# a caller-provided path from, and no source gets compiled in that pass.
+if(DEFINED CMAKE_SCRIPT_MODE_FILE)
+    include(${FS_LL_PATH}/src/Dependency/hal.ll.cmake)
+    return()
+endif()
+
 # Sentinel file used to tell a populated checkout from an empty/missing directory.
 set(FS_LL_SENTINEL_FILE "${FS_LL_PATH}/src/lib/FileSystem.c")
 
@@ -73,8 +82,7 @@ endif()
 set(SOURCES
     ${SOURCES}
     "${FS_LL_PATH}/src/lib/FileSystem.c"
-    "${FS_LL_PLATFORM_DIR}/HAL.c"
-    "${FS_LL_PLATFORM_DIR}/RTC.c"
+    "${FS_LL_PATH}/src/lib/FatFsTime.c"
     "${FS_LL_PLATFORM_DIR}/DiskIO.c"
     "${FS_LL_PATH}/src/Dependency/fatfs/source/ff.c"
     "${FS_LL_PATH}/src/Dependency/fatfs/source/ffsystem.c"
@@ -89,6 +97,10 @@ set(INCLUDE_DIRS
 # Guards against the same fs.ll being included by more than one submodule.
 list(REMOVE_DUPLICATES SOURCES)
 list(REMOVE_DUPLICATES INCLUDE_DIRS)
+
+# All hardware access goes through hal.ll: the SD card's SPI, GPIO and timing come
+# from there, as do HAL.h and the board definition in HALConfig.h.
+include(${FS_LL_PATH}/src/Dependency/hal.ll.cmake)
 
 # Apply patch to ffconf.h (FF_FS_RPATH=1, FF_VOLUMES=2, FF_CODE_PAGE=437, FF_USE_LFN=2)
 include(${FS_LL_PATH}/src/Dependency/fatfs.ffconf_patch.cmake)

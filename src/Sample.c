@@ -1,5 +1,4 @@
 #include "HAL.h"
-#include "RTC.h"
 #include "LCDSetup.h"
 #include "LCDRenderer.h"
 #include "FileSystem.h"

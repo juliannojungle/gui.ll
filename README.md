@@ -107,19 +107,16 @@ gui.ll/
 │   ├── Sample.c                    # Entry point — app_entry()
 │   ├── lib/
 │   │   ├── Helper/
-│   │   │   ├── FileHelper.c        # SD card mount / open / close (FatFS)
 │   │   │   └── Trigonometry.c      # Integer Q16.16 cos/sin LUT (used by curved text)
-│   │   ├── Platform/
-│   │   │   ├── RP2040/             # HAL, SPI, DiskIO, RTC (Pico SDK)
-│   │   │   ├── ESP32/              # HAL, SPI, DiskIO, RTC (ESP-IDF)
-│   │   │   └── Simulator/          # HAL stubs, DiskIO (FatFS ↔ disk image), SDL2 event pump
+│   │   ├── Platform/ESP32/         # ESP-IDF component registration only
 │   │   ├── Driver/GC9A01/          # LCD driver
 │   │   ├── LCD/1in28/              # Display layer: LCDSetup (init) + LCDRenderer (blit)
 │   │   ├── LCD/Simulator/          # SDL2 display layer: same API, renders to window
 │   │   ├── GUI/                    # Canvas / drawing primitives (Canvas.c/.h)
 │   │   └── Fonts/                  # Bitmap font data
 │   └── Dependency/
-│       ├── fatfs/                  # ChaN FatFS
+│       ├── hal.ll/                 # GPIO, SPI, PWM, timing, board pinout (downloaded)
+│       ├── fs.ll/                  # SD card file I/O + FatFS (downloaded)
 │       ├── libpng/                 # libpng
 │       └── zlib/                   # zlib (libpng dependency)
 ├── Documentation/
@@ -134,7 +131,9 @@ gui.ll/
 
 ### Platform abstraction
 
-All hardware-specific code lives under `src/lib/Platform/<PLATFORM>/`. The application layer (`FileHelper`, `Sample.c`) calls abstract functions — `DigitalWrite`, `SPIWriteByte`, `Delay`, etc. — defined in each platform's `HAL.c`. CMake `include_directories` points to the active platform folder at build time, so `#include "HAL.h"` resolves to the correct implementation with no `#ifdef` scattered through application code.
+Hardware access goes through [hal.ll](https://github.com/juliannojungle/hal.ll), which owns GPIO, SPI, PWM, UART, timing, the RTC and the board pinout. The drawing code calls abstract functions — `DigitalWrite`, `SPIWriteByte`, `Delay`, etc. — declared in hal.ll's per-platform `HAL.h`; its contract puts the active platform folder on the include path at build time, so `#include "HAL.h"` resolves to the correct implementation with no `#ifdef` scattered through the code.
+
+What stays platform-specific here is the display layer, selected by folder rather than by preprocessor: `src/lib/LCD/Simulator` on the desktop, `src/lib/LCD/1in28` on both hardware targets.
 
 ### Entry point
 

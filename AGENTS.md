@@ -63,24 +63,13 @@ gui.ll/
 │   ├── Sample.c                    # Entry point (app_entry → main or app_main)
 │   │
 │   ├── lib/
-│   │   ├── Types.h                 # Shared scalar aliases (UINT8/UINT16/UINT32)
 │   │   ├── Helper/
-│   │   │   ├── Debug.h             # SHOWDEBUG traces (enabled by -DDEBUGMSGS)
 │   │   │   └── Trigonometry.c/.h   # Q16.16 integer cos/sin LUT (TrigCosQ16/TrigSinQ16) — float-free, deterministic
+│   │   │                           # (Debug.h / SHOWDEBUG comes from hal.ll)
 │   │   │
-│   │   ├── Platform/               # HAL only: file I/O, RTC and disk I/O come from fs.ll
-│   │   │   ├── RP2040/
-│   │   │   │   ├── HAL.c/.h        # HAL: GPIO, SPI, PWM (Pico SDK) — LCD SPI uses LCD_SPI from HALConfig.h
-│   │   │   │   └── HALConfig.h     # SD pins + SD_SPI(spi0) + SD_SPI_BAUDRATE; LCD pins + LCD_SPI(spi1); SD_DETECT_PIN
-│   │   │   │
-│   │   │   ├── ESP32/
-│   │   │   │   ├── CMakeLists.txt   # idf_component_register (ESP-IDF component)
-│   │   │   │   ├── HAL.c/.h        # HAL: GPIO, SPI (ESP-IDF), LEDC PWM compat — LCD SPI uses LCD_SPI from HALConfig.h
-│   │   │   │   └── HALConfig.h     # SD pins + SD_SPI(SPI2_HOST) + SD_SPI_BAUDRATE; LCD pins + LCD_SPI(SPI3_HOST); SD_DETECT_PIN
-│   │   │   │
-│   │   │   └── Simulator/
-│   │   │       ├── HAL.c/.h        # HAL: no-op stubs + Delay with SDL event pump; Pico-SDK compat constants
-│   │   │       └── HALConfig.h     # Dummy pin defines + SD_DISK_IMAGE "sample/sdcard.img"
+│   │   ├── Platform/               # only the ESP32 component file is left; the HAL moved to hal.ll
+│   │   │   └── ESP32/
+│   │   │       └── CMakeLists.txt   # idf_component_register (ESP-IDF component)
 │   │   │
 │   │   ├── Driver/GC9A01/          # LCD driver (Driver.c/.h) — uses LCD_* defines from HALConfig.h; DriverInitialize configures SPI, GPIO and backlight PWM; DriverSetBacklightBrightness sets PWM level
 │   │   ├── LCD/1in28/               # GC9A01 1.28" panel layer, split in two TUs:
@@ -93,6 +82,8 @@ gui.ll/
 │   │       └── Fonts/               # Font data (font8..font24, fonts.h)
 │   │
 │   └── Dependency/
+│       ├── hal.ll.cmake             # Copy of hal.ll's build contract — versioned here, included by gui.ll.cmake
+│       ├── hal.ll/                  # Resolved through HAL_LL_PATH by hal.ll.cmake — NOT a submodule, git-ignored
 │       ├── fs.ll.cmake              # Copy of fs.ll's build contract — versioned here, included by gui.ll.cmake
 │       ├── fs.ll/                   # Resolved through FS_LL_PATH by fs.ll.cmake — NOT a submodule, git-ignored
 │       ├── libpng/                  # Submodule: libpng (DO NOT MODIFY)
@@ -148,21 +139,28 @@ gui.ll/
 
 ### 1. Platform Abstraction
 
-All platform-specific code lives under `src/lib/Platform/<PLATFORM_NAME>/`.
-The helpers and drivers are platform-agnostic — they call abstract functions
-(`DigitalWrite`, `SPIWriteByte`, `Delay`, etc.) declared in each platform's `HAL.h` and
-defined in the matching `HAL.c`.
+**The platform layer lives in [hal.ll](https://github.com/juliannojungle/hal.ll), not here.** The
+helpers and drivers are platform-agnostic — they call abstract functions (`DigitalWrite`,
+`SPIWriteByte`, `Delay`, …) declared in hal.ll's per-platform `HAL.h` and defined in the matching
+`HAL.c`. `hal.ll.cmake` picks the folder from `PLATFORM_NAME`, puts it on the include path and adds
+its `HAL.c` to `SOURCES`, so a single `#include "HAL.h"` still resolves to the right platform.
 
-Include resolution works via cmake `include_directories` pointing to the active platform folder,
-so a single `#include "HAL.h"` resolves to the right platform's HAL. The HAL `.c` for the
-selected platform is added to the build's source list (RP2040: `add_executable`; ESP32:
-`idf_component_register SRCS`).
+What remains platform-specific *in this repository* is the LCD layer, and it is selected by folder
+rather than by `#ifdef`: `src/lib/LCD/Simulator` on the Simulator, `src/lib/LCD/1in28` on both
+hardware targets. `src/lib/Platform/` therefore holds nothing but the ESP32 component's
+`CMakeLists.txt`, and `gui.ll.cmake` no longer publishes a `GUI_LL_PLATFORM_DIR` or checks for a
+per-platform folder — an unsupported `PLATFORM_NAME` is rejected by hal.ll's contract.
+
+> One consequence worth knowing: **SPI calls take the bus as their first argument**
+> (`SPIWriteByte(LCD_SPI, value)`). gui.ll's old HAL hardwired `LCD_SPI` inside a bus-less
+> `SPIWriteByte`, which could not work once the same HAL had to serve the SD card too.
 
 ### 2. Single SD Card
 
-> The file I/O layer itself now lives in **fs.ll** (`FileSystem.c`, `DiskIO.c`, `RTC.c` and FatFS) —
-> see "Relationship with fs.ll" under Build System. What stays here is the pin/peripheral
-> configuration, because one `HALConfig.h` serves both the card and the panel.
+> The file I/O layer lives in **fs.ll** (`FileSystem.c`, `DiskIO.c`, `FatFsTime.c` and FatFS), and the
+> pin/peripheral configuration lives in **hal.ll**'s `HALConfig.h`, which serves both the card and the
+> panel. Nothing of either is in this repository any more — see "Relationship with fs.ll and hal.ll"
+> under Build System.
 
 The design targets a **single SD card** on one SPI bus. The pins, SPI peripheral and baud rate
 are defined in each platform's `HALConfig.h` (`SD_SPI`, `SD_SPI_SCLK/MOSI/MISO/CS`,
@@ -248,6 +246,20 @@ structure** — the maintainer does not want that extra scaffolding in the repos
 
 ---
 
+## Hardware Access Policy — ALWAYS THROUGH hal.ll
+
+**Rule: nothing in this repository touches hardware directly.** No `gpio_*`, `spi_*`, `uart_*`,
+`sleep_ms`, `vTaskDelay` or any other SDK call — everything goes through **hal.ll**, which owns GPIO,
+SPI, PWM, UART, timing, the RTC, threads and the board pinout (`HALConfig.h`).
+
+This is the dev's rule and it holds across the whole dot-ll-collection and pedal.guru. If something the
+code needs is missing from hal.ll, it gets added there rather than worked around here.
+
+Context, because it explains why the rule exists: gui.ll and fs.ll each used to ship their own `HAL.h`,
+`HAL.c` and `HALConfig.h`, with identical filenames *and* identical include guards. One silently shadowed
+the other, the build depended on include-path precedence to pick gui.ll's, and fs.ll's `HAL.c` had to be
+deleted from the source list to avoid duplicate symbols. hal.ll exists to end that.
+
 ## Code Comments Policy — KEEP COMMENTS MINIMAL
 
 **Rule: write self-explanatory code, not comments.** Prefer clear names and structure over prose.
@@ -283,8 +295,8 @@ This is the entry point for consumers. **A consumer copies this one file into it
 | variable | role |
 |---|---|
 | `GUI_LL_PATH` | in/out. Root of the gui.ll checkout. Accepted as a normal variable or an environment variable; relative paths resolve against `CMAKE_SOURCE_DIR`. Defaults to a `gui.ll` folder next to the copied file. Ends up in the cache. |
-| `PLATFORM_NAME` | in. `Simulator` (default), `RP2040` or `ESP32`. Selects the platform and LCD folders. |
-| `GUI_LL_PLATFORM_DIR` | out. The resolved platform folder. |
+| `PLATFORM_NAME` | in. `Simulator` (default), `RP2040` or `ESP32`. Selects the LCD folder here, and the platform folder inside hal.ll. |
+| `PLATFORM_LIBRARIES` / `PLATFORM_REQUIRES` | out, published by hal.ll. The consumer passes the first to `target_link_libraries` and the second to `idf_component_register`'s `REQUIRES`. |
 | `SOURCES` | out. **Appended** with the gui.ll, libpng, zlib and (through `fs.ll.cmake`) fs.ll + FatFS sources. |
 | `INCLUDE_DIRS` | out. **Appended** with the matching include directories. |
 
@@ -307,37 +319,59 @@ is what brings libpng and zlib in). Consequences to be aware of:
 - All variables are prefixed `GUI_LL_` on purpose. Sibling libraries following this architecture
   get included into the same `CMakeLists.txt`, so generic names would collide. `PLATFORM_NAME` is
   the one intentionally shared input.
-- **A consumer that only draws does not need to include `fs.ll.cmake` itself** — `gui.ll.cmake` ends
-  by including gui.ll's own versioned copy (`src/Dependency/fs.ll.cmake`). A consumer that also uses
-  fs.ll **directly** (its own file access) carries that file too, and that is precisely what stops
-  fs.ll from being downloaded twice: whoever resolves `FS_LL_PATH` first wins, the other include
-  reuses the cached checkout. In that case the `fs.ll.cmake` include has to come **first**: the last
-  thing `gui.ll.cmake` does is `list(REMOVE_ITEM SOURCES "${FS_LL_PLATFORM_DIR}/HAL.c")`, and a
-  later include would put that file back and break the link with duplicate symbols.
+- **A consumer does not need to include `hal.ll.cmake` or `fs.ll.cmake` itself** — `gui.ll.cmake` ends
+  by including gui.ll's own versioned copies (`src/Dependency/hal.ll.cmake`, then
+  `src/Dependency/fs.ll.cmake`). A consumer that uses either one **directly** carries that file too,
+  and that is precisely what stops them from being downloaded twice: whoever resolves `HAL_LL_PATH` /
+  `FS_LL_PATH` first wins, the other include reuses the cached checkout.
+- **Include order between the sibling contracts does not matter.** It used to: `gui.ll.cmake` ended
+  with `list(REMOVE_ITEM SOURCES "${FS_LL_PLATFORM_DIR}/HAL.c")`, so it had to come *after*
+  `fs.ll.cmake` or the removed file came back as a duplicate symbol — while its platform include dir
+  had to come *before* fs.ll's for `HALConfig.h` to resolve to the one carrying the `LCD_*` pins. Both
+  requirements died with the HAL extraction: there is now exactly one `HAL.h` and one `HALConfig.h` in
+  the tree, and they come from hal.ll.
+- **In script mode the contract returns early**, after including `hal.ll.cmake`. ESP-IDF evaluates a
+  consumer's component twice and the first pass (`cmake -P`) exists only to harvest `REQUIRES`, which
+  is what hal.ll publishes — so the chain has to reach hal.ll and nothing else. Guarding only the
+  `git clone`, as an earlier version did, is not enough.
 
-### Relationship with fs.ll
+### Relationship with fs.ll and hal.ll
 
-All file I/O, RTC and SD disk I/O live in [fs.ll](https://github.com/juliannojungle/fs.ll):
-`FileSystem.c`, the platform `RTC.c` and `DiskIO.c`, plus the three FatFS sources. gui.ll keeps
-only the HAL, because a single HAL has to serve both the SD card and the LCD panel: gui.ll's
-`HAL.c`/`HAL.h` is a superset of fs.ll's (it adds SPI/GPIO/PWM for the panel) and its
-`HALConfig.h` carries the `SD_*` **and** `LCD_*` defines. gui.ll's include dirs are appended
-before fs.ll's, so `#include "HAL.h"` and `#include "HALConfig.h"` resolve to gui.ll's copies —
-including from inside fs.ll's `DiskIO.c`. That is the reason fs.ll's `HAL.c` is removed from
-`SOURCES`.
+Two sibling libraries sit below this one:
 
-`src/Dependency/fs.ll` is therefore **not a git submodule** (it is git-ignored): `fs.ll.cmake`
-resolves or downloads it at configure time.
+- **[hal.ll](https://github.com/juliannojungle/hal.ll)** owns GPIO, SPI, PWM, UART, timing, the RTC,
+  threads and mutexes, plus the board pinout. Its `HALConfig.h` carries the `SD_*` **and** `LCD_*`
+  defines, because one board definition has to serve both the card and the panel. Nothing in this
+  repository touches hardware directly.
+- **[fs.ll](https://github.com/juliannojungle/fs.ll)** owns file I/O and SD disk I/O: `FileSystem.c`,
+  the platform `DiskIO.c`, `FatFsTime.c` and the three FatFS sources. It reaches the card through
+  hal.ll, exactly as this library does.
+
+Historically gui.ll kept its own HAL and fs.ll kept a smaller duplicate of it, with the same filenames
+and the same include guards; the build made gui.ll's win by include-path precedence and deleted
+fs.ll's `HAL.c` from the source list so `Delay` and `STDIOInitAll` would not collide at link time. Two
+invisible, order-dependent mechanisms propping up a duplication. hal.ll exists to end that, and both
+mechanisms are gone.
+
+`src/Dependency/hal.ll` and `src/Dependency/fs.ll` are therefore **not git submodules** (both are
+git-ignored): their contracts resolve or download them at configure time, through `HAL_LL_PATH` and
+`FS_LL_PATH`.
 
 ### RP2040
 - Uses **cmake + make** directly
 - Pico SDK is included via `pico_sdk_import.cmake`
 - libpng, zlib and FatFS are compiled straight into the target (no intermediate static libraries)
+- Links `${PLATFORM_LIBRARIES}`, the pico-sdk target list hal.ll publishes. The hardcoded list it
+  replaced named `hardware_adc`, which nothing here uses, and omitted `hardware_uart`, which hal.ll needs
 - Generates `.uf2` for drag-and-drop flashing
 
 ### ESP32
 - Uses **idf.py** (ESP-IDF build system) which internally calls cmake + ninja
 - `EXTRA_COMPONENT_DIRS` points to `src/lib/Platform/ESP32` (avoids needing a `main/` folder)
+- `idf_component_register`'s `REQUIRES` is `${PLATFORM_REQUIRES}`, published by hal.ll. The component
+  must also `set(PLATFORM_NAME "ESP32")` in the file itself — it already does — because the harvest pass
+  sees neither the cache nor `-D` arguments, and a fallback to `Simulator` there yields an empty
+  `REQUIRES` and a failure hundreds of files later on a missing SDK header
 - The root `CMakeLists.txt` does *not* include `gui.ll.cmake` on this platform: the component's
   own `CMakeLists.txt` does, then calls `idf_component_register()` with `${SOURCES}` /
   `${INCLUDE_DIRS}`. That file also derives `PROJ_ROOT` from its own location and sets
@@ -400,6 +434,7 @@ Third-party code is pinned as git submodules with `ignore = all`:
 
 Sibling libraries are **not** submodules — they are resolved (and downloaded when missing) at
 configure time by their own `.cmake` contract, so that several projects can share one checkout:
+- `src/Dependency/hal.ll` — hal.ll, through `src/Dependency/hal.ll.cmake` / `HAL_LL_PATH`
 - `src/Dependency/fs.ll` — fs.ll, through `src/Dependency/fs.ll.cmake` / `FS_LL_PATH`
 
 Either way the content is read-only build input. Never `git add` anything under
@@ -537,6 +572,41 @@ This prevents the git plugin from showing false "modified" files in submodules
   `#ifdef` needed.
 
 Recent work:
+- **Migrated onto hal.ll** — wave 3 of the five-wave HAL extraction whose plan and state live in
+  pedal.guru's `AGENTS.md` §17. gui.ll's own `HAL.{c,h}`, `HALConfig.h` and `src/lib/Types.h` are
+  **deleted**; all of it comes from hal.ll now, `DateTime` included (it left `Canvas.h`, and
+  `CanvasDrawTime` keeps its signature). Before deleting, hal.ll's `HAL.h` and `HALConfig.h` were
+  checked to be strict supersets with every pin value identical. Details:
+  - `hal.ll.cmake` copied into `src/Dependency/` and included from `gui.ll.cmake`;
+    `src/Dependency/hal.ll` added to `.gitignore`. The stale copy of `fs.ll.cmake` was refreshed from
+    fs.ll's current one — it still listed `HAL.c` and `RTC.c`, files fs.ll dropped in wave 2, which is
+    what had been breaking every consumer's configure.
+  - **SPI calls gained their bus argument**: `SPIInit(LCD_SPI, speed)`, `SPIWriteByte(LCD_SPI, v)`,
+    `SPIWriteNByte(LCD_SPI, …)`, in `Driver/GC9A01/Driver.c` and `LCD/1in28/LCDRenderer.c`.
+  - `gui.ll.cmake` gained the early script-mode `return()` (including `hal.ll.cmake` first so
+    `REQUIRES` survives), and lost the `list(REMOVE_ITEM ... HAL.c)` line, `GUI_LL_PLATFORM_DIR`, the
+    platform-folder existence check, and the now-unreachable `if(NOT CMAKE_SCRIPT_MODE_FILE)` around
+    `configure_file`.
+  - `src/Sample.c` dropped its `#include "RTC.h"`; `RTCInitialize` comes from hal.ll's `HAL.h`.
+  - The build now uses hal.ll's published link lists — `${PLATFORM_LIBRARIES}` and
+    `${PLATFORM_REQUIRES}` — instead of hardcoded SDK target names.
+  - The Simulator `Delay` stayed a plain sleep in hal.ll. The SDL-aware version that aborted early on
+    window close is preserved verbatim in hal.ll's `AGENTS.md` §9, together with a sketch for bringing
+    it back through a registered predicate. Nothing else is lost: the Simulator LCD layer runs its own
+    SDL event loop on a dedicated thread.
+  - **Verified**: `Simulator`, `RP2040` and `ESP32-S3` all configure, compile and link in isolated build
+    dirs (ESP32 with its own `sdkconfig`), with **zero warnings on Simulator and RP2040** and only the
+    two known `Canvas.c:129` `-Wtype-limits` warnings on ESP32. Also verified with **nothing pinned**,
+    where the contract cloned hal.ll and fs.ll itself and still built clean. The Simulator sample was
+    started and ran without crashing, but **was not visually inspected** — that pass is still owed.
+  - **`src/lib/Helper/Debug.h` was deleted as well**, for the same reason as `HAL.h`: it duplicated
+    hal.ll's with the same filename *and* the same `DEBUG_H` guard, this copy winning by include-path
+    precedence. The preprocessor-visible content was character-identical — the file differed only by
+    hal.ll's licence header and by being CRLF — so `SHOWDEBUG` comes from hal.ll now. Confirmed with a
+    `-DDEBUGMSGS` build (the path where the macro expands to `printf`) and by every artifact coming out
+    the same size. `src/lib/Helper` keeps `Trigonometry.{c,h}`, so it stays on the include path.
+  - **The empty `Platform/Simulator` and `Platform/RP2040` folders were deleted.** Only the ESP32
+    component's `CMakeLists.txt` is left under `src/lib/Platform`.
 - **`gui.ll.cmake` turned into a self-resolving build contract** (see "Build System" above), mirroring
   fs.ll's. It now resolves `GUI_LL_PATH` (variable or environment, relative resolved against
   `CMAKE_SOURCE_DIR`, defaulting to a `gui.ll` folder next to the copied file), uses
