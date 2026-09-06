@@ -22,7 +22,8 @@ elseif(PLATFORM_NAME STREQUAL "Simulator")
     include(${CMAKE_SOURCE_DIR}/gui.ll.cmake)
     set(SOURCES "${CMAKE_SOURCE_DIR}/src/Sample.c" ${SOURCES})
     add_executable(${PROJECT_NAME} ${SOURCES})
-    include_directories(${INCLUDE_DIRS})
+    # Passing /src to include hal.ll's empty HalMock.h
+    include_directories(${INCLUDE_DIRS} "${HAL_LL_PATH}/src")
     target_link_libraries(${PROJECT_NAME} PUBLIC ${SDL2_LIBRARIES} m ${PLATFORM_LIBRARIES})
 
 elseif(PLATFORM_NAME STREQUAL "RP2040")
