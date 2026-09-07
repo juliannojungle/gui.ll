@@ -63,6 +63,9 @@ bool LCDRenderShouldClose()
 
 void LCDRenderClose()
 {
+    /* A programmatic close has no SDL_QUIT event, so the render loop would never end the wait below */
+    shouldClose = true;
+
     /* Wait for SDL to be destroyed before quitting */
     while (sdlReady) {
         SDL_Delay(1);
