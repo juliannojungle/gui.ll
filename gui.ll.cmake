@@ -110,6 +110,7 @@ set(SOURCES
     "${GUI_LL_LIB_DIR}/GUI/Fonts/font16.c"
     "${GUI_LL_LIB_DIR}/GUI/Fonts/font20.c"
     "${GUI_LL_LIB_DIR}/GUI/Fonts/font24.c"
+    "${GUI_LL_LIB_DIR}/Helper/qr.c"
     "${GUI_LL_LIB_DIR}/Helper/Trigonometry.c")
 
 # zlib

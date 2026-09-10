@@ -14,6 +14,7 @@ Currently supports **RP2040** (Raspberry Pi Pico), **ESP32**, and a **Simulator*
 
 - 🎨 **Direct LCD rendering** — pixels, lines, circles, rectangles, and text written straight to the display without a framebuffer
 - 🖼️ **PNG from SD card** — PNG files decoded on-the-fly from an SD card and streamed directly to the LCD, row by row
+- 𖣯 **Minimalist QR Code model 2 generation** — generator written exclusively for displaying short ASCII URLs
 - 🔌 **Multi-platform** — same application code compiles for RP2040, ESP32, and a native desktop Simulator; platform differences are fully encapsulated in the HAL layer
 - 🖥️ **Desktop simulator** — renders the LCD output in an SDL2 window for rapid iteration without hardware
 - ⚡ **Bare-metal** — no RTOS, no dynamic memory allocator required, runs on the metal
@@ -211,6 +212,36 @@ CanvasDrawText(20, 20, "Hello!", &Font16, WHITE, TRANSPARENT);
 
 LCDRenderTexture(texture);
 ```
+
+---
+
+## 𖣯 Minimalist QR Code generation
+
+Minimalist **QR Code Model 2** generator, designed exclusively for displaying short ASCII URLs. Supports versions 4 and 5, error correction level M, Byte mode, and automatic selection of the best of the 8 available masks. The output is a 1-bit-per-module bitmap, completely independent of the rendering layer.
+
+### Limitations
+
+* ASCII input only, with a maximum length of **80 bytes**.
+* QR Code versions **4 and 5** only.
+* **Byte mode** only.
+* Error correction level **M** only.
+* QR mask is selected automatically; manual mask selection is not supported.
+* Maximum QR matrix size: **37 × 37 modules**.
+* Maximum output bitmap size: **172 bytes**.
+* No dynamic memory allocation (`malloc`).
+* No external dependencies.
+* No large precomputed lookup tables.
+
+### Version selection
+
+|  URL length | QR version |  Matrix |
+| ----------: | ---------: | ------: |
+|  0–62 bytes |  Version 4 | 33 × 33 |
+| 63–80 bytes |  Version 5 | 37 × 37 |
+
+### Memory usage
+
+> The output bitmap requires **172 bytes** in the worst case (37 × 37 modules, 1 bit per module). QR generation uses approximately **800 bytes of temporary stack memory** and does not use dynamic memory allocation.
 
 ---
 

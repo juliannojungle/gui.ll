@@ -572,6 +572,7 @@ This prevents the git plugin from showing false "modified" files in submodules
   `#ifdef` needed.
 
 Recent work:
+- introduced a minimalist qr code model 2 generator, described on `README.md` - size is critical, so everything is contained in `qr.{c,h}` at `src/lib/Helper` with public API in `Canvas.{c.h}` at `CanvasDrawQRCode`
 - **Migrated onto hal.ll** — wave 3 of the five-wave HAL extraction whose plan and state live in
   pedal.guru's `AGENTS.md` §17. gui.ll's own `HAL.{c,h}`, `HALConfig.h` and `src/lib/Types.h` are
   **deleted**; all of it comes from hal.ll now, `DateTime` included (it left `Canvas.h`, and

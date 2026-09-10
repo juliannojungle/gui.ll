@@ -140,5 +140,6 @@ void CanvasDrawBitmap(Texture texture, const unsigned char* imageBuffer);
 void CanvasDrawBitmapBlock(Texture texture, const unsigned char* imageBuffer, UINT8 region);
 void CanvasDrawBitmapToArea(Texture texture, UINT16 x, UINT16 y, const unsigned char *pBitmap,
     UINT16 areaWidth, UINT16 areaHeight);
+void CanvasDrawQRCode(Texture texture, UINT16 xStart, UINT16 yStart, const char * url);
 
 #endif /* __CANVAS_H */

@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include "Debug.h"
 #include "Trigonometry.h"
+#include "qr.h"
 
 Canvas canvas = { ROTATE_0, FLIP_NONE };
 
@@ -199,9 +200,9 @@ void CanvasDrawRectangle(Texture texture, UINT16 xStart, UINT16 yStart, UINT16 x
 
     if (rectangleFillStyle) {
         UINT16 yPoint;
-        for(yPoint = yStart; yPoint < yEnd; yPoint++) {
-            CanvasDrawLine(texture, xStart, yPoint, xEnd, yPoint, color , lineWidth, LINE_STYLE_SOLID);
-        }
+
+        for(yPoint = yStart; yPoint < yEnd; yPoint++)
+            CanvasDrawLine(texture, xStart, yPoint, xEnd, yPoint, color, lineWidth, LINE_STYLE_SOLID);
     } else {
         CanvasDrawLine(texture, xStart, yStart, xEnd, yStart, color, lineWidth, LINE_STYLE_SOLID);
         CanvasDrawLine(texture, xStart, yStart, xStart, yEnd, color, lineWidth, LINE_STYLE_SOLID);
@@ -859,4 +860,27 @@ void CanvasDrawPngToArea(Texture texture, FIL *file, UINT16 xSource, UINT16 ySou
     }
 
     png_destroy_read_struct(&pngPointer, &infoPointer, NULL);
+}
+
+void CanvasDrawQRCode(Texture texture, UINT16 xStart, UINT16 yStart, const char * url) {
+    QRCode qr;
+
+    if (!qr_generate(&qr, url)) return;
+
+    const UINT16 moduleSize = 4;
+
+    for (UINT8 y = 0; y < qr.size; y++) {
+        for (UINT8 x = 0; x < qr.size; x++) {
+            UINT16 color = qr_get_module(&qr, x, y) ? BLACK : WHITE;
+            CanvasDrawRectangle(
+                texture,
+                xStart + x * moduleSize,
+                yStart + y * moduleSize,
+                xStart + (x + 1) * moduleSize - 1,
+                yStart + (y + 1) * moduleSize,
+                color,
+                PIXEL_SIZE_1X1,
+                DRAW_FILL_STYLE_FULL);
+        }
+    }
 }
