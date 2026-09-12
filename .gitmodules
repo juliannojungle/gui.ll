@@ -8,3 +8,8 @@
 	url = https://github.com/madler/zlib.git
 	shallow = true
 	ignore = all
+[submodule "src/Dependency/toolchain.ll"]
+	path = src/Dependency/toolchain.ll
+	url = https://github.com/juliannojungle/toolchain.ll.git
+	shallow = true
+	branch = main

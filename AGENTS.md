@@ -45,19 +45,13 @@ gui.ll/
 ├── gui.ll.cmake                    # Build contract for consumers (see "Build Contract" below)
 ├── CMakeLists.txt                  # Root cmake: builds src/Sample.c, if/else by PLATFORM_NAME
 ├── AGENTS.md                       # This file
-├── .gitmodules                     # Submodule config (libpng, zlib — both ignore = all)
+├── .gitmodules                     # Submodule config (libpng, zlib — ignore = all; toolchain.ll)
 ├── .gitignore                      # build/, sdkconfig, src/Dependency/{fs.ll,libpng,zlib}
 │
 ├── Documentation/
 │   ├── GC9A01A.pdf                 # LCD driver datasheet (original, 192 pages) — versioned
 │   ├── GC9A01A.md                  # Markdown conversion of the datasheet — versioned
 │   └── Image/                      # RP2040 / ESP32-S3 pinout reference images
-│
-├── Toolchain/
-│   ├── RP2040/Setup.sh             # Installs arm-none-eabi-gcc, pico-sdk
-│   ├── ESP32/Setup.sh              # Installs ESP-IDF, xtensa toolchain, Rust, espflash
-│   ├── Simulator/Setup.sh          # Installs libsdl2-dev, gdb, dosfstools, mtools; creates sample/sdcard.img
-│   └── wsl.sh                      # Restores WSL Windows interop (.exe) under systemd
 │
 ├── src/
 │   ├── Sample.c                    # Entry point (app_entry → main or app_main)
@@ -88,6 +82,7 @@ gui.ll/
 │       ├── fs.ll/                   # Resolved through FS_LL_PATH by fs.ll.cmake — NOT a submodule, git-ignored
 │       ├── libpng/                  # Submodule: libpng (DO NOT MODIFY)
 │       ├── zlib/                    # Submodule: zlib (DO NOT MODIFY)
+│       ├── toolchain.ll/            # Submodule: shared setup/build/flash scripts, under Platform/ (see below)
 │       └── pico_sdk_import.cmake    # Pico SDK cmake helper
 │
 └── .vscode/
@@ -405,8 +400,8 @@ fi
 - fs.ll's `fatfs.ffconf_patch.cmake` is applied before compilation (same patch on every platform)
 - Produces a native ELF executable (`build/gui.ll`)
 - `Delay(ms)` integrates an SDL event-pump loop to keep the window responsive
-- Requires `libsdl2-dev`, `gdb`, `dosfstools`, and `mtools` (installed by `Toolchain/Simulator/Setup.sh`)
-- `Toolchain/Simulator/Setup.sh` also creates `sample/sdcard.img` from `sample/sdcard/` contents
+- Requires `libsdl2-dev`, `gdb`, `dosfstools`, and `mtools` (installed by `src/Dependency/toolchain.ll/Platform/Simulator/Setup.sh`)
+- `src/Dependency/toolchain.ll/Platform/Simulator/Setup.sh` also creates `sample/sdcard.img` from `sample/sdcard/` contents
   on every run (not idempotent — intentional so sample file changes are always reflected)
 
 ### Simulator Incremental Build
@@ -436,6 +431,18 @@ Sibling libraries are **not** submodules — they are resolved (and downloaded w
 configure time by their own `.cmake` contract, so that several projects can share one checkout:
 - `src/Dependency/hal.ll` — hal.ll, through `src/Dependency/hal.ll.cmake` / `HAL_LL_PATH`
 - `src/Dependency/fs.ll` — fs.ll, through `src/Dependency/fs.ll.cmake` / `FS_LL_PATH`
+
+**`toolchain.ll` is a real git submodule, and that is deliberate — it is not a sibling library.**
+It centralizes the setup/build/flash scripts (`Platform/RP2040/Setup.sh`, `Platform/ESP32/Setup.sh`,
+`Platform/Simulator/Setup.sh` + `gdb-wrapper.sh`, `Platform/RP2040/Bind.sh`/`Flash.sh`,
+`Platform/wsl.sh`) that `tasks.json` and `launch.json` invoke directly. The `.cmake`-contract trick
+used for hal.ll/fs.ll (point a variable, download on miss) does not fit here: those scripts *are* the
+build/setup steps the IDE runs, not source compiled through a contract, so the files have to be
+physically present in the tree at a known path. A submodule guarantees that and lets GitHub report the
+dependency. It replaced the old local `Toolchain/` folder, which is gone; every `.vscode` reference now
+points at `${workspaceFolder}/src/Dependency/toolchain.ll/Platform/...`, the same layout pedal.guru
+uses. Only pedal.guru and gui.ll consume it so far; hal.ll took only part of the toolchain and does not
+include it yet.
 
 Either way the content is read-only build input. Never `git add` anything under
 `src/Dependency/`, and never commit a patched dependency file.
@@ -470,10 +477,11 @@ Either way the content is read-only build input. Never `git add` anything under
 
 ### Toolchain Setup
 
+The scripts live in the `toolchain.ll` submodule under `src/Dependency/toolchain.ll/Platform/`.
 Run the setup tasks (idempotent — safe to re-run):
-- **"Setup: RP2040 toolchain in WSL"** → `Toolchain/RP2040/Setup.sh`
-- **"Setup: ESP32 toolchain in WSL"** → `Toolchain/ESP32/Setup.sh`
-- **"Setup: WSL"** → `Toolchain/wsl.sh` (WSL environment: Windows interop + dev tools like clangd)
+- **"Setup: RP2040 toolchain in WSL"** → `src/Dependency/toolchain.ll/Platform/RP2040/Setup.sh`
+- **"Setup: ESP32 toolchain in WSL"** → `src/Dependency/toolchain.ll/Platform/ESP32/Setup.sh`
+- **"Setup: WSL"** → `src/Dependency/toolchain.ll/Platform/wsl.sh` (WSL environment: Windows interop + dev tools like clangd)
 
 Setup scripts check for existing installations before downloading.
 ESP32 setup installs: apt deps, ESP-IDF, idf_tools (xtensa, gdb, openocd),
@@ -495,7 +503,7 @@ Python env, Rust, and espflash.
   the handler is never registered on boot and any `.exe` (e.g. `usbipd.exe`) fails with
   "cannot execute binary file: Exec format error". This is **not** a `wsl.conf` problem — interop
   does not need a `[interop]` entry, and `wsl.conf` is not being wiped. Fix: run the
-  **"Setup: WSL"** task (`Toolchain/wsl.sh`), which ensures `WSLInterop.conf` exists and
+  **"Setup: WSL"** task (`src/Dependency/toolchain.ll/Platform/wsl.sh`), which ensures `WSLInterop.conf` exists and
   unmasks/restarts `systemd-binfmt.service` so the handler survives every reboot and
   `wsl --shutdown`. (`systemd-binfmt.service` is a static unit — it cannot be `systemctl enable`d
   and does not need to be; unmasking is what matters.) Verify with
@@ -509,8 +517,8 @@ Python env, Rust, and espflash.
   enabled off` GDB command (even via `setupCommands` in `launch.json`) is processed **after**
   the initial library loads, so it has no effect — the env variable takes precedence in
   `libdebuginfod`. Fix: `launch.json` points `miDebuggerPath` to
-  `Toolchain/Simulator/gdb-wrapper.sh`, a thin wrapper that does `unset DEBUGINFOD_URLS`
-  before `exec /usr/bin/gdb "$@"`. `Toolchain/Simulator/Setup.sh` also appends
+  `src/Dependency/toolchain.ll/Platform/Simulator/gdb-wrapper.sh`, a thin wrapper that does `unset DEBUGINFOD_URLS`
+  before `exec /usr/bin/gdb "$@"`. `src/Dependency/toolchain.ll/Platform/Simulator/Setup.sh` also appends
   `set debuginfod enabled off` to `~/.gdbinit` (idempotent) as belt-and-suspenders. The
   wrapper is the authoritative fix; the `.gdbinit` line catches edge cases where GDB is
   invoked outside the wrapper.
@@ -901,8 +909,9 @@ Recent work:
 3. **No `main/` directory for ESP32**: The ESP-IDF convention of requiring a `main/` folder
    is bypassed via `EXTRA_COMPONENT_DIRS` pointing directly to the platform folder.
 
-4. **Setup scripts in `Toolchain/`**: Avoids cmd.exe escaping issues with complex inline
-   bash commands in tasks.json. Scripts are idempotent and self-documenting.
+4. **Setup scripts in the `toolchain.ll` submodule** (`src/Dependency/toolchain.ll/Platform/`):
+   Avoids cmd.exe escaping issues with complex inline bash commands in tasks.json. Scripts are
+   idempotent and self-documenting, and shared across pedal.guru and gui.ll through the submodule.
 
 5. **Separate compilation (each `.c` is its own translation unit)**: The project compiles every
    `.c` independently to a `.o` and links them. Each module is a `.c`/`.h` pair; the header
