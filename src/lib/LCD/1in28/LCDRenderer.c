@@ -19,10 +19,10 @@ void LCDSetDisplayArea(UINT16 xStart, UINT16 yStart, UINT16 xEnd, UINT16 yEnd)
 void LCDClear(UINT16 fillColor)
 {
     UINT16 j;
-    UINT16 texture[LCD.WIDTH*LCD.HEIGHT];
+    UINT16 texture[LCD.WIDTH];
     fillColor = ((fillColor<<8)&0xff00)|(fillColor>>8);
 
-    for (j = 0; j < LCD.HEIGHT*LCD.WIDTH; j++) {
+    for (j = 0; j < LCD.WIDTH; j++) {
         texture[j] = fillColor;
     }
 
@@ -31,7 +31,7 @@ void LCDClear(UINT16 fillColor)
     DigitalWrite(LCD_CS_PIN, 0);
 
     for (j = 0; j < LCD.HEIGHT; j++) {
-        SPIWriteNByte(LCD_SPI, (uint8_t *)&texture[j*LCD.WIDTH], LCD.WIDTH*2);
+        SPIWriteNByte(LCD_SPI, (uint8_t *)texture, LCD.WIDTH*2);
     }
 
     DigitalWrite(LCD_CS_PIN, 1);
