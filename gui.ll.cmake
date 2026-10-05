@@ -155,6 +155,12 @@ set_source_files_properties(
     "${GUI_LL_DEPENDENCY_DIR}/libpng/png.c"
     PROPERTIES COMPILE_OPTIONS "-Wno-maybe-uninitialized") # suppress warnings for libpng
 
+# Opt-in: serve zlib's inflate window from the runtime heap (hal.ll) instead of
+# the libc heap, for consumers that keep a large framebuffer on the libc heap.
+if(GUI_LL_PNG_HEAP_VIA_HAL)
+    include(${GUI_LL_DEPENDENCY_DIR}/libpng.pngmem_patch.cmake)
+endif()
+
 set(INCLUDE_DIRS
     ${INCLUDE_DIRS}
     "${GUI_LL_LIB_DIR}"

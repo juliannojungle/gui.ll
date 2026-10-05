@@ -81,6 +81,7 @@ gui.ll/
 │       ├── fs.ll.cmake              # Copy of fs.ll's build contract — versioned here, included by gui.ll.cmake
 │       ├── fs.ll/                   # Resolved through FS_LL_PATH by fs.ll.cmake — NOT a submodule, git-ignored
 │       ├── libpng/                  # Submodule: libpng (DO NOT MODIFY)
+│       ├── libpng.pngmem_patch.cmake  # Opt-in: redirect zlib's window to hal.ll heap (GUI_LL_PNG_HEAP_VIA_HAL)
 │       ├── zlib/                    # Submodule: zlib (DO NOT MODIFY)
 │       ├── toolchain.ll/            # Submodule: shared setup/build/flash scripts, under Platform/ (see below)
 │       └── pico_sdk_import.cmake    # Pico SDK cmake helper
@@ -456,6 +457,29 @@ Either way the content is read-only build input. Never `git add` anything under
 | `fs.ll`'s `fatfs.ffconf_patch.cmake` | Rewrites FatFS `ffconf.h` (`FF_FS_RPATH=1`, `FF_VOLUMES=2`, `FF_CODE_PAGE=437`, `FF_USE_LFN=2`) — included by `fs.ll.cmake`, not owned here |
 | `configure_file(pnglibconf.h.prebuilt → pnglibconf.h)` | Generates required libpng config header |
 | `set_source_files_properties(... -Wno-maybe-uninitialized)` | Silences libpng warnings on `png.c` / `pngerror.c` |
+| `src/Dependency/libpng.pngmem_patch.cmake` (**opt-in**, off by default) | Rewrites `png_zalloc`/`png_zfree` in `png.c` to call hal.ll's `HeapAlloc`/`HeapFree` instead of the libc heap. Included by `gui.ll.cmake` only when `GUI_LL_PNG_HEAP_VIA_HAL` is set. |
+
+### `GUI_LL_PNG_HEAP_VIA_HAL`: serving the zlib window from the runtime heap
+
+Decoding a PNG makes zlib allocate its inflate **window** — up to 32 KB for a large image — through
+`png_zalloc`, which normally lands on the **libc** heap. A consumer that also keeps a large framebuffer or
+texture on the libc heap can run it out of contiguous space on a small-RAM device, so a decode fails with
+"out of memory" even though the total free RAM looks sufficient.
+
+The opt-in patch redirects the zlib allocator to **hal.ll's `HeapAlloc`/`HeapFree`** (the FreeRTOS heap on
+hardware, `malloc` on the Simulator), keeping the two pools apart. The window is a transient allocation,
+freed at the end of each decode, not a reservation. Points to keep straight:
+
+- **Off by default.** `gui.ll.cmake` includes the patch only under `if(GUI_LL_PNG_HEAP_VIA_HAL)`, so the
+  standalone build and the sample are unchanged. A consumer that needs it sets `GUI_LL_PNG_HEAP_VIA_HAL ON`
+  before including `gui.ll.cmake`.
+- **The patch lives inside gui.ll** (`src/Dependency/libpng.pngmem_patch.cmake`), next to the libpng
+  checkout it edits — not in the consumer, which must not know libpng exists.
+- **It is applied in place and never versioned**, same mechanism as the others here: it edits the
+  git-ignored libpng submodule, is idempotent (guards on a `HAL_LL_PNGMEM_PATCH` marker), and injects a
+  forward declaration of `HeapAlloc`/`HeapFree` rather than pulling all of `HAL.h` into `png.c`.
+- **It runs after the script-mode early return** in `gui.ll.cmake`, so the ESP-IDF harvest pass (which
+  touches no sources) never triggers it, same as the `configure_file` above.
 
 ### Rationale
 - Submodules stay at pinned commits (shallow clones)
